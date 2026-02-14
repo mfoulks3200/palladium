@@ -3,10 +3,11 @@ import icon from '../../assets/icon.svg';
 import './App.css';
 import './globals.css';
 import { Sidebar } from './components/Sidebar';
+import { ThemeProvider } from './components/ThemeProvider';
 
 function Hello() {
   return (
-    <div className="flex flex-col">
+    <div className="flex w-full h-full p-3 gap-3">
       <Sidebar />
       <div>
         <div className="Hello">
@@ -46,10 +47,17 @@ function Hello() {
 
 export default function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Hello />} />
-      </Routes>
-    </Router>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <Router>
+        <Routes>
+          <Route path="/" element={<Hello />} />
+        </Routes>
+      </Router>
+    </ThemeProvider>
   );
 }
