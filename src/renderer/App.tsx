@@ -7,7 +7,7 @@ import { ThemeProvider } from './components/ThemeProvider';
 
 function Hello() {
   return (
-    <div className="flex w-full h-full p-3 gap-3">
+    <div className="flex h-full w-full gap-3 p-3">
       <Sidebar />
       <div>
         <div className="Hello">
