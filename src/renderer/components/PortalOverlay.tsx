@@ -10,7 +10,7 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { OverlayOptions } from 'src/ipc/Overlay';
+import { OverlayOptions } from '../../ipc';
 
 export const disablePortals = false;
 export const disablePortalClearingOnBlur = false;

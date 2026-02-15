@@ -11,7 +11,7 @@ import { createContext, useCallback, useEffect, useState } from 'react';
 import { OverlayPortal } from './components/PortalOverlay';
 import { CommandBar } from './components/CommandBar';
 import { BrowserUI } from './BrowserUI';
-import { TabManagerIpc } from 'src/ipc/Tabs';
+import { TabManagerIpc } from '../ipc';
 
 export const CommandBarContext = createContext<
   (tabUuid: string, prefill?: string) => void
@@ -25,13 +25,9 @@ function Main() {
   const [tabMeta, setTabMeta] = useState<TabManagerIpc | null>(null);
 
   useEffect(() => {
-    window.electron.ipcRenderer.on(
-      'update-tab-meta',
-      // @ts-expect-error
-      (args: unknown[]) => {
-        setTabMeta(args as unknown as TabManagerIpc);
-      },
-    );
+    window.electron.ipcRenderer.on('update-tab-meta', (args) => {
+      setTabMeta(args);
+    });
 
     window.electron.ipcRenderer.sendMessage('update-tab-meta');
   }, []);

@@ -1,6 +1,6 @@
 import { disablePortalClearingOnBlur } from '@/components/PortalOverlay';
 import { BrowserWindow, WebContentsView } from 'electron';
-import { OverlayOptions } from 'src/ipc/Overlay';
+import { OverlayOptions } from '../ipc';
 
 let overlayView: WebContentsView | null = null;
 

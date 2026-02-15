@@ -1,35 +1,35 @@
 // Disable no-unused-vars, broken for spread args
 /* eslint no-unused-vars: off */
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
-
-export type Channels =
-  | 'update-tab-meta'
-  | 'update-active-tab'
-  | 'update-tab-url'
-  | 'open-new-tab'
-  | 'close-tab'
-  | 'tab-actions'
-  | 'reorder-tab'
-  | 'tab-context-menu'
-  | 'app-resize'
-  | 'browser-layout-change';
+import { MainToRendererEvents, RendererToMainEvents } from '../ipc';
 
 const electronHandler = {
   ipcRenderer: {
-    sendMessage(channel: Channels, ...args: unknown[]) {
+    sendMessage<T extends keyof RendererToMainEvents>(
+      channel: T,
+      ...args: RendererToMainEvents[T]
+    ) {
       ipcRenderer.send(channel, ...args);
     },
-    on(channel: Channels, func: (...args: unknown[]) => void) {
+    on<T extends keyof MainToRendererEvents>(
+      channel: T,
+      func: (...args: MainToRendererEvents[T]) => void,
+    ) {
       const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
-        func(...args);
+        func(...(args as MainToRendererEvents[T]));
       ipcRenderer.on(channel, subscription);
 
       return () => {
         ipcRenderer.removeListener(channel, subscription);
       };
     },
-    once(channel: Channels, func: (...args: unknown[]) => void) {
-      ipcRenderer.once(channel, (_event, ...args) => func(...args));
+    once<T extends keyof MainToRendererEvents>(
+      channel: T,
+      func: (...args: MainToRendererEvents[T]) => void,
+    ) {
+      ipcRenderer.once(channel, (_event, ...args) =>
+        func(...(args as MainToRendererEvents[T])),
+      );
     },
   },
 };

@@ -7,7 +7,7 @@ import {
   ResizablePanelGroup,
 } from './components/ui/resizable';
 import { RefObject, useCallback, useEffect, useRef } from 'react';
-import { OverlayOptions } from 'src/ipc/Overlay';
+import { OverlayOptions } from '../ipc';
 import { Anvil } from 'lucide-react';
 
 export const BrowserUI = () => {
@@ -28,13 +28,9 @@ export const BrowserUI = () => {
   }, [browserPanelRef.current]);
 
   useEffect(() => {
-    window.electron.ipcRenderer.on(
-      'browser-layout-change',
-      // @ts-expect-error
-      (args: unknown[]) => {
-        onResize();
-      },
-    );
+    window.electron.ipcRenderer.on('browser-layout-change', () => {
+      onResize();
+    });
 
     if (browserPanelRef.current) {
       browserPanelRef.current.addEventListener('resize', onResize);

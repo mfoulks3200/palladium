@@ -1,5 +1,5 @@
 import { Menu, MenuItem, WebContentsView, nativeImage } from 'electron';
-import { TabIpcPacket } from 'src/ipc/Tabs';
+import { TabIpcPacket } from '../ipc';
 
 export class Tab extends EventTarget {
   public uuid: string = crypto.randomUUID();

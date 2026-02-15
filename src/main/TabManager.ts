@@ -1,15 +1,14 @@
 import {
   BrowserWindow,
   clipboard,
-  ipcMain,
   Menu,
   MenuItem,
   WebContentsView,
 } from 'electron';
 import { Tab } from './Tab';
-import { TabActionsIpc, TabManagerIpc } from 'src/ipc/Tabs';
+import { TabActionsIpc, TabManagerIpc, OverlayOptions } from '../ipc';
 import { disablePortals } from '@/components/PortalOverlay';
-import { OverlayOptions } from 'src/ipc/Overlay';
+import { typedIpcMain, typedWebContents } from './ipc';
 
 let browsingView: WebContentsView;
 const padding = 12;
@@ -32,20 +31,20 @@ export class TabManager {
     mainWindow.webContents.addListener('devtools-closed', async () => {
       await this.updateBrowsingView();
     });
-    ipcMain.on('update-tab-meta', () => {
+    typedIpcMain.on('update-tab-meta', () => {
       this.updateRenderProcess();
     });
-    ipcMain.on('app-resize', (_event, size) => {
+    typedIpcMain.on('app-resize', (_event, size) => {
       this.updateBrowsingView();
     });
-    ipcMain.on('update-tab-url', (_event, url) => {
+    typedIpcMain.on('update-tab-url', (_event, url) => {
       this.currentTab?.view.webContents.loadURL(url.newUrl);
     });
-    ipcMain.on('open-new-tab', (_event, url) => {
+    typedIpcMain.on('open-new-tab', (_event, url) => {
       const tab = new Tab(url.newUrl);
       this.focusTab(tab);
     });
-    ipcMain.on('browser-layout-change', (_event, size: OverlayOptions) => {
+    typedIpcMain.on('browser-layout-change', (_event, size: OverlayOptions) => {
       this.updateBrowsingView({
         x: size.position.x,
         y: size.position.y,
@@ -53,15 +52,11 @@ export class TabManager {
         height: size.position.height,
       });
     });
-    ipcMain.on('update-active-tab', (_event: any, newTabMeta: any) => {
+    typedIpcMain.on('update-active-tab', (_event, newTabMeta) => {
       console.log('Switching to tab uuid', newTabMeta);
       this.focusTabUuid(newTabMeta.activeTabUuid);
     });
-    ipcMain.on('update-active-tab', (_event: any, newTabMeta: any) => {
-      console.log('Switching to tab uuid', newTabMeta);
-      this.focusTabUuid(newTabMeta.activeTabUuid);
-    });
-    ipcMain.on('close-tab', (_event: any, tabMeta: any) => {
+    typedIpcMain.on('close-tab', (_event, tabMeta) => {
       console.log('Closing tab uuid', tabMeta.uuid);
       const selectedIndex = this.getTabIndex(tabMeta.uuid);
       const selectedTab = this.getTabByUuid(tabMeta.uuid);
@@ -76,18 +71,15 @@ export class TabManager {
         this.tabs.delete(selectedTab);
       }
     });
-    ipcMain.on(
-      'reorder-tab',
-      (_event: any, data: { startIndex: number; finishIndex: number }) => {
-        console.log('Reordering tab', data);
-        const tabArray = [...this.tabs];
-        const [removed] = tabArray.splice(data.startIndex, 1);
-        tabArray.splice(data.finishIndex, 0, removed);
-        this.tabs = new Set(tabArray);
-        this.updateRenderProcess();
-      },
-    );
-    ipcMain.on('tab-actions', (_event: any, actions: TabActionsIpc) => {
+    typedIpcMain.on('reorder-tab', (_event, data) => {
+      console.log('Reordering tab', data);
+      const tabArray = [...this.tabs];
+      const [removed] = tabArray.splice(data.startIndex, 1);
+      tabArray.splice(data.finishIndex, 0, removed);
+      this.tabs = new Set(tabArray);
+      this.updateRenderProcess();
+    });
+    typedIpcMain.on('tab-actions', (_event, actions: TabActionsIpc) => {
       switch (actions.action) {
         case 'back':
           this.currentTab?.view.webContents.navigationHistory.goBack();
@@ -109,7 +101,7 @@ export class TabManager {
           break;
       }
     });
-    ipcMain.on('tab-context-menu', (_event: any, newTabMeta: any) => {
+    typedIpcMain.on('tab-context-menu', (_event, newTabMeta) => {
       const tab = this.getTabByUuid(newTabMeta.uuid);
       console.log('Context menu on tab uuid', newTabMeta, tab?.getTitle());
       if (tab) {
@@ -150,7 +142,9 @@ export class TabManager {
     }>,
   ) {
     if (!dimensions) {
-      this.mainWindow.webContents.send('browser-layout-change');
+      typedWebContents(this.mainWindow.webContents).send(
+        'browser-layout-change',
+      );
       return;
     }
     const internalSize = {
@@ -166,10 +160,10 @@ export class TabManager {
 
   public updateRenderProcess() {
     const tabMeta = [...this.tabs].map((tab) => tab.getTabIpcMeta());
-    this.mainWindow.webContents.send('update-tab-meta', {
+    typedWebContents(this.mainWindow.webContents).send('update-tab-meta', {
       currentTabUuid: this.currentTab?.uuid ?? null,
       tabs: tabMeta,
-    } as TabManagerIpc);
+    });
   }
 
   public addTab(tab: Tab) {

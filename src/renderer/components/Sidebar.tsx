@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 
 import { useCallback, useContext, useEffect, useState } from 'react';
-import { TabActionsIpc, TabManagerIpc } from 'src/ipc/Tabs';
+import { TabActionsIpc, TabManagerIpc } from '../../ipc';
 import { OverlayPortal } from './PortalOverlay';
 import { CommandBarContext, TabMetaContext } from '@/App';
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';

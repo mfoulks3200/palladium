@@ -74,16 +74,17 @@ export const CommandBar = ({
   };
 
   const parseCommand = () => {
-    const channel = tabUuid === 'new' ? 'open-new-tab' : 'update-tab-url';
+    const channel: 'open-new-tab' | 'update-tab-url' =
+      tabUuid === 'new' ? 'open-new-tab' : 'update-tab-url';
     try {
       console.log(`Attempting to parse ${currentText} as a URL`);
       const url = new URL(currentText);
-      window.electron.ipcRenderer.sendMessage(channel as any, {
+      window.electron.ipcRenderer.sendMessage(channel, {
         newUrl: url.toString(),
       });
     } catch (e) {
       console.log(`Failed, searching for ${currentText} instead`);
-      window.electron.ipcRenderer.sendMessage(channel as any, {
+      window.electron.ipcRenderer.sendMessage(channel, {
         newUrl: `https://google.com/search?q=${encodeURIComponent(currentText)}`,
       });
     }
