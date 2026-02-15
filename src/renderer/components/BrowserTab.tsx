@@ -90,7 +90,14 @@ export const BrowserTab = (props: BrowserTabProps) => {
       ref={tabRef}
     >
       {favicon}
-      <div className="flex flex-col justify-center overflow-hidden text-ellipsis">
+      <div
+        className={cn(
+          'flex flex-col justify-center overflow-hidden text-ellipsis',
+          {
+            ['group-hover:pr-6']: !showAfterIcon,
+          },
+        )}
+      >
         <div className="truncate text-sm">{props.title}</div>
         {props.subtitle && (
           <div className="truncate text-xs opacity-25">{props.subtitle}</div>

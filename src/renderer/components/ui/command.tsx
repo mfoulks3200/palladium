@@ -90,7 +90,6 @@ function CommandInput({
           beforeElementClass,
         )}
         style={{
-          //@ts-expect-error
           interpolateSize: 'allow-keywords',
         }}
       >

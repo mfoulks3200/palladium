@@ -35,7 +35,17 @@ export const BrowserUI = () => {
         onResize();
       },
     );
-  }, []);
+
+    if (browserPanelRef.current) {
+      browserPanelRef.current.addEventListener('resize', onResize);
+    }
+
+    return () => {
+      if (browserPanelRef.current) {
+        browserPanelRef.current.removeEventListener('resize', onResize);
+      }
+    };
+  }, [browserPanelRef.current]);
 
   return (
     <div className="h-full p-3">
