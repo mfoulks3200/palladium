@@ -18,6 +18,7 @@ import { TabManager } from './TabManager';
 import { Tab } from './Tab';
 import { setupOverlayManager } from './OverlayManager';
 import { typedIpcMain } from './ipc';
+import { HistoryManager } from './HistoryManager';
 
 class AppUpdater {
   constructor() {
@@ -144,6 +145,8 @@ const createWindow = async () => {
     menu.popup();
     // }
   });
+
+  HistoryManager.getInstance();
 
   // Open urls in the user's browser
   // mainWindow.webContents.setWindowOpenHandler((edata) => {

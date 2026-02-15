@@ -1,5 +1,6 @@
 import { Menu, MenuItem, WebContentsView, nativeImage } from 'electron';
 import { TabIpcPacket } from '../ipc';
+import { HistoryEvent, HistoryManager } from './HistoryManager';
 
 export class Tab extends EventTarget {
   public uuid: string = crypto.randomUUID();
@@ -35,6 +36,24 @@ export class Tab extends EventTarget {
       }
 
       menu.popup({});
+    });
+    HistoryManager.getInstance().addTab(this.uuid);
+    this.view.webContents.on('did-navigate', async (event) => {
+      const historyEvent: HistoryEvent = {
+        tabUuid: this.uuid,
+        url: this.getCurrentUrl(),
+        title:
+          (await this.view.webContents.executeJavaScript(
+            `try{document.querySelector('title').innerText}catch(e){}`,
+          )) ?? this.getTitle(),
+        metaDescription: await this.view.webContents.executeJavaScript(
+          `try{document.querySelector('meta[name="description"]').content}catch(e){}`,
+        ),
+        metaKeywords: await this.view.webContents.executeJavaScript(
+          `try{document.querySelector('meta[name="keywords"]').content}catch(e){}`,
+        ),
+      };
+      HistoryManager.getInstance().addHistoryEvent(historyEvent);
     });
   }
 
