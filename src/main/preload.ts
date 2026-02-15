@@ -9,6 +9,7 @@ export type Channels =
   | 'open-new-tab'
   | 'close-tab'
   | 'tab-actions'
+  | 'reorder-tab'
   | 'tab-context-menu'
   | 'app-resize'
   | 'browser-layout-change';

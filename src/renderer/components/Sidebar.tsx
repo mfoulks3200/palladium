@@ -7,10 +7,51 @@ import { useCallback, useContext, useEffect, useState } from 'react';
 import { TabActionsIpc, TabManagerIpc } from 'src/ipc/Tabs';
 import { OverlayPortal } from './PortalOverlay';
 import { CommandBarContext, TabMetaContext } from '@/App';
+import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
+import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
+import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index';
 
 export const Sidebar = () => {
   const commandBar = useContext(CommandBarContext);
   const tabMeta = useContext(TabMetaContext);
+
+  useEffect(() => {
+    return monitorForElements({
+      onDrop({ location, source }) {
+        const target = location.current.dropTargets[0];
+        if (!target) {
+          return;
+        }
+
+        const sourceData = source.data;
+        const targetData = target.data;
+
+        if (sourceData.type !== 'tab' || targetData.type !== 'tab') {
+          return;
+        }
+
+        const startIndex = sourceData.index as number;
+        const targetIndex = targetData.index as number;
+
+        const edge = extractClosestEdge(targetData);
+        const finishIndex = getReorderDestinationIndex({
+          closestEdgeOfTarget: edge,
+          startIndex,
+          indexOfTarget: targetIndex,
+          axis: 'vertical',
+        });
+
+        if (startIndex === finishIndex) {
+          return;
+        }
+
+        window.electron.ipcRenderer.sendMessage('reorder-tab', {
+          startIndex,
+          finishIndex,
+        });
+      },
+    });
+  }, []);
 
   const switchToTab = useCallback((uuid: string) => {
     window.electron.ipcRenderer.sendMessage('update-active-tab', {
@@ -79,10 +120,11 @@ export const Sidebar = () => {
         <div className="flex h-full w-full flex-col gap-2">
           {tabMeta &&
             tabMeta.tabs &&
-            tabMeta.tabs.map((singleTabMeta) => (
+            tabMeta.tabs.map((singleTabMeta, index) => (
               <BrowserTab
                 key={singleTabMeta.uuid}
                 uuid={singleTabMeta.uuid}
+                index={index}
                 data-tabUuid={singleTabMeta.uuid}
                 isActive={tabMeta.currentTabUuid === singleTabMeta.uuid}
                 isPlayingAudio={singleTabMeta.isPlayingAudio}

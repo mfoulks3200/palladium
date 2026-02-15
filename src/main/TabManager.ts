@@ -76,6 +76,17 @@ export class TabManager {
         this.tabs.delete(selectedTab);
       }
     });
+    ipcMain.on(
+      'reorder-tab',
+      (_event: any, data: { startIndex: number; finishIndex: number }) => {
+        console.log('Reordering tab', data);
+        const tabArray = [...this.tabs];
+        const [removed] = tabArray.splice(data.startIndex, 1);
+        tabArray.splice(data.finishIndex, 0, removed);
+        this.tabs = new Set(tabArray);
+        this.updateRenderProcess();
+      },
+    );
     ipcMain.on('tab-actions', (_event: any, actions: TabActionsIpc) => {
       switch (actions.action) {
         case 'back':
