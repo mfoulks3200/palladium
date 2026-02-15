@@ -1,51 +1,93 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
-import icon from '../../assets/icon.svg';
+import '@fontsource/inter/100';
+import '@fontsource/inter/200';
+import '@fontsource/inter/400';
+import '@fontsource/inter/500';
+import '@fontsource/inter/800';
 import './App.css';
 import './globals.css';
-import { Sidebar } from './components/Sidebar';
 import { ThemeProvider } from './components/ThemeProvider';
+import { createContext, useCallback, useEffect, useState } from 'react';
+import { OverlayPortal } from './components/PortalOverlay';
+import { CommandBar } from './components/CommandBar';
+import { BrowserUI } from './BrowserUI';
+import { TabManagerIpc } from 'src/ipc/Tabs';
 
-function Hello() {
+export const CommandBarContext = createContext<
+  (tabUuid: string, prefill?: string) => void
+>(() => {});
+export const TabMetaContext = createContext<TabManagerIpc | null>(null);
+
+function Main() {
+  const [showingCommandBar, setShowingCommandBar] = useState(false);
+  const [commandBarTabUuid, setCommandBarTabUuid] = useState('new');
+  const [commandPrefill, setCommandPrefill] = useState('');
+  const [tabMeta, setTabMeta] = useState<TabManagerIpc | null>(null);
+
+  useEffect(() => {
+    window.electron.ipcRenderer.on(
+      'update-tab-meta',
+      // @ts-expect-error
+      (args: unknown[]) => {
+        setTabMeta(args as unknown as TabManagerIpc);
+      },
+    );
+
+    window.electron.ipcRenderer.sendMessage('update-tab-meta');
+  }, []);
+
+  const openCommandBar = useCallback(
+    (tabUuid: string, prefill?: string) => {
+      if (prefill) {
+        setCommandPrefill(prefill);
+      }
+      setCommandBarTabUuid(tabUuid);
+      setShowingCommandBar(true);
+    },
+    [showingCommandBar, setShowingCommandBar],
+  );
+
   return (
-    <div className="flex h-full w-full gap-3 p-3">
-      <Sidebar />
-      <div>
-        <div className="Hello">
-          <img width="200" alt="icon" src={icon} />
+    <TabMetaContext.Provider value={tabMeta}>
+      <CommandBarContext.Provider value={openCommandBar}>
+        <BrowserUI />
+        <div className="pointer-events-none absolute top-0 left-0 z-0 flex h-full w-full items-center justify-center">
+          {showingCommandBar && (
+            <OverlayPortal
+              className="h-1/3 w-2xl"
+              onBlur={() => {
+                console.log('Command bar closed');
+                setShowingCommandBar(false);
+              }}
+            >
+              <CommandBar
+                prefill={commandPrefill}
+                tabUuid={commandBarTabUuid}
+                className="h-full w-full max-w-full"
+              />
+            </OverlayPortal>
+          )}
         </div>
-        <h1>electron-react-boilerplate</h1>
-        <div className="Hello">
-          <a
-            href="https://electron-react-boilerplate.js.org/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <button type="button">
-              <span role="img" aria-label="books">
-                📚
-              </span>
-              Read our docs
-            </button>
-          </a>
-          <a
-            href="https://github.com/sponsors/electron-react-boilerplate"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <button type="button">
-              <span role="img" aria-label="folded hands">
-                🙏
-              </span>
-              Donate
-            </button>
-          </a>
-        </div>
-      </div>
-    </div>
+      </CommandBarContext.Provider>
+    </TabMetaContext.Provider>
   );
 }
 
 export default function App() {
+  useEffect(() => {
+    const resizeListener = () => {
+      window.electron.ipcRenderer.sendMessage('app-resize', {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    addEventListener('resize', resizeListener);
+
+    return () => {
+      removeEventListener('resize', resizeListener);
+    };
+  }, []);
+
   return (
     <ThemeProvider
       attribute="class"
@@ -55,7 +97,7 @@ export default function App() {
     >
       <Router>
         <Routes>
-          <Route path="/" element={<Hello />} />
+          <Route path="/" element={<Main />} />
         </Routes>
       </Router>
     </ThemeProvider>

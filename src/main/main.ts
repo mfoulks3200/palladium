@@ -9,11 +9,22 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  screen,
+  BrowserView,
+  Menu,
+} from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import { TabManager } from './TabManager';
+import { Tab } from './Tab';
+import { setupOverlayManager } from './OverlayManager';
 
 class AppUpdater {
   constructor() {
@@ -69,17 +80,32 @@ const createWindow = async () => {
     return path.join(RESOURCES_PATH, ...paths);
   };
 
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+
   mainWindow = new BrowserWindow({
     show: false,
-    width: 1024,
-    height: 728,
+    width,
+    height,
+    titleBarStyle: 'hidden',
+    ...(process.platform !== 'darwin'
+      ? { titleBarOverlay: true }
+      : { trafficLightPosition: { x: 15, y: 20 } }),
+    transparent: true,
+    frame: false,
+    backgroundColor: '#FFFFFF00',
     icon: getAssetPath('icon.png'),
     webPreferences: {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
+      transparent: true,
     },
   });
+
+  // setInterval(() => {
+  //   console.log(mainWindow!.contentView.children);
+  // }, 1000);
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
@@ -101,11 +127,38 @@ const createWindow = async () => {
   const menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();
 
-  // Open urls in the user's browser
-  mainWindow.webContents.setWindowOpenHandler((edata) => {
-    shell.openExternal(edata.url);
-    return { action: 'deny' };
+  const tabManager = new TabManager(mainWindow);
+  tabManager.addTab(new Tab('https://www.electronjs.org'));
+  tabManager.addTab(new Tab('https://www.google.com'));
+
+  const audioTab = new Tab(
+    'https://www.youtube.com/watch?v=WUbnO5hz_-U&list=RDWUbnO5hz_-U&start_radio=1',
+  );
+  // audioTab.setMuted(true);
+  tabManager.addTab(audioTab);
+
+  tabManager.focusTabIndex(0);
+
+  const menu = Menu.buildFromTemplate([
+    { role: 'copy' },
+    { role: 'cut' },
+    { role: 'paste' },
+  ]);
+  mainWindow.webContents.on('context-menu', (_event, params) => {
+    // only show the context menu if the element is editable
+    // if (params.isEditable) {
+    console.log(params);
+    menu.popup();
+    // }
   });
+
+  // Open urls in the user's browser
+  // mainWindow.webContents.setWindowOpenHandler((edata) => {
+  //   shell.openExternal(edata.url);
+  //   return { action: 'deny' };
+  // });
+
+  setupOverlayManager(mainWindow);
 
   // Remove this if your app does not use auto updates
   // eslint-disable-next-line
