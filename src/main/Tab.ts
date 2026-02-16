@@ -1,6 +1,8 @@
-import { Menu, MenuItem, WebContentsView, nativeImage } from 'electron';
+import { Menu, MenuItem, Session, WebContentsView, session } from 'electron';
 import { TabIpcPacket } from '../ipc';
 import { HistoryEvent, HistoryManager } from './HistoryManager';
+import path from 'node:path';
+import os from 'node:os';
 
 export class Tab extends EventTarget {
   public uuid: string = crypto.randomUUID();
@@ -8,18 +10,28 @@ export class Tab extends EventTarget {
   private faviconB64: string | null = null;
   private isPlayingAudio: boolean = false;
   public view: WebContentsView;
+  private session: Session;
 
   constructor(currentUrl: string) {
     super();
     this.currentUrl = currentUrl;
+    const sessionPath = path.join(
+      os.homedir(),
+      '.palladium',
+      'sessions',
+      'main',
+    );
+    this.session = session.fromPath(sessionPath);
     this.view = new WebContentsView({
       webPreferences: {
         contextIsolation: true,
         sandbox: true,
         scrollBounce: true,
         backgroundThrottling: true,
+        session: this.session,
       },
     });
+    HistoryManager.getInstance().addTab(this.uuid);
     this.registerTabEvents();
     this.view.webContents.loadURL(this.currentUrl);
     this.view.webContents.on('context-menu', () => {
@@ -36,24 +48,6 @@ export class Tab extends EventTarget {
       }
 
       menu.popup({});
-    });
-    HistoryManager.getInstance().addTab(this.uuid);
-    this.view.webContents.on('did-navigate', async (event) => {
-      const historyEvent: HistoryEvent = {
-        tabUuid: this.uuid,
-        url: this.getCurrentUrl(),
-        title:
-          (await this.view.webContents.executeJavaScript(
-            `try{document.querySelector('title').innerText}catch(e){}`,
-          )) ?? this.getTitle(),
-        metaDescription: await this.view.webContents.executeJavaScript(
-          `try{document.querySelector('meta[name="description"]').content}catch(e){}`,
-        ),
-        metaKeywords: await this.view.webContents.executeJavaScript(
-          `try{document.querySelector('meta[name="keywords"]').content}catch(e){}`,
-        ),
-      };
-      HistoryManager.getInstance().addHistoryEvent(historyEvent);
     });
   }
 
@@ -147,6 +141,22 @@ export class Tab extends EventTarget {
     });
 
     this.view.webContents.on('did-navigate', async () => {
+      const historyEvent: HistoryEvent = {
+        tabUuid: this.uuid,
+        url: this.getCurrentUrl(),
+        title:
+          (await this.view.webContents.executeJavaScript(
+            `try{document.querySelector('title').innerText}catch(e){}`,
+          )) ?? this.getTitle(),
+        metaDescription: await this.view.webContents.executeJavaScript(
+          `try{document.querySelector('meta[name="description"]').content}catch(e){}`,
+        ),
+        metaKeywords: await this.view.webContents.executeJavaScript(
+          `try{document.querySelector('meta[name="keywords"]').content}catch(e){}`,
+        ),
+      };
+      HistoryManager.getInstance().addHistoryEvent(historyEvent);
+      this.session.flushStorageData();
       this.publishMetadataUpdateEvent();
     });
 
@@ -157,6 +167,10 @@ export class Tab extends EventTarget {
     this.view.webContents.on('did-start-loading', async () => {
       this.publishMetadataUpdateEvent();
     });
+  }
+
+  public destroyTab() {
+    HistoryManager.getInstance().closeTab(this.uuid);
   }
 
   private publishMetadataUpdateEvent() {

@@ -45,7 +45,8 @@ export class HistoryManager extends EventTarget {
         uuid TEXT PRIMARY KEY,
         label TEXT,
         description TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        closed_at DATETIME
       )
     `);
 
@@ -74,6 +75,20 @@ export class HistoryManager extends EventTarget {
         uuid,
       },
       bubbles: true, // Events can bubble up the DOM if necessary
+    });
+    this.dispatchEvent(updateEvent);
+  }
+
+  public closeTab(uuid: string) {
+    const stmt = this.db.prepare(
+      'UPDATE tabs SET closed_at = CURRENT_TIMESTAMP WHERE uuid = ?',
+    );
+    stmt.run(uuid);
+    const updateEvent = new CustomEvent('tab-closed', {
+      detail: {
+        uuid,
+      },
+      bubbles: true,
     });
     this.dispatchEvent(updateEvent);
   }
