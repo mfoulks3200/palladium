@@ -6,7 +6,7 @@ import { Card } from './ui/card';
 import { useCallback, useContext, useEffect, useState } from 'react';
 import { TabActionsIpc, TabManagerIpc } from '../../ipc';
 import { OverlayPortal } from './PortalOverlay';
-import { CommandBarContext, TabMetaContext } from '@/App';
+import { CommandBarContext, TabMetaContext } from '@/windows/main-ui/App';
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index';

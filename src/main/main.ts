@@ -19,6 +19,10 @@ import { Tab } from './Tab';
 import { setupOverlayManager } from './OverlayManager';
 import { typedIpcMain } from './ipc';
 import { HistoryManager } from './HistoryManager';
+import {
+  registerGlobalShortcuts,
+  unregisterGlobalShortcuts,
+} from './GlobalShortcuts';
 
 class AppUpdater {
   constructor() {
@@ -97,11 +101,7 @@ const createWindow = async () => {
     },
   });
 
-  // setInterval(() => {
-  //   console.log(mainWindow!.contentView.children);
-  // }, 1000);
-
-  mainWindow.loadURL(resolveHtmlPath('index.html'));
+  mainWindow.loadURL(resolveHtmlPath('mainUi.html'));
 
   mainWindow.on('ready-to-show', () => {
     if (!mainWindow) {
@@ -169,6 +169,7 @@ app.on('window-all-closed', () => {
   // Respect the OSX convention of having the application in memory even
   // after all windows have been closed
   if (process.platform !== 'darwin') {
+    unregisterGlobalShortcuts();
     app.quit();
   }
 });
@@ -181,6 +182,8 @@ app
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
+
+      registerGlobalShortcuts();
     });
   })
   .catch(console.log);

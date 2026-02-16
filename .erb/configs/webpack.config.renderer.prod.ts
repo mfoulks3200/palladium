@@ -18,6 +18,11 @@ import deleteSourceMaps from '../scripts/delete-source-maps';
 checkNodeEnv('production');
 deleteSourceMaps();
 
+const entryPoints = {
+  mainUi: path.join(webpackPaths.srcRendererMainPath, 'index.tsx'),
+  commandBar: path.join(webpackPaths.srcRendererCommandBarPath, 'index.tsx'),
+};
+
 const configuration: webpack.Configuration = {
   devtool: 'source-map',
 
@@ -25,12 +30,12 @@ const configuration: webpack.Configuration = {
 
   target: ['web', 'electron-renderer'],
 
-  entry: [path.join(webpackPaths.srcRendererPath, 'index.tsx')],
+  entry: entryPoints,
 
   output: {
     path: webpackPaths.distRendererPath,
     publicPath: './',
-    filename: 'renderer.js',
+    filename: '[name].renderer.js',
     library: {
       type: 'umd',
     },
@@ -131,16 +136,19 @@ const configuration: webpack.Configuration = {
       analyzerPort: 8889,
     }),
 
-    new HtmlWebpackPlugin({
-      filename: 'index.html',
-      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
-      minify: {
-        collapseWhitespace: true,
-        removeAttributeQuotes: true,
-        removeComments: true,
-      },
-      isBrowser: false,
-      isDevelopment: false,
+    ...Object.keys(entryPoints).map((entryPoint) => {
+      return new HtmlWebpackPlugin({
+        filename: entryPoint + '.html',
+        chunks: [entryPoint],
+        template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+        minify: {
+          collapseWhitespace: true,
+          removeAttributeQuotes: true,
+          removeComments: true,
+        },
+        isBrowser: false,
+        isDevelopment: false,
+      });
     }),
 
     new webpack.DefinePlugin({

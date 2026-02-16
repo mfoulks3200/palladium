@@ -38,6 +38,19 @@ if (
   execSync('npm run postinstall');
 }
 
+const entryPoints = {
+  mainUi: [
+    `webpack-dev-server/client?http://localhost:${port}/dist`,
+    'webpack/hot/only-dev-server',
+    path.join(webpackPaths.srcRendererMainPath, 'index.tsx'),
+  ],
+  commandBar: [
+    `webpack-dev-server/client?http://localhost:${port}/dist`,
+    'webpack/hot/only-dev-server',
+    path.join(webpackPaths.srcRendererCommandBarPath, 'index.tsx'),
+  ],
+};
+
 const configuration: webpack.Configuration = {
   devtool: 'inline-source-map',
 
@@ -45,16 +58,12 @@ const configuration: webpack.Configuration = {
 
   target: ['web', 'electron-renderer'],
 
-  entry: [
-    `webpack-dev-server/client?http://localhost:${port}/dist`,
-    'webpack/hot/only-dev-server',
-    path.join(webpackPaths.srcRendererPath, 'index.tsx'),
-  ],
+  entry: entryPoints,
 
   output: {
     path: webpackPaths.distRendererPath,
     publicPath: '/',
-    filename: 'renderer.dev.js',
+    filename: '[name].renderer.dev.js',
     library: {
       type: 'umd',
     },
@@ -160,18 +169,21 @@ const configuration: webpack.Configuration = {
 
     new ReactRefreshWebpackPlugin(),
 
-    new HtmlWebpackPlugin({
-      filename: path.join('index.html'),
-      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
-      minify: {
-        collapseWhitespace: true,
-        removeAttributeQuotes: true,
-        removeComments: true,
-      },
-      isBrowser: false,
-      env: process.env.NODE_ENV,
-      isDevelopment: process.env.NODE_ENV !== 'production',
-      nodeModules: webpackPaths.appNodeModulesPath,
+    ...Object.keys(entryPoints).map((entryPoint) => {
+      return new HtmlWebpackPlugin({
+        filename: entryPoint + '.html',
+        chunks: [entryPoint],
+        template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+        minify: {
+          collapseWhitespace: true,
+          removeAttributeQuotes: true,
+          removeComments: true,
+        },
+        isBrowser: false,
+        env: process.env.NODE_ENV,
+        isDevelopment: process.env.NODE_ENV !== 'production',
+        nodeModules: webpackPaths.appNodeModulesPath,
+      });
     }),
   ],
 

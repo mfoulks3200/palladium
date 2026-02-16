@@ -1,13 +1,13 @@
 import { Dog } from 'lucide-react';
-import { Sidebar } from './components/Sidebar';
-import { Card } from './components/ui/card';
+import { Sidebar } from './Sidebar';
+import { Card } from './ui/card';
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-} from './components/ui/resizable';
+} from './ui/resizable';
 import { RefObject, useCallback, useEffect, useRef } from 'react';
-import { OverlayOptions } from '../ipc';
+import { OverlayOptions } from '../../ipc';
 import { Anvil } from 'lucide-react';
 
 export const BrowserUI = () => {

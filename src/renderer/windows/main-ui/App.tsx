@@ -6,12 +6,12 @@ import '@fontsource/inter/500';
 import '@fontsource/inter/800';
 import './App.css';
 import './globals.css';
-import { ThemeProvider } from './components/ThemeProvider';
+import { ThemeProvider } from '../../components/ThemeProvider';
 import { createContext, useCallback, useEffect, useState } from 'react';
-import { OverlayPortal } from './components/PortalOverlay';
-import { CommandBar } from './components/CommandBar';
-import { BrowserUI } from './BrowserUI';
-import { TabManagerIpc } from '../ipc';
+import { OverlayPortal } from '../../components/PortalOverlay';
+import { CommandBar } from '../../components/CommandBar';
+import { BrowserUI } from '../../components/BrowserUI';
+import { TabManagerIpc } from '../../../ipc';
 
 export const CommandBarContext = createContext<
   (tabUuid: string, prefill?: string) => void
