@@ -23,6 +23,8 @@ import {
   registerGlobalShortcuts,
   unregisterGlobalShortcuts,
 } from './GlobalShortcuts';
+import { CommandParser } from './commands/CommandParser';
+import { commandBarSetup } from './commands/CommandBar';
 
 class AppUpdater {
   constructor() {
@@ -33,12 +35,6 @@ class AppUpdater {
 }
 
 let mainWindow: BrowserWindow | null = null;
-
-typedIpcMain.on('ipc-example', async (event, arg) => {
-  const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
-  console.log(msgTemplate(arg));
-  event.reply('ipc-example', msgTemplate('pong'));
-});
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -51,6 +47,8 @@ const isDebug =
 if (isDebug) {
   require('electron-debug').default();
 }
+
+app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal');
 
 const installExtensions = async () => {
   const installer = require('electron-devtools-installer');
@@ -150,11 +148,18 @@ const createWindow = async () => {
 
   // Open urls in the user's browser
   // mainWindow.webContents.setWindowOpenHandler((edata) => {
-  //   shell.openExternal(edata.url);
+  //   // shell.openExternal(edata.url);
+  //   console.log(edata);
   //   return { action: 'deny' };
   // });
 
   setupOverlayManager(mainWindow);
+
+  registerGlobalShortcuts();
+
+  CommandParser.getInstance();
+
+  commandBarSetup();
 
   // Remove this if your app does not use auto updates
   // eslint-disable-next-line
@@ -182,8 +187,13 @@ app
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
-
-      registerGlobalShortcuts();
     });
   })
   .catch(console.log);
+
+app.on('before-quit', async (e) => {
+  e.preventDefault(); // prevents the default quit
+  setTimeout(() => {
+    app.exit();
+  }, 500);
+});

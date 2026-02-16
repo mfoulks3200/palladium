@@ -15,9 +15,14 @@ const padding = 12;
 const sidebarWidth = 256 + padding * 2;
 
 export class TabManager {
+  private static instance: TabManager;
   private mainWindow: BrowserWindow;
   private currentTab: Tab | null = null;
   private tabs: Set<Tab> = new Set();
+
+  public static getInstance() {
+    return TabManager.instance;
+  }
 
   public constructor(mainWindow: BrowserWindow) {
     this.mainWindow = mainWindow;
@@ -131,6 +136,7 @@ export class TabManager {
     setInterval(() => {
       this.updateRenderProcess();
     }, 500);
+    TabManager.instance = this;
   }
 
   public async updateBrowsingView(
@@ -206,5 +212,13 @@ export class TabManager {
 
   public getTabByUuid(tabUuid: string) {
     return [...this.tabs].find((t) => t.uuid === tabUuid);
+  }
+
+  public getCurrentTab() {
+    return this.currentTab;
+  }
+
+  public getAllTabs() {
+    return [...this.tabs];
   }
 }

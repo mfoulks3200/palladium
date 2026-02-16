@@ -9,156 +9,172 @@ import {
   CommandShortcut,
 } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
-import {
-  Calculator,
-  Calendar,
-  CreditCard,
-  Settings,
-  Smile,
-  User,
-} from 'lucide-react';
-import { useContext, useEffect, useRef, useState } from 'react';
-import { PortalWrapperControllerContext } from './PortalOverlay';
+import { ChevronRight } from 'lucide-react';
+import { ReactElement, useCallback, useEffect, useRef, useState } from 'react';
 
 import './CommandBar.css';
+import { CommandResponseIpc } from 'src/ipc';
+import { LucideIcons } from 'src/ipc/Icons';
+import { flushSync } from 'react-dom';
 
 interface CommandBarProps {
   className?: string;
-  tabUuid: string;
-  prefill?: string;
 }
 
-interface SearchEngine {
+interface Lozenge {
   name: string;
-  shortcut: string;
-  lozengeClasses?: string;
+  classes: string;
 }
 
-const engines: SearchEngine[] = [
-  {
-    shortcut: 'go',
-    name: 'Google',
-  },
-  {
-    shortcut: 'npm',
-    name: 'NPM',
-  },
-  {
-    shortcut: 'yt',
-    name: 'YouTube',
-    lozengeClasses: 'bg-red-500/25',
-  },
-];
-
-export const CommandBar = ({
-  className,
-  tabUuid,
-  prefill,
-}: CommandBarProps) => {
-  const { closePortal } = useContext(PortalWrapperControllerContext);
-  const [currentText, setCurrentText] = useState(prefill ?? '');
-  const [currentPrompt, setCurrentPrompt] = useState(
-    'Type a command or search...',
+export const CommandBar = ({ className }: CommandBarProps) => {
+  const [currentText, setCurrentText] = useState('');
+  const [tabUuid, setTabUuid] = useState<string | undefined>(undefined);
+  const [commandResponse, setCommandResponse] =
+    useState<CommandResponseIpc | null>();
+  const [selectedCommand, setSelectedCommand] = useState<string | undefined>(
+    undefined,
   );
-  const [currentLozenge, setCurrentLozenge] = useState<SearchEngine | null>();
-  const [showLozenge, setShowLozenge] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const searchEngine = () => {
-    const engine = engines.find((engine) => engine.shortcut === currentText);
-    if (engine) {
-      setCurrentLozenge(engine);
-      setShowLozenge(true);
-      setCurrentText('');
-    }
-  };
-
-  const parseCommand = () => {
-    const channel: 'open-new-tab' | 'update-tab-url' =
-      tabUuid === 'new' ? 'open-new-tab' : 'update-tab-url';
-    try {
-      console.log(`Attempting to parse ${currentText} as a URL`);
-      const url = new URL(currentText);
-      window.electron.ipcRenderer.sendMessage(channel, {
-        newUrl: url.toString(),
-      });
-    } catch (e) {
-      console.log(`Failed, searching for ${currentText} instead`);
-      window.electron.ipcRenderer.sendMessage(channel, {
-        newUrl: `https://google.com/search?q=${encodeURIComponent(currentText)}`,
-      });
-    }
-  };
+  useEffect(() => {
+    window.electron.ipcRenderer.on('command-setup', (response) => {
+      setTabUuid(response.tabUuid.length === 0 ? undefined : response.tabUuid);
+      if (response.prefill.trim().length > 0) {
+        setCurrentText(response.prefill);
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.select();
+          }
+        }, 1);
+      }
+    });
+  }, [inputRef.current, currentText]);
 
   useEffect(() => {
-    if (inputRef.current && currentText.trim() === prefill?.trim()) {
-      inputRef.current.select();
-    }
-  }, [inputRef.current, currentText]);
+    window.electron.ipcRenderer.on('command-response', (response) => {
+      setCommandResponse(response);
+      if (!selectedCommand && Object.keys(response.suggestions).length > 0) {
+        setSelectedCommand(
+          Object.values(response.suggestions)[0].commands[0].value,
+        );
+      }
+      if (selectedCommand && Object.keys(response.suggestions).length === 0) {
+        setSelectedCommand(undefined);
+      }
+    });
+    window.electron.ipcRenderer.sendMessage('command-input', {
+      mode: 'suggestions',
+      input: currentText,
+    });
+  }, []);
+
+  const onInput = useCallback((newInput: string) => {
+    setCurrentText(newInput);
+    window.electron.ipcRenderer.sendMessage('command-input', {
+      mode: 'suggestions',
+      input: newInput,
+    });
+  }, []);
+
+  const closeCommandBar = useCallback(() => {
+    window.electron.ipcRenderer.sendMessage('command-bar', {
+      action: 'close',
+    });
+  }, []);
+
+  const onKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeCommandBar();
+      } else if (event.key === 'Tab') {
+        event.preventDefault();
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        if (selectedCommand) {
+          window.electron.ipcRenderer.sendMessage('command-input', {
+            mode: 'execute',
+            input: currentText,
+            command: selectedCommand,
+            tabUuid: tabUuid,
+          });
+          closeCommandBar();
+        }
+      }
+    },
+    [currentText, selectedCommand],
+  );
+
+  if (!commandResponse) {
+    return <></>;
+  }
+
+  const commandSections: ReactElement[] = [];
+  for (const section of Object.values(commandResponse.suggestions)) {
+    commandSections.push(
+      <>
+        {commandSections.length > 0 && <CommandSeparator />}
+        <CommandGroup heading={section.section.name}>
+          {section.commands.map((command) => {
+            let icon = <></>;
+            if (command.icon) {
+              if (Object.hasOwn(LucideIcons, command.icon)) {
+                // @ts-expect-error
+                const CommandIcon = LucideIcons[command.icon];
+                icon = <CommandIcon />;
+              } else {
+                icon = <img src={command.icon} className="h-[18px] w-[18px]" />;
+              }
+            }
+            return (
+              <CommandItem value={command.value}>
+                {!!command.icon && icon}
+                <span>{command.name}</span>
+
+                {command.shortcut &&
+                  (currentText.length === 0 ||
+                    command.shortcut.shortcutStr.startsWith(currentText)) && (
+                    <CommandShortcut>
+                      <div className="flex gap-0.5">
+                        {command.shortcut.shortcutStr} <ChevronRight /> Tab
+                      </div>
+                    </CommandShortcut>
+                  )}
+              </CommandItem>
+            );
+          })}
+        </CommandGroup>
+      </>,
+    );
+  }
 
   return (
     <Command
-      className={cn(
-        'rounded-2xl border bg-black/75 drop-shadow-2xl backdrop-blur-md backdrop-saturate-200 transition-none',
-        className,
-      )}
+      onValueChange={setSelectedCommand}
+      value={selectedCommand}
+      className={cn('transition-none', className)}
+      shouldFilter={false}
     >
       <CommandInput
         className="p-1 px-4 text-xl"
-        placeholder={currentPrompt}
-        showBeforeElement={showLozenge}
-        beforeElement={<>{currentLozenge?.name}</>}
-        beforeElementClass={currentLozenge?.lozengeClasses}
+        placeholder={commandResponse.provider.prompt}
+        showBeforeElement={!!commandResponse.provider.lozenge}
+        beforeElement={<>{commandResponse.provider.lozenge?.name ?? ''}</>}
+        beforeElementClass={commandResponse.provider.lozenge?.color ?? ''}
         autoFocus={true}
         onInput={(event) => {
           //@ts-expect-error
-          setCurrentText(event.target.value);
+          onInput(event.target.value);
         }}
         value={currentText}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            closePortal();
-          } else if (event.key === 'Tab') {
-            event.preventDefault();
-            searchEngine();
-          } else if (event.key === 'Enter') {
-            event.preventDefault();
-            parseCommand();
-          }
-        }}
+        onKeyDown={onKeyDown as any}
         onBlur={() => {
-          closePortal();
+          closeCommandBar();
         }}
         ref={inputRef}
       />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
-        <CommandGroup heading="Search Engines">
-          {engines.map((engine) => (
-            <CommandItem value={engine.shortcut}>
-              <Calendar />
-              <span>{engine.name}</span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
-        <CommandSeparator />
-        <CommandGroup heading="Settings">
-          <CommandItem>
-            <User />
-            <span>Profile</span>
-            <CommandShortcut>⌘P</CommandShortcut>
-          </CommandItem>
-          <CommandItem>
-            <CreditCard />
-            <span>Billing</span>
-            <CommandShortcut>⌘B</CommandShortcut>
-          </CommandItem>
-          <CommandItem>
-            <Settings />
-            <span>Settings</span>
-            <CommandShortcut>⌘S</CommandShortcut>
-          </CommandItem>
-        </CommandGroup>
+        {commandSections}
       </CommandList>
     </Command>
   );

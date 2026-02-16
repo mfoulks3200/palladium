@@ -3,6 +3,7 @@ import { TabIpcPacket } from '../ipc';
 import { HistoryEvent, HistoryManager } from './HistoryManager';
 import path from 'node:path';
 import os from 'node:os';
+import { TabManager } from './TabManager';
 
 export class Tab extends EventTarget {
   public uuid: string = crypto.randomUUID();
@@ -89,7 +90,7 @@ export class Tab extends EventTarget {
   }
 
   public getFavicon() {
-    return this.view.webContents;
+    return this.faviconB64;
   }
 
   public getMuted() {
@@ -166,6 +167,15 @@ export class Tab extends EventTarget {
 
     this.view.webContents.on('did-start-loading', async () => {
       this.publishMetadataUpdateEvent();
+    });
+
+    this.view.webContents.setWindowOpenHandler((edata) => {
+      if (edata.disposition === 'background-tab') {
+        TabManager.getInstance().addTab(new Tab(edata.url));
+      } else {
+        TabManager.getInstance().focusTab(new Tab(edata.url));
+      }
+      return { action: 'deny' };
     });
   }
 

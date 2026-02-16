@@ -6,13 +6,12 @@ import { Card } from './ui/card';
 import { useCallback, useContext, useEffect, useState } from 'react';
 import { TabActionsIpc, TabManagerIpc } from '../../ipc';
 import { OverlayPortal } from './PortalOverlay';
-import { CommandBarContext, TabMetaContext } from '@/windows/main-ui/App';
+import { TabMetaContext } from '@/windows/main-ui/App';
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index';
 
 export const Sidebar = () => {
-  const commandBar = useContext(CommandBarContext);
   const tabMeta = useContext(TabMetaContext);
 
   useEffect(() => {
@@ -80,6 +79,16 @@ export const Sidebar = () => {
     }
   }
 
+  const openCommandBar = useCallback(
+    (uuid?: string) => {
+      window.electron.ipcRenderer.sendMessage('command-bar', {
+        action: 'open',
+        tabUuid: uuid,
+      });
+    },
+    [currentTab],
+  );
+
   return (
     <div className="flex h-full flex-col gap-2">
       <div className="flex h-8 w-full items-center gap-2">
@@ -109,7 +118,7 @@ export const Sidebar = () => {
       <Card
         className="h-10 w-full cursor-pointer bg-black/75 p-2 drop-shadow-md backdrop-blur-sm backdrop-saturate-200"
         onClick={() => {
-          commandBar(tabMeta?.currentTabUuid ?? 'new', currentTab?.url);
+          openCommandBar(currentTab?.uuid);
         }}
       >
         <div className="overflow-hidden px-1 text-sm text-ellipsis opacity-75 select-none focus:outline-none active:outline-none">
@@ -153,7 +162,7 @@ export const Sidebar = () => {
               'flex h-10 cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-white/5'
             }
             onClick={() => {
-              commandBar('new', '');
+              openCommandBar();
             }}
           >
             <Plus size="18px" className="max-w-[18px] min-w-[18px]" />

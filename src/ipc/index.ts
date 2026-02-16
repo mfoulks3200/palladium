@@ -1,3 +1,5 @@
+import { IpcIcons } from './Icons';
+
 export interface OverlayOptions {
   position: {
     x: number;
@@ -27,6 +29,64 @@ export interface TabActionsIpc {
   action: 'back' | 'forward' | 'refresh' | 'hard-refresh' | 'mute' | 'unmute';
 }
 
+interface CommandInputSuggestionIpc {
+  provider?: string;
+  mode: 'suggestions';
+  input: string;
+}
+
+interface CommandInputExecutionIpc {
+  provider?: string;
+  mode: 'execute';
+  input: string;
+  command: string;
+  tabUuid?: string;
+}
+
+export type CommandInputIpc =
+  | CommandInputSuggestionIpc
+  | CommandInputExecutionIpc;
+
+export interface CommandResponseIpc {
+  provider: {
+    lozenge?: {
+      name: string;
+      color: string;
+      icon?: IpcIcons;
+    };
+    prompt: string;
+  };
+  suggestions: {
+    [section: string]: {
+      section: {
+        name: string;
+        id: string;
+      };
+      commands: {
+        icon?: IpcIcons | string;
+        name: string;
+        keywords?: string[];
+        value: string;
+        shortcut?: {
+          shortcutStr: string;
+          name: string;
+          color: string;
+        };
+      }[];
+    };
+  };
+}
+
+export interface CommandBarIpc {
+  action: 'open' | 'close';
+  tabUuid?: string;
+}
+
+export interface CommandBarSetupIpc {
+  tabUuid: string;
+  prefill: string;
+}
+
 /**
  * Protocol definition for Renderer -> Main communication
  */
@@ -42,6 +102,8 @@ export interface RendererToMainEvents {
   'app-resize': [{ width: number; height: number }];
   'browser-layout-change': [OverlayOptions];
   'ipc-example': [string];
+  'command-input': [CommandInputIpc];
+  'command-bar': [CommandBarIpc];
 }
 
 /**
@@ -51,6 +113,8 @@ export interface MainToRendererEvents {
   'update-tab-meta': [TabManagerIpc];
   'browser-layout-change': [];
   'ipc-example': [string];
+  'command-response': [CommandResponseIpc];
+  'command-setup': [CommandBarSetupIpc];
 }
 
 export type Channels = keyof RendererToMainEvents | keyof MainToRendererEvents;
