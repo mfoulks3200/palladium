@@ -17,7 +17,7 @@ export const App = () => {
         enableSystem
         disableTransitionOnChange
       >
-        <CommandBar className="h-full w-full max-w-full" />
+        <CommandBar className="h-full max-h-full min-h-full w-full max-w-full min-w-full" />
       </ThemeProvider>
     </>
   );

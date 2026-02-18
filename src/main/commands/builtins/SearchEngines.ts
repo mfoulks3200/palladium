@@ -14,8 +14,16 @@ const searchEngines: SearchEngine[] = [
     name: 'Google',
     id: 'google',
     shortcutCode: 'go',
-    getSearchUrl: (query: string) =>
-      `https://google.com/search?q=${encodeURIComponent(query)}`,
+    getSearchUrl: (query: string) => {
+      const params = new URLSearchParams();
+      params.append('q', encodeURIComponent(query));
+      params.append('oq', encodeURIComponent(query));
+      params.append('sourceid', 'chrome');
+      params.append('ie', 'utf8');
+      params.append('hl', 'en');
+      params.append('source', 'hp');
+      return `https://google.com/search?${params.toString()}`;
+    },
   },
   {
     name: 'Bing',

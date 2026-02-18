@@ -87,6 +87,10 @@ export interface CommandBarSetupIpc {
   prefill: string;
 }
 
+export interface InternalPageNavigateIpc {
+  newPath: string;
+}
+
 /**
  * Protocol definition for Renderer -> Main communication
  */
@@ -104,6 +108,7 @@ export interface RendererToMainEvents {
   'ipc-example': [string];
   'command-input': [CommandInputIpc];
   'command-bar': [CommandBarIpc];
+  'internal-page-navigate': [InternalPageNavigateIpc];
 }
 
 /**
@@ -115,6 +120,7 @@ export interface MainToRendererEvents {
   'ipc-example': [string];
   'command-response': [CommandResponseIpc];
   'command-setup': [CommandBarSetupIpc];
+  'internal-page-navigate': [InternalPageNavigateIpc];
 }
 
 export type Channels = keyof RendererToMainEvents | keyof MainToRendererEvents;

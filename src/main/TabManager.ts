@@ -189,8 +189,21 @@ export class TabManager {
 
     this.currentTab = tab;
     this.currentTab.view.setBorderRadius(13);
-    if (!disablePortals) {
+    if (!this.currentTab.isInternalPage) {
       this.mainWindow.contentView.addChildView(this.currentTab.view);
+      typedWebContents(this.mainWindow.webContents).send(
+        'internal-page-navigate',
+        {
+          newPath: '',
+        },
+      );
+    } else {
+      typedWebContents(this.mainWindow.webContents).send(
+        'internal-page-navigate',
+        {
+          newPath: this.currentTab.getCurrentUrl(),
+        },
+      );
     }
     this.updateBrowsingView();
     this.updateRenderProcess();

@@ -6,9 +6,10 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from './ui/resizable';
-import { RefObject, useCallback, useEffect, useRef } from 'react';
+import { RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { OverlayOptions } from '../../ipc';
 import { Anvil } from 'lucide-react';
+import { InternalPageRouter } from './internal-pages/InternalPageRouter';
 
 export const BrowserUI = () => {
   const browserPanelRef = useRef<HTMLDivElement>(null);
@@ -32,14 +33,17 @@ export const BrowserUI = () => {
       onResize();
     });
 
+    const resizeObserver = new ResizeObserver((entries) => {
+      onResize();
+    });
+
     if (browserPanelRef.current) {
       browserPanelRef.current.addEventListener('resize', onResize);
+      resizeObserver.observe(browserPanelRef.current);
     }
 
     return () => {
-      if (browserPanelRef.current) {
-        browserPanelRef.current.removeEventListener('resize', onResize);
-      }
+      resizeObserver.disconnect();
     };
   }, [browserPanelRef.current]);
 
@@ -63,18 +67,22 @@ const BrowserBackgroundPanel = ({
 }: {
   ref: RefObject<HTMLDivElement | null>;
 }) => {
+  const [internalPageUrl, setInternalPageUrl] = useState('');
+
+  useEffect(() => {
+    window.electron.ipcRenderer.on('internal-page-navigate', (response) => {
+      setInternalPageUrl(response.newPath);
+    });
+  }, []);
+
   return (
     <Card
-      className="flex h-full grow items-center justify-center bg-black/75 p-2 drop-shadow-md backdrop-blur-sm backdrop-saturate-200"
+      className="flex h-full grow items-center justify-center overflow-hidden bg-black/75 py-0 drop-shadow-md backdrop-blur-sm backdrop-saturate-200"
       ref={ref}
     >
-      <div className="flex h-full grow flex-col items-center justify-center opacity-25 select-none">
-        <Anvil size={256} strokeWidth={0.33} />
-        <div className="text-8xl font-light">Palladium</div>
-        <div className="text-xl">
-          The browser purpose-built to get out of your way.
-        </div>
-      </div>
+      {internalPageUrl.trim().length > 0 && (
+        <InternalPageRouter path={internalPageUrl} />
+      )}
     </Card>
   );
 };

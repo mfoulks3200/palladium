@@ -96,6 +96,7 @@ const createWindow = async () => {
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
       transparent: true,
+      // devTools: false,
     },
   });
 
@@ -122,12 +123,13 @@ const createWindow = async () => {
   const tabManager = new TabManager(mainWindow);
   tabManager.addTab(new Tab('https://www.electronjs.org'));
   tabManager.addTab(new Tab('https://www.google.com'));
-
-  const audioTab = new Tab(
-    'https://www.youtube.com/watch?v=WUbnO5hz_-U&list=RDWUbnO5hz_-U&start_radio=1',
+  tabManager.addTab(
+    new Tab(
+      'https://www.youtube.com/watch?v=WUbnO5hz_-U&list=RDWUbnO5hz_-U&start_radio=1',
+    ),
   );
-  // audioTab.setMuted(true);
-  tabManager.addTab(audioTab);
+
+  tabManager.focusTab(new Tab('palladium://settings'));
 
   tabManager.focusTabIndex(0);
 

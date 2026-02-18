@@ -7,49 +7,56 @@ import { TabManager } from './TabManager';
 
 export class Tab extends EventTarget {
   public uuid: string = crypto.randomUUID();
+  public isInternalPage: boolean = false;
   private currentUrl: string = '';
   private faviconB64: string | null = null;
   private isPlayingAudio: boolean = false;
   public view: WebContentsView;
-  private session: Session;
+  private static session: Session;
 
   constructor(currentUrl: string) {
     super();
     this.currentUrl = currentUrl;
-    const sessionPath = path.join(
-      os.homedir(),
-      '.palladium',
-      'sessions',
-      'main',
-    );
-    this.session = session.fromPath(sessionPath);
+    if (!Tab.session) {
+      const sessionPath = path.join(
+        os.homedir(),
+        '.palladium',
+        'sessions',
+        'main',
+      );
+      Tab.session = session.fromPath(sessionPath);
+    }
     this.view = new WebContentsView({
       webPreferences: {
         contextIsolation: true,
         sandbox: true,
         scrollBounce: true,
         backgroundThrottling: true,
-        session: this.session,
+        session: Tab.session,
       },
     });
-    HistoryManager.getInstance().addTab(this.uuid);
-    this.registerTabEvents();
-    this.view.webContents.loadURL(this.currentUrl);
-    this.view.webContents.on('context-menu', () => {
-      const menu = new Menu();
-      if (!this.isDevMode()) {
-        menu.append(
-          new MenuItem({
-            label: 'Enable dev mode',
-            click: () => {
-              this.setDevMode(true);
-            },
-          }),
-        );
-      }
+    if (!currentUrl.startsWith('palladium://')) {
+      HistoryManager.getInstance().addTab(this.uuid);
+      this.registerTabEvents();
+      this.view.webContents.loadURL(this.currentUrl);
+      this.view.webContents.on('context-menu', () => {
+        const menu = new Menu();
+        if (!this.isDevMode()) {
+          menu.append(
+            new MenuItem({
+              label: 'Enable dev mode',
+              click: () => {
+                this.setDevMode(true);
+              },
+            }),
+          );
+        }
 
-      menu.popup({});
-    });
+        menu.popup({});
+      });
+    } else {
+      this.isInternalPage = true;
+    }
   }
 
   private async imageUrlToBase64(url: string): Promise<string | null> {
@@ -70,7 +77,11 @@ export class Tab extends EventTarget {
   }
 
   public getCurrentUrl() {
-    return this.view.webContents.getURL();
+    if (this.isInternalPage) {
+      return this.currentUrl;
+    } else {
+      return this.view.webContents.getURL();
+    }
   }
 
   public getTitle() {
@@ -157,8 +168,13 @@ export class Tab extends EventTarget {
         ),
       };
       HistoryManager.getInstance().addHistoryEvent(historyEvent);
-      this.session.flushStorageData();
+      Tab.session.flushStorageData();
       this.publishMetadataUpdateEvent();
+    });
+
+    this.view.webContents.on('destroyed', () => {
+      HistoryManager.getInstance().closeTab(this.uuid);
+      Tab.session.flushStorageData();
     });
 
     this.view.webContents.on('did-start-loading', async () => {

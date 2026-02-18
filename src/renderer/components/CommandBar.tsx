@@ -29,6 +29,7 @@ interface Lozenge {
 export const CommandBar = ({ className }: CommandBarProps) => {
   const [currentText, setCurrentText] = useState('');
   const [tabUuid, setTabUuid] = useState<string | undefined>(undefined);
+  const [shortcut, setShortcut] = useState<string | undefined>(undefined);
   const [commandResponse, setCommandResponse] =
     useState<CommandResponseIpc | null>();
   const [selectedCommand, setSelectedCommand] = useState<string | undefined>(
@@ -151,7 +152,7 @@ export const CommandBar = ({ className }: CommandBarProps) => {
     <Command
       onValueChange={setSelectedCommand}
       value={selectedCommand}
-      className={cn('transition-none', className)}
+      className={cn('h-full w-full transition-none', className)}
       shouldFilter={false}
     >
       <CommandInput

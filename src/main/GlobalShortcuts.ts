@@ -2,8 +2,8 @@ import { globalShortcut } from 'electron';
 import { spawnCommandBarUI } from './commands/CommandBar';
 
 export const registerGlobalShortcuts = () => {
-  const ret = globalShortcut.register('CommandOrControl+T', () => {
-    console.log('CommandOrControl+T is pressed');
+  const ret = globalShortcut.register('CommandOrControl+Shift+T', () => {
+    console.log('CommandOrControl+Shift+T is pressed');
     spawnCommandBarUI();
   });
 
