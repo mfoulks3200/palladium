@@ -8,24 +8,11 @@
  * When running `npm run build` or `npm run build:main`, this file is compiled to
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
-import path from 'path';
-import { app, BrowserWindow, shell, screen, BrowserView, Menu } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
-import MenuBuilder from './menu';
-import { resolveHtmlPath } from './util';
-import { TabManager } from './TabManager';
-import { Tab } from './Tab';
-import { setupOverlayManager } from './OverlayManager';
-import { typedIpcMain } from './ipc';
-import { HistoryManager } from './HistoryManager';
-import {
-  registerGlobalShortcuts,
-  unregisterGlobalShortcuts,
-} from './GlobalShortcuts';
-import { CommandParser } from './commands/CommandParser';
-import { commandBarSetup } from './commands/CommandBar';
-import { SettingsManager } from './SettingsManager';
+import { unregisterGlobalShortcuts } from './GlobalShortcuts';
+import { BrowserWindowUI } from './BrowserWindowUI';
 
 class AppUpdater {
   constructor() {
@@ -69,106 +56,7 @@ const createWindow = async () => {
     await installExtensions();
   }
 
-  const RESOURCES_PATH = app.isPackaged
-    ? path.join(process.resourcesPath, 'assets')
-    : path.join(__dirname, '../../assets');
-
-  const getAssetPath = (...paths: string[]): string => {
-    return path.join(RESOURCES_PATH, ...paths);
-  };
-
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.workAreaSize;
-
-  mainWindow = new BrowserWindow({
-    show: false,
-    width,
-    height,
-    titleBarStyle: 'hidden',
-    ...(process.platform !== 'darwin'
-      ? { titleBarOverlay: true }
-      : { trafficLightPosition: { x: 15, y: 20 } }),
-    transparent: true,
-    frame: false,
-    backgroundColor: '#FFFFFF00',
-    icon: getAssetPath('icon.png'),
-    webPreferences: {
-      preload: app.isPackaged
-        ? path.join(__dirname, 'preload.js')
-        : path.join(__dirname, '../../.erb/dll/preload.js'),
-      transparent: true,
-      // devTools: false,
-    },
-  });
-
-  mainWindow.loadURL(resolveHtmlPath('mainUi.html'));
-
-  mainWindow.on('ready-to-show', () => {
-    if (!mainWindow) {
-      throw new Error('"mainWindow" is not defined');
-    }
-    if (process.env.START_MINIMIZED) {
-      mainWindow.minimize();
-    } else {
-      mainWindow.show();
-    }
-  });
-
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
-
-  const menuBuilder = new MenuBuilder(mainWindow);
-  menuBuilder.buildMenu();
-
-  SettingsManager.getInstance();
-
-  HistoryManager.getInstance();
-
-  setupOverlayManager(mainWindow);
-
-  registerGlobalShortcuts();
-
-  CommandParser.getInstance();
-
-  commandBarSetup();
-
-  const tabManager = new TabManager(mainWindow);
-  tabManager.addTab(new Tab('https://www.electronjs.org'));
-  tabManager.addTab(new Tab('https://www.google.com'));
-  tabManager.addTab(
-    new Tab(
-      'https://www.youtube.com/watch?v=WUbnO5hz_-U&list=RDWUbnO5hz_-U&start_radio=1',
-    ),
-  );
-
-  tabManager.focusTab(new Tab('palladium://settings'));
-
-  tabManager.focusTabIndex(3);
-
-  const menu = Menu.buildFromTemplate([
-    { role: 'copy' },
-    { role: 'cut' },
-    { role: 'paste' },
-  ]);
-  mainWindow.webContents.on('context-menu', (_event, params) => {
-    // only show the context menu if the element is editable
-    // if (params.isEditable) {
-    console.log(params);
-    menu.popup();
-    // }
-  });
-
-  // Open urls in the user's browser
-  // mainWindow.webContents.setWindowOpenHandler((edata) => {
-  //   // shell.openExternal(edata.url);
-  //   console.log(edata);
-  //   return { action: 'deny' };
-  // });
-
-  // Remove this if your app does not use auto updates
-  // eslint-disable-next-line
-  new AppUpdater();
+  const mainBrowserWindow = new BrowserWindowUI();
 };
 
 /**
