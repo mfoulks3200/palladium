@@ -1,4 +1,5 @@
 import { IpcIcons } from './Icons';
+import { SettingSchema } from './SettingsRegistry';
 
 export interface OverlayOptions {
   position: {
@@ -109,6 +110,7 @@ export interface RendererToMainEvents {
   'command-input': [CommandInputIpc];
   'command-bar': [CommandBarIpc];
   'internal-page-navigate': [InternalPageNavigateIpc];
+  'settings-sync': [SettingSchema];
 }
 
 /**
@@ -121,6 +123,7 @@ export interface MainToRendererEvents {
   'command-response': [CommandResponseIpc];
   'command-setup': [CommandBarSetupIpc];
   'internal-page-navigate': [InternalPageNavigateIpc];
+  'settings-sync': [SettingSchema];
 }
 
 export type Channels = keyof RendererToMainEvents | keyof MainToRendererEvents;

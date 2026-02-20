@@ -11,6 +11,7 @@ import {
 import { PropsWithChildren, ReactElement, useState } from 'react';
 import { AboutPanel } from './AboutPanel';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DefaultSearchEngines } from './DefaultSearchEngines';
 
 interface SettingsCard {
   name?: string;
@@ -31,6 +32,11 @@ const settingsUi: Record<string, SettingsPages> = {
     cards: {
       defaultSearchEngines: {
         name: 'Default Search Engines',
+        customContents: (
+          <div className="flex flex-col gap-4 pt-8">
+            <DefaultSearchEngines />
+          </div>
+        ),
       },
       customSearchEngines: {
         name: 'Custom Search Engines',
@@ -140,9 +146,9 @@ export const SettingsPage = () => {
               description={card.description}
               customContents={card.customContents}
             >
-              <SettingsOption name={'Enable Timeline'} type={'checkbox'} />
+              {/* <SettingsOption name={'Enable Timeline'} type={'checkbox'} />
               <SettingsOption name={'Timeline Retention'} type={'checkbox'} />
-              <SettingsOption name={'Example Field'} type={'text'} />
+              <SettingsOption name={'Example Field'} type={'text'} /> */}
             </SettingsCard>
           ))}
         </div>
@@ -183,17 +189,18 @@ const SettingsCard = ({
   );
 };
 
-const SettingsOption = ({
+export const SettingsOption = ({
   name,
   description,
   disabled,
-  type,
-}: {
+  className,
+  children,
+}: PropsWithChildren<{
   name: string;
   description?: string;
   disabled?: boolean;
-  type: 'checkbox' | 'text';
-}) => {
+  className?: string;
+}>) => {
   return (
     <div className="flex min-h-9 gap-4 px-4">
       <div className="flex w-1/2 flex-col justify-center">
@@ -202,15 +209,7 @@ const SettingsOption = ({
           <div className="text-xs text-white/30">{description}</div>
         )}
       </div>
-      <div
-        className={cn('flex w-1/2 items-center', {
-          ['justify-end']: type === 'checkbox',
-          ['justify-center']: type === 'text',
-        })}
-      >
-        {type === 'checkbox' && <Checkbox disabled={disabled} defaultChecked />}
-        {type === 'text' && <Input disabled={disabled} type="text" />}
-      </div>
+      <div className={cn('flex w-1/2 items-center', className)}>{children}</div>
     </div>
   );
 };

@@ -25,6 +25,7 @@ import {
 } from './GlobalShortcuts';
 import { CommandParser } from './commands/CommandParser';
 import { commandBarSetup } from './commands/CommandBar';
+import { SettingsManager } from './SettingsManager';
 
 class AppUpdater {
   constructor() {
@@ -120,6 +121,18 @@ const createWindow = async () => {
   const menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();
 
+  SettingsManager.getInstance();
+
+  HistoryManager.getInstance();
+
+  setupOverlayManager(mainWindow);
+
+  registerGlobalShortcuts();
+
+  CommandParser.getInstance();
+
+  commandBarSetup();
+
   const tabManager = new TabManager(mainWindow);
   tabManager.addTab(new Tab('https://www.electronjs.org'));
   tabManager.addTab(new Tab('https://www.google.com'));
@@ -131,7 +144,7 @@ const createWindow = async () => {
 
   tabManager.focusTab(new Tab('palladium://settings'));
 
-  tabManager.focusTabIndex(0);
+  tabManager.focusTabIndex(3);
 
   const menu = Menu.buildFromTemplate([
     { role: 'copy' },
@@ -146,22 +159,12 @@ const createWindow = async () => {
     // }
   });
 
-  HistoryManager.getInstance();
-
   // Open urls in the user's browser
   // mainWindow.webContents.setWindowOpenHandler((edata) => {
   //   // shell.openExternal(edata.url);
   //   console.log(edata);
   //   return { action: 'deny' };
   // });
-
-  setupOverlayManager(mainWindow);
-
-  registerGlobalShortcuts();
-
-  CommandParser.getInstance();
-
-  commandBarSetup();
 
   // Remove this if your app does not use auto updates
   // eslint-disable-next-line

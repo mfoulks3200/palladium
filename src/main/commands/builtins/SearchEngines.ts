@@ -1,9 +1,12 @@
 import { TabManager } from 'src/main/TabManager';
 import type { CommandMetadata, CommandProvider } from '../CommandParser';
 import { Tab } from 'src/main/Tab';
+import { SettingsKeys } from 'src/ipc/SettingsRegistry';
+import { SettingsManager } from 'src/main/SettingsManager';
 
 interface SearchEngine {
   name: string;
+  enableSettingKey: SettingsKeys;
   id: string;
   shortcutCode: string;
   getSearchUrl: (query: string) => string;
@@ -13,6 +16,7 @@ const searchEngines: SearchEngine[] = [
   {
     name: 'Google',
     id: 'google',
+    enableSettingKey: 'searchEngines.defaultEngines.google',
     shortcutCode: 'go',
     getSearchUrl: (query: string) => {
       const params = new URLSearchParams();
@@ -28,6 +32,7 @@ const searchEngines: SearchEngine[] = [
   {
     name: 'Bing',
     id: 'bing',
+    enableSettingKey: 'searchEngines.defaultEngines.bing',
     shortcutCode: 'bi',
     getSearchUrl: (query: string) =>
       `https://bing.com/search?q=${encodeURIComponent(query)}`,
@@ -35,6 +40,7 @@ const searchEngines: SearchEngine[] = [
   {
     name: 'DuckDuckGo',
     id: 'ddg',
+    enableSettingKey: 'searchEngines.defaultEngines.duckDuckGo',
     shortcutCode: 'ddg',
     getSearchUrl: (query: string) =>
       `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
@@ -47,26 +53,34 @@ export class SearchEngines implements CommandProvider {
   }
 
   public getSuggestions(input: string) {
-    return searchEngines.map((engine) => {
-      let suggestion: ReturnType<CommandProvider['getSuggestions']>[number] = {
-        name:
-          input.length > 0
-            ? `Search ${input} with ${engine.name}...`
-            : `Search ${engine.name}`,
-        value: engine.id,
-        icon: 'Search',
-      };
+    return searchEngines
+      .filter((engine) => {
+        const enabled = SettingsManager.getInstance().getItem(
+          engine.enableSettingKey,
+        );
+        return enabled;
+      })
+      .map((engine) => {
+        let suggestion: ReturnType<CommandProvider['getSuggestions']>[number] =
+          {
+            name:
+              input.length > 0
+                ? `Search ${input} with ${engine.name}...`
+                : `Search ${engine.name}`,
+            value: engine.id,
+            icon: 'Search',
+          };
 
-      if (engine.shortcutCode) {
-        suggestion.shortcut = {
-          shortcutStr: engine.shortcutCode,
-          name: `Search ${engine.name}`,
-          color: 'green',
-        };
-      }
+        if (engine.shortcutCode) {
+          suggestion.shortcut = {
+            shortcutStr: engine.shortcutCode,
+            name: `Search ${engine.name}`,
+            color: 'green',
+          };
+        }
 
-      return suggestion;
-    });
+        return suggestion;
+      });
   }
 
   public runCommand(

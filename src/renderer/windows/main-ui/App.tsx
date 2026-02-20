@@ -13,11 +13,11 @@ import { ThemeProvider } from '../../components/ThemeProvider';
 import { createContext, useEffect, useState } from 'react';
 import { BrowserUI } from '../../components/BrowserUI';
 import { TabManagerIpc } from '../../../ipc';
+import { SettingsProvider } from '@/lib/settings';
 
 export const TabMetaContext = createContext<TabManagerIpc | null>(null);
 
 function Main() {
-  const [showingCommandBar, setShowingCommandBar] = useState(false);
   const [tabMeta, setTabMeta] = useState<TabManagerIpc | null>(null);
 
   useEffect(() => {
@@ -29,9 +29,11 @@ function Main() {
   }, []);
 
   return (
-    <TabMetaContext.Provider value={tabMeta}>
-      <BrowserUI />
-    </TabMetaContext.Provider>
+    <SettingsProvider>
+      <TabMetaContext.Provider value={tabMeta}>
+        <BrowserUI />
+      </TabMetaContext.Provider>
+    </SettingsProvider>
   );
 }
 
