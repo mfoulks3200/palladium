@@ -9,18 +9,8 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import { app, BrowserWindow } from 'electron';
-import { autoUpdater } from 'electron-updater';
-import log from 'electron-log';
 import { unregisterGlobalShortcuts } from './GlobalShortcuts';
 import { BrowserWindowUI } from './BrowserWindowUI';
-
-class AppUpdater {
-  constructor() {
-    log.transports.file.level = 'info';
-    autoUpdater.logger = log;
-    autoUpdater.checkForUpdatesAndNotify();
-  }
-}
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -56,7 +46,7 @@ const createWindow = async () => {
     await installExtensions();
   }
 
-  const mainBrowserWindow = new BrowserWindowUI();
+  const mainBrowserWindow = new BrowserWindowUI(isDebug);
 };
 
 /**
@@ -84,9 +74,14 @@ app
   })
   .catch(console.log);
 
-app.on('before-quit', async (e) => {
-  e.preventDefault(); // prevents the default quit
-  setTimeout(() => {
-    app.exit();
-  }, 500);
+// app.on('before-quit', async (e) => {
+//   e.preventDefault(); // prevents the default quit
+//   setTimeout(() => {
+//     app.exit();
+//   }, 500);
+// });
+
+app.on('will-quit', async (e) => {
+  unregisterGlobalShortcuts();
+  app.quit();
 });

@@ -15,16 +15,20 @@ import { resolveHtmlPath } from './util';
 
 class AppUpdater {
   constructor() {
-    log.transports.file.level = 'info';
-    autoUpdater.logger = log;
-    autoUpdater.checkForUpdatesAndNotify();
+    log.transports.file.level = false;
+    log.transports.console.level = false;
+    // log.transports.file.level = 'info';
+    // autoUpdater.logger = log;
+    // autoUpdater.checkForUpdatesAndNotify();
   }
 }
 
 export class BrowserWindowUI {
   public mainWindow: BrowserWindow = null as any;
+  public debugMode: boolean = false;
 
-  constructor() {
+  constructor(debugMode?: boolean) {
+    this.debugMode = !!debugMode;
     this.createWindow();
     this.createMenu();
     this.initializeSubsystems();
@@ -119,21 +123,24 @@ export class BrowserWindowUI {
     commandBarSetup();
 
     const tabManager = new TabManager(this.mainWindow);
-    tabManager.addTab(new Tab('https://www.electronjs.org'));
-    tabManager.addTab(new Tab('https://www.google.com'));
-    tabManager.addTab(
-      new Tab(
-        'https://www.youtube.com/watch?v=WUbnO5hz_-U&list=RDWUbnO5hz_-U&start_radio=1',
-      ),
-    );
+    if (this.debugMode) {
+      tabManager.addTab(new Tab('https://www.electronjs.org'));
+      tabManager.addTab(new Tab('https://www.google.com'));
+      tabManager.addTab(
+        new Tab(
+          'https://www.youtube.com/watch?v=WUbnO5hz_-U&list=RDWUbnO5hz_-U&start_radio=1',
+        ),
+      );
 
-    tabManager.focusTab(new Tab('palladium://settings'));
+      tabManager.addTab(new Tab('palladium://settings'));
 
-    tabManager.focusTabIndex(3);
+      tabManager.focusTabIndex(3);
+    } else {
+      tabManager.focusTab(new Tab('https://google.com'));
+    }
   }
 
   public createMenu() {
     const menuBuilder = new MenuBuilder(this.mainWindow);
-    menuBuilder.buildMenu();
   }
 }

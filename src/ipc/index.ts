@@ -19,6 +19,7 @@ export interface TabIpcPacket {
   isPlayingAudio: boolean;
   isMuted: boolean;
   isLoading: boolean;
+  isInternal: boolean;
 }
 
 export interface TabManagerIpc {

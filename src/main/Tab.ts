@@ -123,6 +123,7 @@ export class Tab extends EventTarget {
       isPlayingAudio: this.isPlayingAudio,
       isMuted: this.view.webContents.isAudioMuted(),
       isLoading: this.view.webContents.isLoading(),
+      isInternal: this.isInternalPage,
     };
   }
 

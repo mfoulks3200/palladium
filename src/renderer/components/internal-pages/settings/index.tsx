@@ -8,10 +8,17 @@ import {
   Info,
   Search,
 } from 'lucide-react';
-import { PropsWithChildren, ReactElement, useState } from 'react';
+import {
+  PropsWithChildren,
+  ReactElement,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { AboutPanel } from './AboutPanel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DefaultSearchEngines } from './DefaultSearchEngines';
+import { InternalTabMetaContext } from '@/windows/main-ui/App';
 
 interface SettingsCard {
   name?: string;
@@ -21,6 +28,7 @@ interface SettingsCard {
 
 interface SettingsPages {
   name: string;
+  disabled?: boolean;
   icon: ReactElement;
   cards: Record<string, SettingsCard>;
 }
@@ -46,6 +54,7 @@ const settingsUi: Record<string, SettingsPages> = {
   },
   timeline: {
     name: 'Timeline',
+    disabled: true,
     icon: <ChartNoAxesGantt />,
     cards: {
       timeline: {
@@ -60,6 +69,7 @@ const settingsUi: Record<string, SettingsPages> = {
   },
   extensions: {
     name: 'Extensions',
+    disabled: true,
     icon: <Blocks />,
     cards: {
       extensions: {
@@ -69,6 +79,7 @@ const settingsUi: Record<string, SettingsPages> = {
   },
   mods: {
     name: 'Mods',
+    disabled: true,
     icon: <FishingHook />,
     cards: {
       mods: {
@@ -103,6 +114,17 @@ const settingsUi: Record<string, SettingsPages> = {
 export const SettingsPage = () => {
   const [currentPage, setCurrentPage] = useState(Object.keys(settingsUi)[0]);
 
+  const internalTabMeta = useContext(InternalTabMetaContext);
+
+  useEffect(() => {
+    if (internalTabMeta) {
+      internalTabMeta.setTabMeta({
+        title: `${settingsUi[currentPage].name} - Settings`,
+        icon: <Info />,
+      });
+    }
+  }, [currentPage]);
+
   return (
     <div className="mt-8 h-full max-h-full w-full overflow-scroll">
       <div
@@ -129,6 +151,7 @@ export const SettingsPage = () => {
             {Object.entries(settingsUi).map(([key, val]) => (
               <SettingsTab
                 name={val.name}
+                disabled={val.disabled ?? false}
                 icon={val.icon}
                 isActive={key === currentPage}
                 onClick={() => {
@@ -139,7 +162,7 @@ export const SettingsPage = () => {
             ))}
           </div>
         </div>
-        <div className="flex w-1/2 flex-col gap-4 py-4">
+        <div className="flex min-h-80 w-1/2 flex-col items-stretch gap-4 py-4">
           {Object.values(settingsUi[currentPage].cards).map((card) => (
             <SettingsCard
               title={card.name}
@@ -217,11 +240,13 @@ export const SettingsOption = ({
 const SettingsTab = ({
   icon,
   name,
+  disabled,
   isActive,
   onClick,
 }: {
   icon: ReactElement;
   name: string;
+  disabled: boolean;
   isActive: boolean;
   onClick: () => void;
 }) => {
@@ -234,9 +259,10 @@ const SettingsTab = ({
         'bg-linear-to-r from-transparent to-transparent hover:from-white/10',
         {
           ['from-white/25']: isActive,
+          ['cursor-auto opacity-25']: disabled,
         },
       )}
-      onClick={onClick}
+      onClick={disabled ? () => {} : onClick}
     >
       {icon}
       {name}

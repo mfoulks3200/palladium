@@ -6,13 +6,14 @@ import { Card } from './ui/card';
 import { useCallback, useContext, useEffect, useState } from 'react';
 import { TabActionsIpc, TabManagerIpc } from '../../ipc';
 import { OverlayPortal } from './PortalOverlay';
-import { TabMetaContext } from '@/windows/main-ui/App';
+import { InternalTabMetaContext, TabMetaContext } from '@/windows/main-ui/App';
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index';
 
 export const Sidebar = () => {
   const tabMeta = useContext(TabMetaContext);
+  const internalTabMeta = useContext(InternalTabMetaContext);
 
   useEffect(() => {
     return monitorForElements({
@@ -67,8 +68,8 @@ export const Sidebar = () => {
   const currentTab =
     tabMeta?.tabs.find((t) => t.uuid === tabMeta.currentTabUuid) ?? null;
 
-  let currentTabDisplayUrl = '';
-  if (currentTab) {
+  let currentTabDisplayUrl = currentTab?.url ?? '';
+  if (currentTab && !currentTab.url.startsWith('palladium')) {
     try {
       currentTabDisplayUrl = new URL(currentTab.url).hostname.replaceAll(
         /^www./g,
@@ -137,7 +138,11 @@ export const Sidebar = () => {
                 data-tabUuid={singleTabMeta.uuid}
                 isActive={tabMeta.currentTabUuid === singleTabMeta.uuid}
                 isPlayingAudio={singleTabMeta.isPlayingAudio}
-                title={singleTabMeta.title}
+                title={
+                  singleTabMeta.isInternal
+                    ? (internalTabMeta?.tabs[singleTabMeta.uuid]?.title ?? '')
+                    : singleTabMeta.title
+                }
                 favicon={singleTabMeta.faviconB64 ?? undefined}
                 onClick={() => {
                   console.log('Switching to tab ', singleTabMeta.uuid);

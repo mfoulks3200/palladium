@@ -1,10 +1,14 @@
-import { CircleStar, HandMetal } from 'lucide-react';
 import PackageJson from '../../../../../package.json';
+
+import iconImage from '../../../../../assets/icon.png';
 
 export const AboutPanel = () => {
   return (
     <div className="flex h-96 w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl">
-      <HandMetal size={174} strokeWidth={0.75} />
+      <img
+        src={iconImage}
+        className="pointer-events-none max-w-1/3 pb-8 select-none"
+      />
       <div className="flex select-none">
         <div className="text-6xl font-light">Palladium</div>
         <div className="text-sm font-light">Alpha</div>

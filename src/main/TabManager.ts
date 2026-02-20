@@ -165,7 +165,9 @@ export class TabManager {
   }
 
   public updateRenderProcess() {
-    const tabMeta = [...this.tabs].map((tab) => tab.getTabIpcMeta());
+    const tabMeta = [...this.tabs]
+      .map((tab) => (tab.view ? tab.getTabIpcMeta() : undefined))
+      .filter((meta) => !!meta);
     typedWebContents(this.mainWindow.webContents).send('update-tab-meta', {
       currentTabUuid: this.currentTab?.uuid ?? null,
       tabs: tabMeta,

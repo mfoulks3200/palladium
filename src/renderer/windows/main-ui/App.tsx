@@ -10,15 +10,37 @@ import '@fontsource/inter/800';
 import './App.css';
 import '../globals.css';
 import { ThemeProvider } from '../../components/ThemeProvider';
-import { createContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import { BrowserUI } from '../../components/BrowserUI';
 import { TabManagerIpc } from '../../../ipc';
 import { SettingsProvider } from '@/lib/settings';
 
+interface InternalTabMetaItem {
+  title: string;
+  icon: ReactElement;
+}
+
+interface InternalTabMeta {
+  tabs: Record<string, InternalTabMetaItem>;
+  setTabMeta: (meta: InternalTabMetaItem, tabId?: string) => void;
+}
+
 export const TabMetaContext = createContext<TabManagerIpc | null>(null);
+export const InternalTabMetaContext = createContext<InternalTabMeta | null>(
+  null,
+);
 
 function Main() {
   const [tabMeta, setTabMeta] = useState<TabManagerIpc | null>(null);
+  const [internalTabMeta, setInternalTabMeta] = useState<
+    Record<string, InternalTabMetaItem>
+  >({});
 
   useEffect(() => {
     window.electron.ipcRenderer.on('update-tab-meta', (args) => {
@@ -28,10 +50,33 @@ function Main() {
     window.electron.ipcRenderer.sendMessage('update-tab-meta');
   }, []);
 
+  const setTabMetaItem = useCallback(
+    (meta: InternalTabMetaItem, tabId?: string) => {
+      setInternalTabMeta((oldMeta) => {
+        if (tabId || (tabMeta && tabMeta?.currentTabUuid)) {
+          return {
+            ...oldMeta,
+            [(tabId ?? tabMeta!.currentTabUuid)!]: meta,
+          };
+        } else {
+          return oldMeta;
+        }
+      });
+    },
+    [tabMeta],
+  );
+
   return (
     <SettingsProvider>
       <TabMetaContext.Provider value={tabMeta}>
-        <BrowserUI />
+        <InternalTabMetaContext.Provider
+          value={{
+            tabs: internalTabMeta,
+            setTabMeta: setTabMetaItem,
+          }}
+        >
+          <BrowserUI />
+        </InternalTabMetaContext.Provider>
       </TabMetaContext.Provider>
     </SettingsProvider>
   );
