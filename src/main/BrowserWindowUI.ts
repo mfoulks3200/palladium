@@ -50,6 +50,8 @@ export class BrowserWindowUI {
       show: false,
       width,
       height,
+      minWidth: 800,
+      minHeight: 800,
       titleBarStyle: 'hidden',
       ...(process.platform !== 'darwin'
         ? { titleBarOverlay: true }
@@ -126,15 +128,15 @@ export class BrowserWindowUI {
     if (this.debugMode) {
       tabManager.addTab(new Tab('https://www.electronjs.org'));
       tabManager.addTab(new Tab('https://www.google.com'));
-      tabManager.addTab(
-        new Tab(
-          'https://www.youtube.com/watch?v=WUbnO5hz_-U&list=RDWUbnO5hz_-U&start_radio=1',
-        ),
-      );
+      // tabManager.addTab(
+      //   new Tab(
+      //     'https://www.youtube.com/watch?v=WUbnO5hz_-U&list=RDWUbnO5hz_-U&start_radio=1',
+      //   ),
+      // );
 
       tabManager.addTab(new Tab('palladium://settings'));
 
-      tabManager.focusTabIndex(3);
+      tabManager.focusTabIndex(2);
     } else {
       tabManager.focusTab(new Tab('https://google.com'));
     }

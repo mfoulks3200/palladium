@@ -7,7 +7,7 @@ export const AboutPanel = () => {
     <div className="flex h-96 w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl">
       <img
         src={iconImage}
-        className="pointer-events-none max-w-1/3 pb-8 select-none"
+        className="pointer-events-none max-h-1/2 min-h-1/2 pb-8 select-none"
       />
       <div className="flex select-none">
         <div className="text-6xl font-light">Palladium</div>

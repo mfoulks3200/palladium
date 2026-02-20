@@ -11,6 +11,9 @@ import { OverlayOptions } from '../../ipc';
 import { Anvil } from 'lucide-react';
 import { InternalPageRouter } from './internal-pages/InternalPageRouter';
 
+import styles from './BrowserUI.module.css';
+import { cn } from '@/lib/utils';
+
 export const BrowserUI = () => {
   const browserPanelRef = useRef<HTMLDivElement>(null);
 
@@ -48,7 +51,7 @@ export const BrowserUI = () => {
   }, [browserPanelRef.current]);
 
   return (
-    <div className="h-full p-3">
+    <div className={cn('h-full p-3', styles.draggableFrame)}>
       <ResizablePanelGroup orientation="horizontal" onLayoutChange={onResize}>
         <ResizablePanel defaultSize="250px" maxSize="400px" minSize="200px">
           <Sidebar />

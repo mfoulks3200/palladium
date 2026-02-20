@@ -16,7 +16,18 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/renderer/*"]
-    }
+    },
+    "types": ["./src/globals.d.ts"],
+    "plugins": [
+      {
+        "name": "typescript-plugin-css-modules",
+        "options": {
+          "postcssOptions": {
+            "useConfig": true
+          }
+        }
+      }
+    ]
   },
   "exclude": ["test", "release/build", "release/app/dist", ".erb/dll"]
 }

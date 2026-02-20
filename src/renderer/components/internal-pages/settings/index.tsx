@@ -162,18 +162,20 @@ export const SettingsPage = () => {
             ))}
           </div>
         </div>
-        <div className="flex min-h-80 w-1/2 flex-col items-stretch gap-4 py-4">
-          {Object.values(settingsUi[currentPage].cards).map((card) => (
-            <SettingsCard
-              title={card.name}
-              description={card.description}
-              customContents={card.customContents}
-            >
-              {/* <SettingsOption name={'Enable Timeline'} type={'checkbox'} />
+        <div className="flex min-h-80 w-1/2 flex-col items-center py-4">
+          <div className="flex w-full max-w-[750px] flex-col gap-4">
+            {Object.values(settingsUi[currentPage].cards).map((card) => (
+              <SettingsCard
+                title={card.name}
+                description={card.description}
+                customContents={card.customContents}
+              >
+                {/* <SettingsOption name={'Enable Timeline'} type={'checkbox'} />
               <SettingsOption name={'Timeline Retention'} type={'checkbox'} />
               <SettingsOption name={'Example Field'} type={'text'} /> */}
-            </SettingsCard>
-          ))}
+              </SettingsCard>
+            ))}
+          </div>
         </div>
       </div>
     </div>

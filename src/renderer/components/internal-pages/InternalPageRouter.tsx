@@ -5,7 +5,7 @@ import { SettingsPage } from './settings';
 const routes = [
   {
     path: '/',
-    element: <div>Hello World</div>,
+    element: <div></div>,
   },
   {
     path: '/settings',

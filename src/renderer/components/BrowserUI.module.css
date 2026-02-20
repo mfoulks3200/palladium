@@ -1,0 +1,7 @@
+.draggableFrame {
+  app-region: drag;
+
+  & > * {
+    app-region: no-drag;
+  }
+}
