@@ -15,9 +15,11 @@
   "dependencies": {
     "better-sqlite3": "^12.6.2",
     "electron-liquid-glass": "^1.1.1",
-    "node-abi": "^3.24.0"
+    "node-abi": "^3.24.0",
+    "node-gyp": "^12.2.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13"
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.3.0"
   }
 }

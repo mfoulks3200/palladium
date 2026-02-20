@@ -87,7 +87,6 @@
     "@atlaskit/pragmatic-drag-and-drop-react-drop-indicator": "^3.2.12",
     "@electron/notarize": "^3.0.0",
     "@fontsource/inter": "^5.2.8",
-    "better-sqlite3": "^12.6.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -209,6 +208,8 @@
       "gatekeeperAssess": false
     },
     "dmg": {
+      "title": "Palladium",
+      "format": "UDZO",
       "contents": [
         {
           "x": 130,
