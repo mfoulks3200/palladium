@@ -18,6 +18,7 @@ import {
 import { AboutPanel } from './AboutPanel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DefaultSearchEngines } from './DefaultSearchEngines';
+import { CustomSearchEngines } from './CustomSearchEngines';
 import { InternalTabMetaContext } from '@/windows/main-ui/App';
 
 interface SettingsCard {
@@ -49,6 +50,11 @@ const settingsUi: Record<string, SettingsPages> = {
       customSearchEngines: {
         name: 'Custom Search Engines',
         description: 'Add custom sites to the command bar.',
+        customContents: (
+          <div className="px-4 pt-4">
+            <CustomSearchEngines />
+          </div>
+        ),
       },
     },
   },

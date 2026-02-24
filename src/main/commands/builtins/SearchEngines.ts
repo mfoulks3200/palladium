@@ -52,35 +52,55 @@ export class SearchEngines implements CommandProvider {
     return { name: 'Search Engines', id: 'builtins.searchEngines' };
   }
 
-  public getSuggestions(input: string) {
-    return searchEngines
+  private getActiveEngines() {
+    const builtinEngines = searchEngines
       .filter((engine) => {
         const enabled = SettingsManager.getInstance().getItem(
           engine.enableSettingKey,
         );
         return enabled;
       })
-      .map((engine) => {
-        let suggestion: ReturnType<CommandProvider['getSuggestions']>[number] =
-          {
-            name:
-              input.length > 0
-                ? `Search ${input} with ${engine.name}...`
-                : `Search ${engine.name}`,
-            value: engine.id,
-            icon: 'Search',
-          };
+      .map((engine) => ({
+        id: engine.id,
+        name: engine.name,
+        shortcut: engine.shortcutCode,
+        getSearchUrl: engine.getSearchUrl,
+      }));
 
-        if (engine.shortcutCode) {
-          suggestion.shortcut = {
-            shortcutStr: engine.shortcutCode,
-            name: `Search ${engine.name}`,
-            color: 'green',
-          };
-        }
+    const customEngines = SettingsManager.getInstance()
+      .getItem('searchEngines.custom')
+      .map((engine, index) => ({
+        id: `custom-${index}`,
+        name: engine.name,
+        shortcut: engine.shortcut,
+        getSearchUrl: (query: string) =>
+          engine.urlPattern.replace('%s', encodeURIComponent(query)),
+      }));
 
-        return suggestion;
-      });
+    return [...builtinEngines, ...customEngines];
+  }
+
+  public getSuggestions(input: string) {
+    return this.getActiveEngines().map((engine) => {
+      let suggestion: ReturnType<CommandProvider['getSuggestions']>[number] = {
+        name:
+          input.length > 0
+            ? `Search ${input} with ${engine.name}...`
+            : `Search ${engine.name}`,
+        value: engine.id,
+        icon: 'Search',
+      };
+
+      if (engine.shortcut) {
+        suggestion.shortcut = {
+          shortcutStr: engine.shortcut,
+          name: `Search ${engine.name}`,
+          color: 'green',
+        };
+      }
+
+      return suggestion;
+    });
   }
 
   public runCommand(
@@ -88,7 +108,7 @@ export class SearchEngines implements CommandProvider {
     input: string,
     metadata?: CommandMetadata,
   ) {
-    const engine = searchEngines.find((e) => e.id === command);
+    const engine = this.getActiveEngines().find((e) => e.id === command);
 
     let searchUrl = '';
     if (engine) {

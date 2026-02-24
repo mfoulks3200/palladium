@@ -27,7 +27,7 @@ export const settingsSchema = z.object({
           z.object({
             name: z.string(),
             shortcut: z.string(),
-            urlPattern: z.url(),
+            urlPattern: z.string(),
           }),
         )
         .default([])
