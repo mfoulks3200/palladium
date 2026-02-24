@@ -32,6 +32,11 @@ export class BrowserWindowUI {
     this.createWindow();
     this.createMenu();
     this.initializeSubsystems();
+    this.mainWindow.on('show', () => {
+      TabManager.getInstance().focusTab(
+        TabManager.getInstance().getCurrentTab()!,
+      );
+    });
   }
 
   public createWindow() {
