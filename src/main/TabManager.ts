@@ -168,10 +168,12 @@ export class TabManager {
     const tabMeta = [...this.tabs]
       .map((tab) => (tab.view ? tab.getTabIpcMeta() : undefined))
       .filter((meta) => !!meta);
-    typedWebContents(this.mainWindow.webContents).send('update-tab-meta', {
-      currentTabUuid: this.currentTab?.uuid ?? null,
-      tabs: tabMeta,
-    });
+    if (!this.mainWindow.isDestroyed()) {
+      typedWebContents(this.mainWindow.webContents).send('update-tab-meta', {
+        currentTabUuid: this.currentTab?.uuid ?? null,
+        tabs: tabMeta,
+      });
+    }
   }
 
   public addTab(tab: Tab) {
