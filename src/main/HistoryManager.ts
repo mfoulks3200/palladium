@@ -2,6 +2,8 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { typedIpcMain, typedWebContents } from './ipc';
+import { HistoryItem } from '../ipc';
 
 export interface HistoryEvent {
   tabUuid: string;
@@ -33,6 +35,18 @@ export class HistoryManager extends EventTarget {
 
     this.db = new Database(dbPath);
     this.init();
+    this.registerIpc();
+  }
+
+  private registerIpc() {
+    typedIpcMain.on('get-history', (event) => {
+      const history = this.getHistory() as HistoryItem[];
+      typedWebContents(event.sender).send('history-data', history);
+    });
+
+    typedIpcMain.on('clear-history', () => {
+      this.clearHistory();
+    });
   }
 
   private init() {
@@ -130,6 +144,15 @@ export class HistoryManager extends EventTarget {
         'SELECT * FROM history WHERE tab_uuid = ? ORDER BY timestamp DESC',
       )
       .all(tabUuid);
+  }
+
+  public clearHistory() {
+    this.db.prepare('DELETE FROM history').run();
+    this.db.prepare('DELETE FROM tabs').run();
+    const updateEvent = new CustomEvent('history-cleared', {
+      bubbles: true,
+    });
+    this.dispatchEvent(updateEvent);
   }
 
   public close() {
