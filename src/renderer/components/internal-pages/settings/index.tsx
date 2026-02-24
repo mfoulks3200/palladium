@@ -5,6 +5,7 @@ import {
   Blocks,
   ChartNoAxesGantt,
   FishingHook,
+  History,
   Info,
   Search,
 } from 'lucide-react';
@@ -16,8 +17,10 @@ import {
   useState,
 } from 'react';
 import { AboutPanel } from './AboutPanel';
+import { HistoryPanel } from './HistoryPanel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DefaultSearchEngines } from './DefaultSearchEngines';
+import { CustomSearchEngines } from './CustomSearchEngines';
 import { InternalTabMetaContext } from '@/windows/main-ui/App';
 
 interface SettingsCard {
@@ -49,21 +52,26 @@ const settingsUi: Record<string, SettingsPages> = {
       customSearchEngines: {
         name: 'Custom Search Engines',
         description: 'Add custom sites to the command bar.',
+        customContents: (
+          <div className="px-4 pt-4">
+            <CustomSearchEngines />
+          </div>
+        ),
       },
     },
   },
-  timeline: {
-    name: 'Timeline',
-    disabled: true,
-    icon: <ChartNoAxesGantt />,
+  history: {
+    name: 'History',
+    icon: <History />,
     cards: {
-      timeline: {
-        name: 'Timeline',
-        description:
-          'Save your tabs automatically as you browse, so you can find them later.',
-      },
       history: {
-        name: 'History',
+        name: 'Browser History',
+        description: 'View and manage your browsing history.',
+        customContents: (
+          <div className="pt-4">
+            <HistoryPanel />
+          </div>
+        ),
       },
     },
   },

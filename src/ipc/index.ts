@@ -93,6 +93,16 @@ export interface InternalPageNavigateIpc {
   newPath: string;
 }
 
+export interface HistoryItem {
+  id: number;
+  tab_uuid: string;
+  url: string;
+  title: string;
+  metaDescription: string;
+  metaKeywords: string;
+  timestamp: string;
+}
+
 /**
  * Protocol definition for Renderer -> Main communication
  */
@@ -112,6 +122,8 @@ export interface RendererToMainEvents {
   'command-bar': [CommandBarIpc];
   'internal-page-navigate': [InternalPageNavigateIpc];
   'settings-sync': [SettingSchema];
+  'get-history': [];
+  'clear-history': [];
 }
 
 /**
@@ -125,6 +137,7 @@ export interface MainToRendererEvents {
   'command-setup': [CommandBarSetupIpc];
   'internal-page-navigate': [InternalPageNavigateIpc];
   'settings-sync': [SettingSchema];
+  'history-data': [HistoryItem[]];
 }
 
 export type Channels = keyof RendererToMainEvents | keyof MainToRendererEvents;
