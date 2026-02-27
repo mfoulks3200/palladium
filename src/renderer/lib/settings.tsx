@@ -2,6 +2,7 @@ import {
   createContext,
   PropsWithChildren,
   useCallback,
+  useContext,
   useEffect,
   useState,
 } from 'react';
@@ -77,4 +78,13 @@ export const SettingsProvider = ({ children }: PropsWithChildren) => {
       {children}
     </SettingsContext.Provider>
   );
+};
+
+export const useSettings = <T extends SettingsKeys>(
+  settingKey: T,
+): [SettingKeyType<T>, (newValue: SettingKeyType<T>) => void] => {
+  const Settings = useContext(SettingsContext);
+  const settingsHook = Settings.useSetting(settingKey);
+
+  return settingsHook;
 };

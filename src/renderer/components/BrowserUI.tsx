@@ -22,6 +22,7 @@ import { InternalPageRouter } from './internal-pages/InternalPageRouter';
 import styles from './BrowserUI.module.css';
 import { cn } from '@/lib/utils';
 import { TabMetaContext } from '@/windows/main-ui/App';
+import { ShaderBackground } from './ShaderBackground';
 
 export const BrowserUI = () => {
   const tabMeta = useContext(TabMetaContext);
@@ -134,22 +135,22 @@ export const BrowserUI = () => {
   }
 
   return (
-    <div
-      className={cn(
-        'h-screen max-h-screen w-screen max-w-screen p-2 px-2',
-        styles.draggableFrame,
-      )}
-    >
-      <ResizablePanelGroup
-        orientation="horizontal"
-        onLayoutChange={onBrowserResize}
-      >
-        <ResizablePanel defaultSize="250px" maxSize="400px" minSize="200px">
-          <Sidebar />
-        </ResizablePanel>
-        <ResizableHandle className="mx-0.5 w-1 rounded-sm border-none bg-transparent transition-colors after:hidden after:border-none hover:bg-black/50" />
-        <ResizablePanel minSize="30%">{browserPanel}</ResizablePanel>
-      </ResizablePanelGroup>
+    <div className="h-screen max-h-screen w-screen max-w-screen">
+      <div className="absolute h-full w-full">
+        <ShaderBackground />
+      </div>
+      <div className={cn('h-full w-full p-2 px-2', styles.draggableFrame)}>
+        <ResizablePanelGroup
+          orientation="horizontal"
+          onLayoutChange={onBrowserResize}
+        >
+          <ResizablePanel defaultSize="250px" maxSize="400px" minSize="200px">
+            <Sidebar />
+          </ResizablePanel>
+          <ResizableHandle className="mx-0.5 w-1 rounded-sm border-none bg-transparent transition-colors after:hidden after:border-none hover:bg-black/50" />
+          <ResizablePanel minSize="30%">{browserPanel}</ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
     </div>
   );
 };

@@ -257,6 +257,7 @@ export default class MenuBuilder {
           {
             label: 'Toggle shell dev mode',
             click() {
+              console.log('Triggered open dev tools');
               mainWindow.webContents.openDevTools();
             },
           },

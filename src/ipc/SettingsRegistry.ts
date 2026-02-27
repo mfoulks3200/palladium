@@ -1,5 +1,6 @@
 import * as z from 'zod';
 import { GetPathType, NestedKeysOf } from './Utility';
+import { backgrounds } from '@/lib/backgrounds';
 
 const settingsRegistryItem = z.registry<{
   introducedIn: string;
@@ -34,6 +35,22 @@ export const settingsSchema = z.object({
         .register(settingsRegistryItem, {
           introducedIn: '0.0.5',
         }),
+    })
+    .prefault({}),
+  personalization: z
+    .object({
+      background: z
+        .discriminatedUnion('type', [
+          z.object({
+            type: z.literal('presetShader'),
+            id: z.enum(
+              Object.keys(
+                backgrounds,
+              ) as unknown as (keyof typeof backgrounds)[],
+            ),
+          }),
+        ])
+        .prefault({ type: 'presetShader', id: 'rainbow' }),
     })
     .prefault({}),
 });

@@ -8,6 +8,7 @@ import {
   History,
   Info,
   Search,
+  Sparkles,
 } from 'lucide-react';
 import {
   PropsWithChildren,
@@ -22,6 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DefaultSearchEngines } from './DefaultSearchEngines';
 import { CustomSearchEngines } from './CustomSearchEngines';
 import { InternalTabMetaContext } from '@/windows/main-ui/App';
+import { Background } from './Background';
 
 interface SettingsCard {
   name?: string;
@@ -37,6 +39,20 @@ interface SettingsPages {
 }
 
 const settingsUi: Record<string, SettingsPages> = {
+  personalization: {
+    name: 'Personalization',
+    icon: <Sparkles />,
+    cards: {
+      background: {
+        name: 'Background',
+        customContents: (
+          <div className="flex flex-col gap-4 pt-8">
+            <Background />
+          </div>
+        ),
+      },
+    },
+  },
   searchEngines: {
     name: 'Search Engines',
     icon: <Search />,

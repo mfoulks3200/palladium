@@ -92,7 +92,7 @@ export const Sidebar = () => {
 
   return (
     <div className="flex h-full flex-col gap-2">
-      <div className="flex h-8 w-full items-center gap-2">
+      <div className="z-10 flex h-8 w-full items-center gap-2">
         <div className="grow"></div>
         <Button
           variant="ghost"
