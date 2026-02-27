@@ -134,6 +134,7 @@ export const Sidebar = () => {
               <BrowserTab
                 key={singleTabMeta.uuid}
                 uuid={singleTabMeta.uuid}
+                url={singleTabMeta.url}
                 index={index}
                 data-tabUuid={singleTabMeta.uuid}
                 isActive={tabMeta.currentTabUuid === singleTabMeta.uuid}

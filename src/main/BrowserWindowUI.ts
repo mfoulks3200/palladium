@@ -70,7 +70,7 @@ export class BrowserWindowUI {
           ? path.join(__dirname, 'preload.js')
           : path.join(__dirname, '../../.erb/dll/preload.js'),
         transparent: true,
-        // devTools: false,
+        devTools: false,
       },
     });
 
@@ -141,7 +141,7 @@ export class BrowserWindowUI {
 
       tabManager.addTab(new Tab('palladium://settings'));
 
-      tabManager.focusTabIndex(2);
+      tabManager.focusTabIndex(1);
     } else {
       tabManager.focusTab(new Tab('https://google.com'));
     }

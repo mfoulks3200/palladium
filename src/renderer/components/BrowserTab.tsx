@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { Apple, LoaderCircle, Volume2, VolumeOff, X } from 'lucide-react';
+import { Cog, LoaderCircle, Volume2, VolumeOff, X } from 'lucide-react';
 import { ReactElement, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
 import {
@@ -16,6 +16,7 @@ import { DropIndicator } from '@atlaskit/pragmatic-drag-and-drop-react-drop-indi
 
 interface BrowserTabProps {
   isActive: boolean;
+  url: string;
   uuid: string;
   title: string;
   index: number;
@@ -87,7 +88,7 @@ export const BrowserTab = (props: BrowserTabProps) => {
     if (props.favicon) {
       favicon = <img height="18px" width="18px" src={props.favicon} />;
     } else {
-      favicon = <Apple size="18px" className="max-w-[18px] min-w-[18px]" />;
+      favicon = <Cog size="18px" className="max-w-[18px] min-w-[18px]" />;
     }
   }
 
@@ -134,6 +135,10 @@ export const BrowserTab = (props: BrowserTabProps) => {
     };
   }, []);
 
+  let title = props.title;
+  if (props.title.trim().length === 0 && props.url.startsWith('palladium://')) {
+    title = 'Palladium';
+  }
   return (
     <div className="relative">
       <div
@@ -158,7 +163,7 @@ export const BrowserTab = (props: BrowserTabProps) => {
             },
           )}
         >
-          <div className="truncate text-sm">{props.title}</div>
+          <div className="truncate text-sm">{title}</div>
           {props.subtitle && (
             <div className="truncate text-xs opacity-25">{props.subtitle}</div>
           )}
