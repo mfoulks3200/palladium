@@ -48,9 +48,16 @@ export const settingsSchema = z.object({
                 backgrounds,
               ) as unknown as (keyof typeof backgrounds)[],
             ),
+            speed: z.number().gt(-10).lt(10),
+            maxFps: z.number().gte(0).lt(120),
           }),
         ])
-        .prefault({ type: 'presetShader', id: 'rainbow' }),
+        .prefault({
+          type: 'presetShader',
+          id: 'rainbow',
+          speed: 0.1,
+          maxFps: 10,
+        }),
     })
     .prefault({}),
 });

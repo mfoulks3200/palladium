@@ -1,0 +1,4 @@
+.invertedIcons {
+  mix-blend-mode: difference;
+  filter: saturate(0) contrast(1);
+}

@@ -1,22 +1,36 @@
 import { backgrounds } from '@/lib/backgrounds';
 import { ReactShaderToy } from './agents-ui/react-shader-toy';
 import { useSettings } from '@/lib/settings';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useDebounce } from 'use-debounce';
 
 export const ShaderBackground = () => {
   const [lastShader, setLastShader] = useState('');
   const [shader] = useSettings('personalization.background.id');
+  const [maxFps] = useSettings('personalization.background.maxFps');
+  const [speed] = useSettings('personalization.background.speed');
+  const [thisShader] = useDebounce(
+    JSON.stringify({ shader, maxFps, speed }),
+    500,
+  );
 
   useEffect(() => {
-    if (lastShader !== shader) {
-      setLastShader(shader);
+    if (lastShader !== thisShader) {
+      setLastShader(thisShader);
     }
-  }, [shader]);
+  }, [lastShader, thisShader]);
+
+  // console.log(shader, maxFps, speed);
 
   return (
     <>
-      {lastShader === shader && (
-        <ReactShaderToy fs={backgrounds[shader].fs} precision="lowp" />
+      {lastShader === thisShader && (
+        <ReactShaderToy
+          fs={backgrounds[shader].fs}
+          timeMultiplier={speed}
+          maxFPS={maxFps}
+          precision="lowp"
+        />
       )}
     </>
   );

@@ -136,7 +136,7 @@ export const BrowserUI = () => {
 
   return (
     <div className="h-screen max-h-screen w-screen max-w-screen">
-      <div className="absolute h-full w-full">
+      <div className="-mb-[100vh] h-full w-full">
         <ShaderBackground />
       </div>
       <div className={cn('h-full w-full p-2 px-2', styles.draggableFrame)}>

@@ -499,6 +499,15 @@ export interface ReactShaderToyProps {
    */
   onDoneLoadingTextures?: () => void;
 
+  /** Maximum frame rate for the shader. */
+  maxFPS?: number;
+
+  /** Multiplier for the shader time. */
+  timeMultiplier?: number;
+
+  /** Performance report callback. */
+  onPerformanceReport?: (report: { fps: number; frameTime: number }) => void;
+
   /** Custom callback to handle errors. Defaults to `console.error`. */
   onError?: (error: string) => void;
 
@@ -518,6 +527,9 @@ export function ReactShaderToy({
   lerp = 1,
   devicePixelRatio = 1,
   onDoneLoadingTextures,
+  maxFPS,
+  timeMultiplier = 1,
+  onPerformanceReport,
   onError = console.error,
   onWarning = console.warn,
   ...canvasProps
@@ -535,6 +547,9 @@ export function ReactShaderToy({
   const lastMouseArrRef = useRef<number[]>([0, 0]);
   const texturesArrRef = useRef<Texture[]>([]);
   const lastTimeRef = useRef(0);
+  const lastFrameTimeRef = useRef(0);
+  const frameCountRef = useRef(0);
+  const performanceTimeRef = useRef(0);
   const resizeObserverRef = useRef<ResizeObserver | undefined>(undefined);
   const uniformsRef = useRef<
     Record<
@@ -827,11 +842,13 @@ export function ReactShaderToy({
     return fragmentShader;
   };
 
+  const safeTimeMultiplier = timeMultiplier === 0 ? 0.00001 : timeMultiplier;
+
   const setUniforms = (timestamp: number) => {
     const gl = glRef.current;
     if (!gl || !shaderProgramRef.current) return;
     const delta = lastTimeRef.current
-      ? (timestamp - lastTimeRef.current) / 1000
+      ? ((timestamp - lastTimeRef.current) / 1000) * safeTimeMultiplier
       : 0;
     lastTimeRef.current = timestamp;
     const propUniforms = propsUniformsRef.current;
@@ -950,8 +967,33 @@ export function ReactShaderToy({
   };
 
   const drawScene = (timestamp: number) => {
+    animFrameIdRef.current = requestAnimationFrame(drawScene);
     const gl = glRef.current;
     if (!gl) return;
+
+    if (maxFPS) {
+      const interval = 1000 / maxFPS;
+      const elapsed = timestamp - lastFrameTimeRef.current;
+      if (elapsed < interval) return;
+      lastFrameTimeRef.current = timestamp - (elapsed % interval);
+    } else {
+      lastFrameTimeRef.current = timestamp;
+    }
+
+    // Performance reporting
+    frameCountRef.current++;
+    if (timestamp - performanceTimeRef.current >= 1000) {
+      if (onPerformanceReport) {
+        onPerformanceReport({
+          fps: frameCountRef.current,
+          frameTime:
+            (timestamp - performanceTimeRef.current) / frameCountRef.current,
+        });
+      }
+      frameCountRef.current = 0;
+      performanceTimeRef.current = timestamp;
+    }
+
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBufferRef.current);
@@ -965,6 +1007,7 @@ export function ReactShaderToy({
     );
     setUniforms(timestamp);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
     const mouseValue = uniformsRef.current.iMouse?.value;
     if (
       uniformsRef.current.iMouse?.isNeeded &&
@@ -976,7 +1019,6 @@ export function ReactShaderToy({
       mouseValue[0] = lerpVal(currentX, lastMouseArrRef.current[0] ?? 0, lerp);
       mouseValue[1] = lerpVal(currentY, lastMouseArrRef.current[1] ?? 0, lerp);
     }
-    animFrameIdRef.current = requestAnimationFrame(drawScene);
   };
 
   const addEventListeners = () => {
