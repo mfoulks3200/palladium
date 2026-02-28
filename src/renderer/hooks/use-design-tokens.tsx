@@ -35,6 +35,7 @@ export interface DesignPreferences {
   theme: 'light' | 'dark' | 'system';
   primaryColor: string;
   backgroundColor?: string;
+  opacity?: number;
 }
 
 // Context shape
@@ -90,23 +91,25 @@ const generateTokens = (prefs: DesignPreferences, effectiveTheme: 'light' | 'dar
   // Base backgrounds heavily dependent on theme
   const baseBackground = prefs.backgroundColor || (isDark ? '#09090b' : '#ffffff');
   
-  // Mix a subtle amount of primary tint into background
-  const background = chroma.mix(baseBackground, primary, isDark ? 0.05 : 0.03, 'rgb').hex();
-  
-  // Surface is usually a slight elevation from background, highly tinted to restore the card's previous appearance
-  const rawSurface = isDark ? adjustLightness(background, 0.5) : adjustLightness(background, -0.2);
-  const surface = chroma.mix(rawSurface, primary, isDark ? 0.15 : 0.08, 'rgb').hex();
+  // Solid hexes for contrast calculations
+  const backgroundHex = chroma.mix(baseBackground, primary, isDark ? 0.05 : 0.03, 'rgb').hex();
+  const rawSurfaceHex = isDark ? adjustLightness(backgroundHex, 0.5) : adjustLightness(backgroundHex, -0.2);
+  const surfaceHex = chroma.mix(rawSurfaceHex, primary, isDark ? 0.15 : 0.08, 'rgb').hex();
+  const borderHex = isDark ? adjustLightness(backgroundHex, 1) : adjustLightness(backgroundHex, -1);
+
+  // Apply user opacity for glass effect
+  const opacity = prefs.opacity !== undefined ? prefs.opacity : 1;
+  const background = chroma(backgroundHex).alpha(opacity).css();
+  const surface = chroma(surfaceHex).alpha(opacity).css();
+  const border = chroma(borderHex).alpha(opacity).css();
 
   // Generate a full palette for the primary color
   const primaryPalette = generatePalette(primary, 9);
 
-  // Calculate accessible text colors
-  const text = getAccessibleTextColor(background, '#0f172a', '#f8fafc');
+  // Calculate accessible text colors using the solid hexes
+  const text = getAccessibleTextColor(backgroundHex, '#0f172a', '#f8fafc');
   const primaryForeground = getAccessibleTextColor(primary, '#000000', '#ffffff');
-  const surfaceForeground = getAccessibleTextColor(surface, '#000000', '#ffffff');
-
-  // Borders need enough contrast to be visible but not overwhelming
-  const border = isDark ? adjustLightness(background, 1) : adjustLightness(background, -1);
+  const surfaceForeground = getAccessibleTextColor(surfaceHex, '#000000', '#ffffff');
 
   return {
     primary,
@@ -159,13 +162,17 @@ export const DesignTokenProvider: React.FC<{
   }, [preferences.theme]);
 
   const [tintColor] = useSettings('personalization.userInterface.tintColor');
+  const [opacity] = useSettings('personalization.userInterface.transparency');
+  const [blur] = useSettings('personalization.userInterface.blur');
+  const [saturation] = useSettings('personalization.userInterface.backdropSaturation');
   const safeTintColor = tintColor.startsWith('#') ? tintColor : `#${tintColor}`;
 
   // Recalculate tokens when preferences or effective theme changes
   const tokens = useMemo(() => generateTokens({
     ...preferences,
-    primaryColor: safeTintColor
-  }, effectiveTheme), [preferences, effectiveTheme, safeTintColor]);
+    primaryColor: safeTintColor,
+    opacity
+  }, effectiveTheme), [preferences, effectiveTheme, safeTintColor, opacity]);
 
   // Inject CSS variables into the root document so regular CSS/Tailwind can use them
   useEffect(() => {
@@ -184,7 +191,11 @@ export const DesignTokenProvider: React.FC<{
     tokens.primaryPalette.forEach((color, index) => {
        root.style.setProperty(`--color-primary-${(index + 1) * 100}`, color);
     });
-  }, [tokens]);
+
+    // Inject glassmorphism effects
+    root.style.setProperty('--ui-blur', `${blur}px`);
+    root.style.setProperty('--ui-saturation', `${saturation}%`);
+  }, [tokens, blur, saturation]);
 
   const setPreferences = (newPrefs: DesignPreferences) => {
     setPreferencesState(newPrefs);
