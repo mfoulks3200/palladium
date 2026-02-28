@@ -87,6 +87,7 @@
     "@atlaskit/pragmatic-drag-and-drop-react-drop-indicator": "^3.2.12",
     "@base-ui/react": "^1.2.0",
     "@electron/notarize": "^3.0.0",
+    "@electron/notarize": "^3.1.1",
     "@fontsource/inter": "^5.2.8",
     "@livekit/components-react": "^2.9.20",
     "chroma-js": "^3.2.0",
@@ -200,7 +201,6 @@
       "package.json"
     ],
     "mac": {
-      "notarize": true,
       "target": {
         "target": "default",
         "arch": [
