@@ -20,6 +20,10 @@ export interface DesignTokens {
   // Calculated
   primaryForeground: string;
   surfaceForeground: string;
+  successForeground: string;
+  warningForeground: string;
+  errorForeground: string;
+  infoForeground: string;
 
   // Palettes for more nuanced styling (e.g. 100-900 scale)
   primaryPalette: string[];
@@ -58,6 +62,10 @@ const defaultTokens: DesignTokens = {
   info: '#3b82f6',
   primaryForeground: '#ffffff',
   surfaceForeground: '#111827',
+  successForeground: '#ffffff',
+  warningForeground: '#ffffff',
+  errorForeground: '#ffffff',
+  infoForeground: '#ffffff',
   primaryPalette: [],
 };
 
@@ -107,6 +115,10 @@ const generateTokens = (prefs: DesignPreferences, effectiveTheme: 'light' | 'dar
     info: '#3b82f6',
     primaryForeground,
     surfaceForeground,
+    successForeground: getAccessibleTextColor('#10b981', '#000000', '#ffffff'),
+    warningForeground: getAccessibleTextColor('#f59e0b', '#000000', '#ffffff'),
+    errorForeground: getAccessibleTextColor('#ef4444', '#000000', '#ffffff'),
+    infoForeground: getAccessibleTextColor('#3b82f6', '#000000', '#ffffff'),
     primaryPalette,
   };
 };
