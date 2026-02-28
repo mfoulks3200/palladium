@@ -1,17 +1,46 @@
-import { Menu, MenuItem, Session, WebContentsView, session } from 'electron';
+import {
+  Menu,
+  MenuItem,
+  Session,
+  WebContents,
+  WebContentsView,
+  session,
+} from 'electron';
 import { TabIpcPacket } from '../ipc';
 import { HistoryEvent, HistoryManager } from './HistoryManager';
 import path from 'node:path';
 import os from 'node:os';
 import { TabManager } from './TabManager';
 
+const devToolsCSS = `
+body > .widget.vbox.root-view {
+    margin-bottom: 0px !important;
+    margin-right: 0px !important;
+}
+
+div.widget.vbox[slot="sidebar"]{
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: 100vh !important;
+  width: 100vw !important;
+  min-height: 100vh !important;
+  min-width: 100vw !important;
+  max-height: 100vh !important;
+  max-width: 100vw !important;
+}
+`;
+
 export class Tab extends EventTarget {
   public uuid: string = crypto.randomUUID();
   public isInternalPage: boolean = false;
+  public devMode: boolean = false;
   private currentUrl: string = '';
   private faviconB64: string | null = null;
   private isPlayingAudio: boolean = false;
   public view: WebContentsView;
+  public devToolsView: WebContentsView = null as any;
   private static session: Session;
 
   constructor(currentUrl: string) {
@@ -35,6 +64,7 @@ export class Tab extends EventTarget {
         session: Tab.session,
       },
     });
+    this.setupDevtoolsWindow();
     if (!currentUrl.startsWith('palladium://')) {
       HistoryManager.getInstance().addTab(this.uuid);
       this.registerTabEvents();
@@ -57,6 +87,29 @@ export class Tab extends EventTarget {
     } else {
       this.isInternalPage = true;
     }
+  }
+
+  private setupDevtoolsWindow() {
+    this.devToolsView = new WebContentsView({
+      webPreferences: {
+        contextIsolation: true,
+        sandbox: true,
+        scrollBounce: true,
+        backgroundThrottling: true,
+        session: Tab.session,
+      },
+    });
+
+    this.devToolsView.webContents.on('destroyed', () => {
+      if (!this.view.webContents.isDestroyed()) {
+        this.setDevMode(false);
+        this.setupDevtoolsWindow();
+        const tabMan = TabManager.getInstance();
+        if (tabMan && tabMan.getCurrentTab() === this) {
+          tabMan.focusTab(this);
+        }
+      }
+    });
   }
 
   private async imageUrlToBase64(url: string): Promise<string | null> {
@@ -89,15 +142,34 @@ export class Tab extends EventTarget {
   }
 
   public isDevMode() {
-    return this.view.webContents.isDevToolsOpened();
+    return this.devMode;
   }
 
   public setDevMode(shouldEnable: boolean) {
+    if (this.devMode === shouldEnable) return;
+    this.devMode = shouldEnable;
     if (shouldEnable) {
-      this.view.webContents.openDevTools();
+      if (this.devToolsView.webContents.isDestroyed()) {
+        this.setupDevtoolsWindow();
+      }
+      try {
+        this.view.webContents.setDevToolsWebContents(
+          this.devToolsView.webContents,
+        );
+      } catch (e) {
+        console.error('Failed to set devtools web contents:', e);
+      }
+      this.view.webContents.openDevTools({ mode: 'bottom' });
+      // Devtoolception
+      // this.devToolsView.webContents.openDevTools({ mode: 'detach' });
     } else {
-      this.view.webContents.closeDevTools();
+      if (this.view.webContents.isDevToolsOpened()) {
+        this.view.webContents.closeDevTools();
+      }
+      // Detaching with null is causing native conversion errors in some Electron environments.
+      // Since we handle recreation on 'destroyed', we can safely skip explicit detachment.
     }
+    this.publishMetadataUpdateEvent();
   }
 
   public getFavicon() {
@@ -146,11 +218,14 @@ export class Tab extends EventTarget {
     });
 
     this.view.webContents.on('devtools-opened', async () => {
-      this.publishMetadataUpdateEvent();
+      this.setDevMode(true);
+      this.devToolsView.webContents.insertCSS(devToolsCSS);
+      // Devtool-ception
+      // this.devToolsView.webContents.openDevTools();
     });
 
     this.view.webContents.on('devtools-closed', async () => {
-      this.publishMetadataUpdateEvent();
+      this.setDevMode(false);
     });
 
     this.view.webContents.on('did-navigate', async () => {

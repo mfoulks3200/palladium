@@ -11,6 +11,9 @@ import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/ad
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index';
 
+import styles from './Sidebar.module.css';
+import { cn } from '@/lib/utils';
+
 export const Sidebar = () => {
   const tabMeta = useContext(TabMetaContext);
   const internalTabMeta = useContext(InternalTabMetaContext);
@@ -92,7 +95,12 @@ export const Sidebar = () => {
 
   return (
     <div className="flex h-full flex-col gap-2">
-      <div className="flex h-8 w-full items-center gap-2">
+      <div
+        className={cn(
+          'z-10 flex h-8 w-full items-center gap-2',
+          styles.invertedIcons,
+        )}
+      >
         <div className="grow"></div>
         <Button
           variant="ghost"
@@ -134,6 +142,7 @@ export const Sidebar = () => {
               <BrowserTab
                 key={singleTabMeta.uuid}
                 uuid={singleTabMeta.uuid}
+                url={singleTabMeta.url}
                 index={index}
                 data-tabUuid={singleTabMeta.uuid}
                 isActive={tabMeta.currentTabUuid === singleTabMeta.uuid}

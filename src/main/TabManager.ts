@@ -27,20 +27,25 @@ export class TabManager {
   public constructor(mainWindow: BrowserWindow) {
     this.mainWindow = mainWindow;
     this.updateBrowsingView();
+    this.updateDevtoolsView();
     mainWindow.on('resize', async () => {
       await this.updateBrowsingView();
+      this.updateDevtoolsView();
     });
     mainWindow.webContents.addListener('devtools-opened', async () => {
       await this.updateBrowsingView();
+      await this.updateDevtoolsView();
     });
     mainWindow.webContents.addListener('devtools-closed', async () => {
       await this.updateBrowsingView();
+      await this.updateDevtoolsView();
     });
     typedIpcMain.on('update-tab-meta', () => {
       this.updateRenderProcess();
     });
     typedIpcMain.on('app-resize', (_event, size) => {
       this.updateBrowsingView();
+      this.updateDevtoolsView();
     });
     typedIpcMain.on('update-tab-url', (_event, url) => {
       this.currentTab?.view.webContents.loadURL(url.newUrl);
@@ -57,6 +62,17 @@ export class TabManager {
         height: size.position.height,
       });
     });
+    typedIpcMain.on(
+      'devtools-layout-change',
+      (_event, size: OverlayOptions) => {
+        this.updateDevtoolsView({
+          x: size.position.x,
+          y: size.position.y,
+          width: size.position.width,
+          height: size.position.height,
+        });
+      },
+    );
     typedIpcMain.on('update-active-tab', (_event, newTabMeta) => {
       console.log('Switching to tab uuid', newTabMeta);
       this.focusTabUuid(newTabMeta.activeTabUuid);
@@ -164,6 +180,34 @@ export class TabManager {
     }
   }
 
+  public async updateDevtoolsView(
+    dimensions?: Partial<{
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }>,
+  ) {
+    if (!dimensions) {
+      typedWebContents(this.mainWindow.webContents).send(
+        'devtools-layout-change',
+      );
+      return;
+    }
+    const internalSize = {
+      x: (dimensions?.x ?? 0) + 1,
+      y: (dimensions?.y ?? 0) + 1,
+      width: (dimensions?.width ?? 0) - 2,
+      height: (dimensions?.height ?? 0) - 2,
+    };
+    if (this.currentTab) {
+      this.currentTab.devToolsView.setBounds(internalSize);
+      this.currentTab.devToolsView.webContents.insertCSS(
+        'body{ min-height: 100vh; }',
+      );
+    }
+  }
+
   public updateRenderProcess() {
     const tabMeta = [...this.tabs]
       .map((tab) => (tab.view ? tab.getTabIpcMeta() : undefined))
@@ -189,12 +233,16 @@ export class TabManager {
     this.addTab(tab);
     if (this.currentTab) {
       this.mainWindow.contentView.removeChildView(this.currentTab.view);
+      this.mainWindow.contentView.removeChildView(this.currentTab.devToolsView);
     }
 
     this.currentTab = tab;
-    this.currentTab.view.setBorderRadius(13);
+    this.currentTab.view.setBorderRadius(6);
+    this.currentTab.devToolsView.setBorderRadius(6);
     if (!this.currentTab.isInternalPage) {
       this.mainWindow.contentView.addChildView(this.currentTab.view);
+      this.mainWindow.contentView.addChildView(this.currentTab.devToolsView);
+
       typedWebContents(this.mainWindow.webContents).send(
         'internal-page-navigate',
         {

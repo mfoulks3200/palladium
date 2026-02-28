@@ -117,6 +117,7 @@ export interface RendererToMainEvents {
   'tab-context-menu': [{ uuid: string }];
   'app-resize': [{ width: number; height: number }];
   'browser-layout-change': [OverlayOptions];
+  'devtools-layout-change': [OverlayOptions];
   'ipc-example': [string];
   'command-input': [CommandInputIpc];
   'command-bar': [CommandBarIpc];
@@ -132,6 +133,7 @@ export interface RendererToMainEvents {
 export interface MainToRendererEvents {
   'update-tab-meta': [TabManagerIpc];
   'browser-layout-change': [];
+  'devtools-layout-change': [];
   'ipc-example': [string];
   'command-response': [CommandResponseIpc];
   'command-setup': [CommandBarSetupIpc];

@@ -2,7 +2,8 @@ import { useContext, useState } from 'react';
 import { SettingsContext } from '@/lib/settings';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Search, Trash2 } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
 export const CustomSearchEngines = () => {
   const { useSetting } = useContext(SettingsContext);
@@ -58,7 +59,10 @@ export const CustomSearchEngines = () => {
         ))}
       </div>
 
-      <div className="mt-2 flex flex-col gap-3 rounded-lg border border-white/10 bg-white/5 p-4">
+      <Card
+        apperance="Hero"
+        className="mt-2 flex flex-col gap-3 rounded-lg border border-white/10 bg-white/5 p-4"
+      >
         <div className="mb-1 text-sm font-medium">Add Search Engine</div>
         <div className="grid grid-cols-2 gap-2">
           <Input
@@ -88,7 +92,7 @@ export const CustomSearchEngines = () => {
           <Plus className="mr-2 h-4 w-4" />
           Add Engine
         </Button>
-      </div>
+      </Card>
     </div>
   );
 };
