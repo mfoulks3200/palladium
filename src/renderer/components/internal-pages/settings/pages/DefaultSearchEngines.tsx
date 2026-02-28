@@ -1,7 +1,7 @@
 import { useContext } from 'react';
-import { SettingsOption } from '.';
 import { SettingsContext } from '@/lib/settings';
 import { Checkbox } from '@/components/ui/checkbox';
+import { SettingsOption } from '../SettingComponents';
 
 export const DefaultSearchEngines = () => {
   const { useSetting } = useContext(SettingsContext);

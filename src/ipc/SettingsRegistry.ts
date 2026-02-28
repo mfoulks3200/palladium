@@ -39,6 +39,14 @@ export const settingsSchema = z.object({
     .prefault({}),
   personalization: z
     .object({
+      userInterface: z
+        .object({
+          tintColor: z.hex().length(6).default('000000'),
+          transparency: z.number().gt(0).lte(1).default(0.75),
+          blur: z.number().gte(0).lte(50).default(8),
+          backdropSaturation: z.number().gte(0).lte(500).default(200),
+        })
+        .prefault({}),
       background: z
         .discriminatedUnion('type', [
           z.object({
@@ -52,7 +60,7 @@ export const settingsSchema = z.object({
             maxFps: z.number().gte(0).lt(120),
           }),
         ])
-        .prefault({
+        .default({
           type: 'presetShader',
           id: 'rainbow',
           speed: 0.1,

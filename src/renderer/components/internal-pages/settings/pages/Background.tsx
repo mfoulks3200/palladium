@@ -1,6 +1,4 @@
-import { SettingsOption } from '.';
-import { SettingsContext, useSettings } from '@/lib/settings';
-import { Checkbox } from '@/components/ui/checkbox';
+import { useSettings } from '@/lib/settings';
 import {
   Combobox,
   ComboboxContent,
@@ -15,6 +13,7 @@ import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { SwatchBook } from 'lucide-react';
+import { SettingsOption } from '../SettingComponents';
 
 export const Background = () => {
   const shaderPresets = ['Color', 'Shader'];
@@ -97,6 +96,7 @@ export const ShaderBackground = () => {
           'border-x-gray-600/35 border-t-gray-600/50 border-b-gray-600/20',
           'flex flex-col gap-2 overflow-hidden p-4',
         )}
+        apperance="Hero"
       >
         <a href={currentBg.link ?? '#'} target="_blank" className="text-xl">
           {backgrounds[shaderPreset].name}
@@ -112,33 +112,27 @@ export const ShaderBackground = () => {
         <SwatchBook size={128} className="absolute -top-6 right-0 opacity-5" />
       </Card>
       <SettingsOption name={'Speed'} className={optionClassNames}>
-        <div className="flex w-full gap-2">
-          <div className="flex grow">
-            <Slider
-              defaultValue={[speed]}
-              min={-1}
-              max={1}
-              onValueChange={(newVal) => setSpeed(newVal[0])}
-              step={0.01}
-              className="mx-auto w-full max-w-xs"
-            />
-            <div className="relative mr-[50%] -ml-[50%] h-full w-[1px] bg-white" />
-          </div>
-          <div className="w-14 text-right">{speed.toFixed(2)}</div>
-        </div>
+        <Slider
+          defaultValue={[speed]}
+          min={-1}
+          max={1}
+          onValueChange={(newVal) => setSpeed(newVal[0])}
+          step={0.01}
+          className="mx-auto w-full max-w-xs"
+          centerMarker={true}
+          displayValue={(speed * 100).toFixed(0) + '%'}
+        />
       </SettingsOption>
       <SettingsOption name={'Max FPS'} className={optionClassNames}>
-        <div className="flex w-full gap-2">
-          <Slider
-            defaultValue={[maxFps]}
-            min={0}
-            max={120}
-            onValueChange={(newVal) => setMaxFps(newVal[0])}
-            step={1}
-            className="mx-auto w-full max-w-xs"
-          />
-          <div className="w-14 text-right">{maxFps}</div>
-        </div>
+        <Slider
+          defaultValue={[maxFps]}
+          min={0}
+          max={120}
+          onValueChange={(newVal) => setMaxFps(newVal[0])}
+          step={1}
+          className="mx-auto w-full max-w-xs"
+          displayValue={maxFps}
+        />
       </SettingsOption>
     </>
   );

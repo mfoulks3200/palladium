@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { HistoryItem } from '../../../../ipc';
+import { HistoryItem } from '../../../../../ipc';
 import { Button } from '@/components/ui/button';
 import { Trash2, ExternalLink, Globe } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
 export const HistoryPanel = () => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -52,26 +53,23 @@ export const HistoryPanel = () => {
           <div className="py-8 text-center text-white/50">No history found</div>
         ) : (
           history.map((item) => (
-            <div
-              key={item.id}
-              className="group flex flex-col gap-1 rounded-lg border border-white/5 bg-white/5 p-3 transition-colors hover:bg-white/10"
-            >
+            <Card key={item.id} className="group flex flex-col gap-1 p-3">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded bg-white/10">
-                    <Globe className="size-4 text-white/70" />
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded">
+                    <Globe className="size-4" />
                   </div>
                   <div className="flex flex-col overflow-hidden">
                     <div className="truncate text-sm font-medium">
                       {item.title || 'Untitled'}
                     </div>
-                    <div className="truncate text-xs text-white/40">
+                    <div className="truncate text-xs opacity-40">
                       {item.url}
                     </div>
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <div className="text-[10px] text-white/30">
+                  <div className="text-[10px] opacity-30">
                     {formatDate(item.timestamp)}
                   </div>
                   <button
@@ -83,16 +81,16 @@ export const HistoryPanel = () => {
                     className="opacity-0 transition-opacity group-hover:opacity-100"
                     title="Open in new tab"
                   >
-                    <ExternalLink className="size-3 text-white/50 hover:text-white" />
+                    <ExternalLink className="size-3 opacity-50" />
                   </button>
                 </div>
               </div>
               {item.metaDescription && (
-                <div className="mt-1 line-clamp-2 text-xs text-white/30">
+                <div className="mt-1 line-clamp-2 text-xs opacity-30">
                   {item.metaDescription}
                 </div>
               )}
-            </div>
+            </Card>
           ))
         )}
       </div>

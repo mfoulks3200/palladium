@@ -1,0 +1,51 @@
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.heroImage {
+  &::before {
+    display: block;
+    content: '';
+    --angle: 0deg;
+    background-image: conic-gradient(
+      from var(--angle),
+      violet,
+      indigo,
+      blue,
+      green,
+      yellow,
+      orange,
+      red,
+      violet
+    );
+    animation: rotateGradient 6s linear infinite;
+    height: 160px;
+    width: 160px;
+    margin-bottom: -160px;
+    filter: blur(15px);
+    border-radius: 40px;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 2s ease;
+  }
+
+  &:hover::before {
+    opacity: 1;
+  }
+
+  & img {
+    position: relative;
+    z-index: 10;
+  }
+}
+
+@keyframes rotateGradient {
+  from {
+    --angle: 0deg;
+  }
+  to {
+    --angle: 360deg;
+  }
+}
