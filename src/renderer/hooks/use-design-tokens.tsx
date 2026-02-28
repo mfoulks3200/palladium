@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import { generatePalette, getAccessibleTextColor, adjustLightness, hasSufficientContrast, ensureVisiblePrimary } from '../lib/colors';
 import { useSettings } from '../lib/settings';
+import chroma from 'chroma-js';
 
 // Define the shape of our tokens
 export interface DesignTokens {
@@ -83,14 +84,18 @@ const getEffectiveTheme = (themePref: 'light' | 'dark' | 'system'): 'light' | 'd
 const generateTokens = (prefs: DesignPreferences, effectiveTheme: 'light' | 'dark'): DesignTokens => {
   const isDark = effectiveTheme === 'dark';
 
-  // Base backgrounds heavily dependent on theme
-  const background = prefs.backgroundColor || (isDark ? '#09090b' : '#ffffff');
-  
-  // Surface is usually a slight elevation from background
-  const surface = isDark ? adjustLightness(background, 0.5) : adjustLightness(background, -0.2);
-  
   // Primary color from user, adjusted for extreme light/dark
   const primary = ensureVisiblePrimary(prefs.primaryColor, isDark);
+
+  // Base backgrounds heavily dependent on theme
+  const baseBackground = prefs.backgroundColor || (isDark ? '#09090b' : '#ffffff');
+  
+  // Mix a subtle amount of primary tint into background
+  const background = chroma.mix(baseBackground, primary, isDark ? 0.05 : 0.03, 'rgb').hex();
+  
+  // Surface is usually a slight elevation from background, highly tinted to restore the card's previous appearance
+  const rawSurface = isDark ? adjustLightness(background, 0.5) : adjustLightness(background, -0.2);
+  const surface = chroma.mix(rawSurface, primary, isDark ? 0.15 : 0.08, 'rgb').hex();
 
   // Generate a full palette for the primary color
   const primaryPalette = generatePalette(primary, 9);
