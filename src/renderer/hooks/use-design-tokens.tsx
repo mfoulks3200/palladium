@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
-import { generatePalette, getAccessibleTextColor, adjustLightness, hasSufficientContrast } from '../lib/colors';
+import { generatePalette, getAccessibleTextColor, adjustLightness, hasSufficientContrast, ensureVisiblePrimary } from '../lib/colors';
 import { useSettings } from '../lib/settings';
 
 // Define the shape of our tokens
@@ -89,8 +89,8 @@ const generateTokens = (prefs: DesignPreferences, effectiveTheme: 'light' | 'dar
   // Surface is usually a slight elevation from background
   const surface = isDark ? adjustLightness(background, 0.5) : adjustLightness(background, -0.2);
   
-  // Primary color from user
-  const primary = prefs.primaryColor;
+  // Primary color from user, adjusted for extreme light/dark
+  const primary = ensureVisiblePrimary(prefs.primaryColor, isDark);
 
   // Generate a full palette for the primary color
   const primaryPalette = generatePalette(primary, 9);
@@ -159,7 +159,7 @@ export const DesignTokenProvider: React.FC<{
   // Recalculate tokens when preferences or effective theme changes
   const tokens = useMemo(() => generateTokens({
     ...preferences,
-    primaryColor: safeTintColor !== '#000000' ? safeTintColor : preferences.primaryColor
+    primaryColor: safeTintColor
   }, effectiveTheme), [preferences, effectiveTheme, safeTintColor]);
 
   // Inject CSS variables into the root document so regular CSS/Tailwind can use them

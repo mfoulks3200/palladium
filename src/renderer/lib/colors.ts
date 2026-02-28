@@ -58,3 +58,18 @@ export const adjustLightness = (hexColor: string, amount: number): string => {
     .darken(Math.abs(amount) / 10)
     .hex();
 };
+
+// Ensure primary color stays visible at the extremes by fading it towards white/black
+export const ensureVisiblePrimary = (hexColor: string, isDark: boolean): string => {
+  const luminance = chroma(hexColor).luminance();
+  if (isDark && luminance < 0.15) {
+    // Fade to white smoothly as luminance drops below 0.15
+    const ratio = Math.max(0, Math.min(1, 1 - (luminance / 0.15)));
+    return chroma.mix(hexColor, '#ffffff', ratio, 'rgb').hex();
+  } else if (!isDark && luminance > 0.85) {
+    // Fade to black smoothly as luminance goes above 0.85
+    const ratio = Math.max(0, Math.min(1, (luminance - 0.85) / 0.15));
+    return chroma.mix(hexColor, '#000000', ratio, 'rgb').hex();
+  }
+  return hexColor;
+};
