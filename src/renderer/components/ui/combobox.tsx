@@ -12,8 +12,6 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from '@/components/ui/input-group';
-import { useSettings } from '@/lib/settings';
-import chroma from 'chroma-js';
 
 const Combobox = ComboboxPrimitive.Root;
 
@@ -65,24 +63,9 @@ function ComboboxInput({
   showTrigger?: boolean;
   showClear?: boolean;
 }) {
-  const [tint] = useSettings('personalization.userInterface.tintColor');
-  const [opacity] = useSettings('personalization.userInterface.transparency');
-
-  let baseBgColor = chroma(tint).alpha(opacity).desaturate(3);
-
-  const lightMode =
-    chroma.contrast(baseBgColor, 'white') >
-    chroma.contrast(baseBgColor, 'black');
-
   return (
     <InputGroup
-      className={cn('w-auto border-0 shadow-sm', className)}
-      style={{
-        backgroundColor: lightMode
-          ? 'rgba(0,0,0,0.25)'
-          : 'rgba(255,255,255,0.2)',
-        color: lightMode ? 'white' : 'black',
-      }}
+      className={cn('w-auto border-0 shadow-sm bg-input/10 dark:bg-input/30', className)}
     >
       <ComboboxPrimitive.Input
         render={<InputGroupInput className="bg-none" disabled={disabled} />}

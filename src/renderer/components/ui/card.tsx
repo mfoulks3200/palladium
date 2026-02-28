@@ -1,8 +1,6 @@
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
-import { useSettings } from '@/lib/settings';
-import chroma from 'chroma-js';
 
 type CardApperances = 'Translucent' | 'Solid' | 'Hero';
 
@@ -15,57 +13,13 @@ function Card({
   apperance = 'Translucent',
   ...props
 }: React.ComponentProps<'div'> & CardProps) {
-  const [tint] = useSettings('personalization.userInterface.tintColor');
-  const [opacity] = useSettings('personalization.userInterface.transparency');
-  const [blur] = useSettings('personalization.userInterface.blur');
-  const [saturation] = useSettings(
-    'personalization.userInterface.backdropSaturation',
-  );
-
-  let baseBgColor = chroma(tint).alpha(opacity).desaturate(3);
-
-  switch (apperance) {
-    case 'Hero':
-      baseBgColor = baseBgColor.darken(0.75);
-      break;
-    case 'Solid':
-      if (baseBgColor.luminance() < 0.3) {
-        baseBgColor = baseBgColor.darken(2);
-      } else {
-        baseBgColor = baseBgColor.brighten(1);
-      }
-      break;
-    case 'Translucent':
-      //
-      break;
-  }
-
-  const lightMode =
-    chroma.contrast(baseBgColor, 'white') >
-    chroma.contrast(baseBgColor, 'black');
-
-  let topBorderColor = baseBgColor.alpha(0.5).brighten(lightMode ? 2 : 1.25);
-
   return (
     <div
       data-slot="card"
       className={cn(
-        'text-card-foreground flex flex-col gap-6 rounded-[8px] border py-6 shadow-sm transition-[color]',
-        {
-          ['text-white']: lightMode,
-          ['text-black']: !lightMode,
-        },
+        'text-card-foreground bg-card flex flex-col gap-6 rounded-[8px] border py-6 shadow-sm transition-[color]',
         className,
       )}
-      style={{
-        backgroundColor: baseBgColor.css(),
-        background: `linear-gradient(45deg, ${baseBgColor.darken(0.25)} 0%, ${baseBgColor.brighten(0.25)} 100%)`,
-        backdropFilter: `blur(${blur}px) saturate(${saturation}%)`,
-        borderTop: `1px solid ${topBorderColor.css()}`,
-        borderLeft: `1px solid ${topBorderColor.darken(0.6).css()}`,
-        borderRight: `1px solid ${topBorderColor.darken(0.6).css()}`,
-        borderBottom: `1px solid ${topBorderColor.darken(0.9).css()}`,
-      }}
       {...props}
     />
   );

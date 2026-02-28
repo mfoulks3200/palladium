@@ -2,8 +2,6 @@ import * as React from 'react';
 import { Slider as SliderPrimitive } from 'radix-ui';
 
 import { cn } from '@/lib/utils';
-import { useSettings } from '@/lib/settings';
-import chroma from 'chroma-js';
 
 interface SliderProps {
   centerMarker?: boolean;
@@ -20,14 +18,6 @@ function Slider({
   displayValue,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Root> & SliderProps) {
-  const [tint] = useSettings('personalization.userInterface.tintColor');
-  const [opacity] = useSettings('personalization.userInterface.transparency');
-
-  let baseBgColor = chroma(tint).alpha(opacity).desaturate(3);
-
-  const lightMode =
-    chroma.contrast(baseBgColor, 'white') >
-    chroma.contrast(baseBgColor, 'black');
 
   const _values = React.useMemo(
     () =>
@@ -58,24 +48,15 @@ function Slider({
             data-slot="slider-track"
             className={cn(
               'relative grow overflow-hidden rounded-full data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5',
+              'bg-primary/20'
             )}
-            style={{
-              backgroundColor: lightMode
-                ? 'rgba(0,0,0,0.1)'
-                : 'rgba(255,255,255,0.2)',
-            }}
           >
             <SliderPrimitive.Range
               data-slot="slider-range"
               className={cn(
                 'absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full',
+                'bg-primary'
               )}
-              style={{
-                backgroundColor: chroma(lightMode ? 'white' : 'black')
-                  .darken(opacity * 4)
-                  .alpha(0.5)
-                  .css(),
-              }}
             />
           </SliderPrimitive.Track>
           {Array.from({ length: _values.length }, (_, index) => (
@@ -88,25 +69,13 @@ function Slider({
         </SliderPrimitive.Root>
         {centerMarker && (
           <div
-            className="relative -z-10 mr-[50%] -ml-[50%] h-full w-[1px]"
-            style={{
-              backgroundColor: chroma(lightMode ? 'white' : 'black')
-                .darken(opacity * 4)
-                .alpha(0.5)
-                .css(),
-            }}
+            className="relative -z-10 mr-[50%] -ml-[50%] h-full w-[1px] bg-primary/50"
           />
         )}
       </div>
       {displayValue && (
         <div
-          className="w-14 rounded-sm bg-red-600 px-2 py-1 text-right font-mono text-sm"
-          style={{
-            backgroundColor: lightMode
-              ? 'rgba(0,0,0,0.1)'
-              : 'rgba(255,255,255,0.2)',
-            color: lightMode ? 'white' : 'black',
-          }}
+          className="w-14 rounded-sm bg-muted px-2 py-1 text-right font-mono text-sm text-foreground"
         >
           {displayValue}
         </div>
