@@ -85,21 +85,33 @@ const getEffectiveTheme = (themePref: 'light' | 'dark' | 'system'): 'light' | 'd
 const generateTokens = (prefs: DesignPreferences, effectiveTheme: 'light' | 'dark'): DesignTokens => {
   const isDark = effectiveTheme === 'dark';
 
-  // Raw tint color
+  // Raw tint color and its luminance
   const rawPrimary = prefs.primaryColor;
+  const primaryLuminance = chroma(rawPrimary).luminance();
 
   // Primary color from user, adjusted for extreme light/dark
   const primary = ensureVisiblePrimary(rawPrimary, isDark);
 
-  // Base backgrounds heavily dependent on theme
-  const baseBackground = prefs.backgroundColor || (isDark ? '#09090b' : '#ffffff');
+  // Dynamic base background that can be pulled all the way to absolute black/white
+  let baseBackground = prefs.backgroundColor || (isDark ? '#09090b' : '#ffffff');
+  if (isDark && primaryLuminance < 0.02) {
+    baseBackground = chroma.mix(baseBackground, '#000000', 1 - (primaryLuminance / 0.02), 'rgb').hex();
+  } else if (!isDark && primaryLuminance > 0.98) {
+    baseBackground = chroma.mix(baseBackground, '#ffffff', (primaryLuminance - 0.98) / 0.02, 'rgb').hex();
+  }
   
   // Solid hexes for contrast calculations using raw unadjusted primary so dark tints don't accidentally lighten backgrounds
   const backgroundHex = chroma.mix(baseBackground, rawPrimary, isDark ? 0.05 : 0.03, 'rgb').hex();
-  // In light mode, shadcn usually keeps cards pure white like the background. Darkening it artificially prevented pure white cards.
-  const rawSurfaceHex = isDark ? adjustLightness(backgroundHex, 0.5) : backgroundHex;
+  
+  // Scale surfaces based on extremes. If picking pure black, remove the elevation so it stays black.
+  const darkElevation = isDark ? Math.min(0.5, primaryLuminance * 25) : 0;
+  const rawSurfaceHex = isDark ? adjustLightness(backgroundHex, darkElevation) : backgroundHex;
   const surfaceHex = chroma.mix(rawSurfaceHex, rawPrimary, isDark ? 0.15 : 0.08, 'rgb').hex();
-  const borderHex = isDark ? adjustLightness(backgroundHex, 1) : adjustLightness(backgroundHex, -1);
+  
+  // Scale border contrast dynamically. If absolute white/black, borders dissolve too.
+  const darkBorderElev = isDark ? Math.min(1, primaryLuminance * 50) : 0;
+  const lightBorderElev = !isDark ? Math.max(-1, (primaryLuminance - 1) * 50) : 0;
+  const borderHex = isDark ? adjustLightness(backgroundHex, darkBorderElev) : adjustLightness(backgroundHex, lightBorderElev);
 
   // Apply user opacity for glass effect
   const opacity = prefs.opacity !== undefined ? prefs.opacity : 1;
