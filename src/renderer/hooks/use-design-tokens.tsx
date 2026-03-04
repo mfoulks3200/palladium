@@ -96,7 +96,8 @@ const generateTokens = (prefs: DesignPreferences, effectiveTheme: 'light' | 'dar
   
   // Solid hexes for contrast calculations using raw unadjusted primary so dark tints don't accidentally lighten backgrounds
   const backgroundHex = chroma.mix(baseBackground, rawPrimary, isDark ? 0.05 : 0.03, 'rgb').hex();
-  const rawSurfaceHex = isDark ? adjustLightness(backgroundHex, 0.5) : adjustLightness(backgroundHex, -0.2);
+  // In light mode, shadcn usually keeps cards pure white like the background. Darkening it artificially prevented pure white cards.
+  const rawSurfaceHex = isDark ? adjustLightness(backgroundHex, 0.5) : backgroundHex;
   const surfaceHex = chroma.mix(rawSurfaceHex, rawPrimary, isDark ? 0.15 : 0.08, 'rgb').hex();
   const borderHex = isDark ? adjustLightness(backgroundHex, 1) : adjustLightness(backgroundHex, -1);
 
