@@ -85,16 +85,19 @@ const getEffectiveTheme = (themePref: 'light' | 'dark' | 'system'): 'light' | 'd
 const generateTokens = (prefs: DesignPreferences, effectiveTheme: 'light' | 'dark'): DesignTokens => {
   const isDark = effectiveTheme === 'dark';
 
+  // Raw tint color
+  const rawPrimary = prefs.primaryColor;
+
   // Primary color from user, adjusted for extreme light/dark
-  const primary = ensureVisiblePrimary(prefs.primaryColor, isDark);
+  const primary = ensureVisiblePrimary(rawPrimary, isDark);
 
   // Base backgrounds heavily dependent on theme
   const baseBackground = prefs.backgroundColor || (isDark ? '#09090b' : '#ffffff');
   
-  // Solid hexes for contrast calculations
-  const backgroundHex = chroma.mix(baseBackground, primary, isDark ? 0.05 : 0.03, 'rgb').hex();
+  // Solid hexes for contrast calculations using raw unadjusted primary so dark tints don't accidentally lighten backgrounds
+  const backgroundHex = chroma.mix(baseBackground, rawPrimary, isDark ? 0.05 : 0.03, 'rgb').hex();
   const rawSurfaceHex = isDark ? adjustLightness(backgroundHex, 0.5) : adjustLightness(backgroundHex, -0.2);
-  const surfaceHex = chroma.mix(rawSurfaceHex, primary, isDark ? 0.15 : 0.08, 'rgb').hex();
+  const surfaceHex = chroma.mix(rawSurfaceHex, rawPrimary, isDark ? 0.15 : 0.08, 'rgb').hex();
   const borderHex = isDark ? adjustLightness(backgroundHex, 1) : adjustLightness(backgroundHex, -1);
 
   // Apply user opacity for glass effect
