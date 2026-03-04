@@ -92,12 +92,12 @@ const generateTokens = (prefs: DesignPreferences, effectiveTheme: 'light' | 'dar
   // Primary color from user, adjusted for extreme light/dark
   const primary = ensureVisiblePrimary(rawPrimary, isDark);
 
-  // Dynamic base background that can be pulled all the way to absolute black/white
+  // Dynamic base background that can be pulled all the way to absolute black/white regardless of the active theme
   let baseBackground = prefs.backgroundColor || (isDark ? '#09090b' : '#ffffff');
-  if (isDark && primaryLuminance < 0.02) {
-    baseBackground = chroma.mix(baseBackground, '#000000', 1 - (primaryLuminance / 0.02), 'rgb').hex();
-  } else if (!isDark && primaryLuminance > 0.98) {
-    baseBackground = chroma.mix(baseBackground, '#ffffff', (primaryLuminance - 0.98) / 0.02, 'rgb').hex();
+  if (primaryLuminance < 0.05) {
+    baseBackground = chroma.mix(baseBackground, '#000000', 1 - (primaryLuminance / 0.05), 'rgb').hex();
+  } else if (primaryLuminance > 0.95) {
+    baseBackground = chroma.mix(baseBackground, '#ffffff', (primaryLuminance - 0.95) / 0.05, 'rgb').hex();
   }
   
   // Solid hexes for contrast calculations using raw unadjusted primary so dark tints don't accidentally lighten backgrounds
