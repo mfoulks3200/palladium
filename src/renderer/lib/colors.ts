@@ -9,7 +9,7 @@ export const getLuminance = (hexColor: string): number => {
 export const hasSufficientContrast = (
   textColor: string,
   bgColor: string,
-  minRatio: number = 4.5
+  minRatio: number = 4.5,
 ): boolean => {
   return chroma.contrast(textColor, bgColor) >= minRatio;
 };
@@ -18,7 +18,7 @@ export const hasSufficientContrast = (
 export const getAccessibleTextColor = (
   bgColor: string,
   darkColor: string = '#000000',
-  lightColor: string = '#ffffff'
+  lightColor: string = '#ffffff',
 ): string => {
   const contrastWithDark = chroma.contrast(bgColor, darkColor);
   const contrastWithLight = chroma.contrast(bgColor, lightColor);
@@ -28,7 +28,7 @@ export const getAccessibleTextColor = (
 // Generate a full palette of varying lightnesses from a single base color
 export const generatePalette = (
   baseColor: string,
-  steps: number = 9
+  steps: number = 9,
 ): string[] => {
   // We use bezier interpolation to get a smooth scale
   // We want to generate shades from very light to very dark
@@ -60,11 +60,14 @@ export const adjustLightness = (hexColor: string, amount: number): string => {
 };
 
 // Ensure primary color stays visible at the extremes by fading it towards white/black
-export const ensureVisiblePrimary = (hexColor: string, isDark: boolean): string => {
+export const ensureVisiblePrimary = (
+  hexColor: string,
+  isDark: boolean,
+): string => {
   const luminance = chroma(hexColor).luminance();
   if (isDark && luminance < 0.15) {
     // Fade to white smoothly as luminance drops below 0.15
-    const ratio = Math.max(0, Math.min(1, 1 - (luminance / 0.15)));
+    const ratio = Math.max(0, Math.min(1, 1 - luminance / 0.15));
     return chroma.mix(hexColor, '#ffffff', ratio, 'rgb').hex();
   } else if (!isDark && luminance > 0.85) {
     // Fade to black smoothly as luminance goes above 0.85
@@ -72,4 +75,8 @@ export const ensureVisiblePrimary = (hexColor: string, isDark: boolean): string 
     return chroma.mix(hexColor, '#000000', ratio, 'rgb').hex();
   }
   return hexColor;
+};
+
+export const toHex = (color: string): string => {
+  return chroma(color).hex('rgba');
 };

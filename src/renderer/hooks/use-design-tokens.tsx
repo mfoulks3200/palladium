@@ -1,5 +1,17 @@
-import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
-import { generatePalette, getAccessibleTextColor, adjustLightness, hasSufficientContrast, ensureVisiblePrimary } from '../lib/colors';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useMemo,
+  useEffect,
+} from 'react';
+import {
+  generatePalette,
+  getAccessibleTextColor,
+  adjustLightness,
+  hasSufficientContrast,
+  ensureVisiblePrimary,
+} from '../lib/colors';
 import { useSettings } from '../lib/settings';
 import chroma from 'chroma-js';
 
@@ -9,6 +21,8 @@ export interface DesignTokens {
   primary: string;
   background: string;
   surface: string;
+  surfaceRaised: string;
+  surfaceOverlay: string;
   text: string;
   border: string;
 
@@ -21,6 +35,8 @@ export interface DesignTokens {
   // Calculated
   primaryForeground: string;
   surfaceForeground: string;
+  surfaceRaisedForeground: string;
+  surfaceOverlayForeground: string;
   successForeground: string;
   warningForeground: string;
   errorForeground: string;
@@ -42,7 +58,10 @@ interface DesignTokenContextValue {
   tokens: DesignTokens;
   preferences: DesignPreferences;
   setPreferences: (prefs: DesignPreferences) => void;
-  updatePreference: <K extends keyof DesignPreferences>(key: K, value: DesignPreferences[K]) => void;
+  updatePreference: <K extends keyof DesignPreferences>(
+    key: K,
+    value: DesignPreferences[K],
+  ) => void;
 }
 
 const defaultPreferences: DesignPreferences = {
@@ -54,6 +73,8 @@ const defaultTokens: DesignTokens = {
   primary: '#3b82f6',
   background: '#ffffff',
   surface: '#f3f4f6',
+  surfaceRaised: '#e5e7eb',
+  surfaceOverlay: '#d1d5db',
   text: '#111827',
   border: '#e5e7eb',
   success: '#10b981',
@@ -62,6 +83,8 @@ const defaultTokens: DesignTokens = {
   info: '#3b82f6',
   primaryForeground: '#ffffff',
   surfaceForeground: '#111827',
+  surfaceRaisedForeground: '#111827',
+  surfaceOverlayForeground: '#111827',
   successForeground: '#ffffff',
   warningForeground: '#ffffff',
   errorForeground: '#ffffff',
@@ -69,7 +92,9 @@ const defaultTokens: DesignTokens = {
   primaryPalette: [],
 };
 
-const DesignTokenContext = createContext<DesignTokenContextValue | undefined>(undefined);
+const DesignTokenContext = createContext<DesignTokenContextValue | undefined>(
+  undefined,
+);
 
 // Main generator function
 const generateTokens = (prefs: DesignPreferences): DesignTokens => {
@@ -84,25 +109,56 @@ const generateTokens = (prefs: DesignPreferences): DesignTokens => {
   const primary = ensureVisiblePrimary(rawPrimary, isDark);
 
   // Dynamic base background that can be pulled all the way to absolute black/white regardless of the active theme
-  let baseBackground = prefs.backgroundColor || (isDark ? '#09090b' : '#ffffff');
+  let baseBackground =
+    prefs.backgroundColor || (isDark ? '#09090b' : '#ffffff');
   if (primaryLuminance < 0.5) {
-    baseBackground = chroma.mix(baseBackground, '#000000', 1 - (primaryLuminance / 0.05), 'rgb').hex();
+    baseBackground = chroma
+      .mix(baseBackground, '#000000', 1 - primaryLuminance / 0.05, 'rgb')
+      .hex();
   } else {
-    baseBackground = chroma.mix(baseBackground, '#ffffff', (primaryLuminance - 0.5) / 0.5, 'rgb').hex();
+    baseBackground = chroma
+      .mix(baseBackground, '#ffffff', (primaryLuminance - 0.5) / 0.5, 'rgb')
+      .hex();
   }
-  
+
   // Solid hexes for contrast calculations using raw unadjusted primary so dark tints don't accidentally lighten backgrounds
-  const backgroundHex = chroma.mix(baseBackground, rawPrimary, isDark ? 0.05 : 0.03, 'rgb').hex();
-  
+  const backgroundHex = chroma
+    .mix(baseBackground, rawPrimary, isDark ? 0.05 : 0.03, 'rgb')
+    .hex();
+
   // Scale surfaces based on extremes. If picking pure black, remove the elevation so it stays black.
   const darkElevation = isDark ? Math.min(0.5, primaryLuminance * 25) : 0;
-  const rawSurfaceHex = isDark ? adjustLightness(backgroundHex, darkElevation) : backgroundHex;
-  const surfaceHex = chroma.mix(rawSurfaceHex, rawPrimary, isDark ? 0.15 : 0.08, 'rgb').hex();
-  
+  const rawSurfaceHex = isDark
+    ? adjustLightness(backgroundHex, darkElevation)
+    : backgroundHex;
+  // Desaturate the primary before mixing into surfaces so the tint stays subtle and
+  // doesn't produce an overly-saturated surface. Using 'lab' for perceptually uniform blending.
+  const surfaceTint = chroma(rawPrimary).desaturate(3).hex();
+  const surfaceHex = chroma
+    .mix(rawSurfaceHex, surfaceTint, isDark ? 0.15 : 0.08, 'lab')
+    .hex();
+
+  // Elevated surfaces — progressively lighter in dark mode, slightly darker/more tinted in light mode
+  const surfaceRaisedBase = adjustLightness(surfaceHex, isDark ? 1.5 : -0.5);
+  const surfaceRaisedHex = chroma
+    .mix(surfaceRaisedBase, surfaceTint, isDark ? 0.2 : 0.1, 'lab')
+    .hex();
+
+  const surfaceOverlayBase = adjustLightness(surfaceHex, isDark ? 3 : -1);
+  const surfaceOverlayHex = chroma
+    .mix(surfaceOverlayBase, surfaceTint, isDark ? 0.25 : 0.12, 'lab')
+    .hex();
+
   // Scale border contrast dynamically. If absolute white/black, borders dissolve too.
-  const darkBorderElev = isDark ? Math.max(0.5, Math.min(1, primaryLuminance * 50)) : 0;
-  const lightBorderElev = !isDark ? Math.max(-1, (primaryLuminance - 1) * 50) : 0;
-  let borderHex = isDark ? adjustLightness(backgroundHex, darkBorderElev) : adjustLightness(backgroundHex, lightBorderElev);
+  const darkBorderElev = isDark
+    ? Math.max(0.5, Math.min(1, primaryLuminance * 50))
+    : 0;
+  const lightBorderElev = !isDark
+    ? Math.max(-1, (primaryLuminance - 1) * 50)
+    : 0;
+  let borderHex = isDark
+    ? adjustLightness(backgroundHex, darkBorderElev)
+    : adjustLightness(backgroundHex, lightBorderElev);
 
   // Enforce a minimum lightness for dark mode borders so they stand out on true black backgrounds
   if (isDark && chroma(borderHex).get('hsl.l') < 0.12) {
@@ -113,6 +169,8 @@ const generateTokens = (prefs: DesignPreferences): DesignTokens => {
   const opacity = prefs.opacity !== undefined ? prefs.opacity : 1;
   const background = chroma(backgroundHex).alpha(opacity).css();
   const surface = chroma(surfaceHex).alpha(opacity).css();
+  const surfaceRaised = chroma(surfaceRaisedHex).alpha(opacity).css();
+  const surfaceOverlay = chroma(surfaceOverlayHex).alpha(opacity).css();
   const border = chroma(borderHex).alpha(opacity).css();
 
   // Generate a full palette for the primary color
@@ -120,13 +178,33 @@ const generateTokens = (prefs: DesignPreferences): DesignTokens => {
 
   // Calculate accessible text colors using the solid hexes
   const text = getAccessibleTextColor(backgroundHex, '#0f172a', '#f8fafc');
-  const primaryForeground = getAccessibleTextColor(primary, '#000000', '#ffffff');
-  const surfaceForeground = getAccessibleTextColor(surfaceHex, '#000000', '#ffffff');
+  const primaryForeground = getAccessibleTextColor(
+    primary,
+    '#000000',
+    '#ffffff',
+  );
+  const surfaceForeground = getAccessibleTextColor(
+    surfaceHex,
+    '#000000',
+    '#ffffff',
+  );
+  const surfaceRaisedForeground = getAccessibleTextColor(
+    surfaceRaisedHex,
+    '#000000',
+    '#ffffff',
+  );
+  const surfaceOverlayForeground = getAccessibleTextColor(
+    surfaceOverlayHex,
+    '#000000',
+    '#ffffff',
+  );
 
   return {
     primary,
     background,
     surface,
+    surfaceRaised,
+    surfaceOverlay,
     text,
     border,
     success: '#10b981',
@@ -135,6 +213,8 @@ const generateTokens = (prefs: DesignPreferences): DesignTokens => {
     info: '#3b82f6',
     primaryForeground,
     surfaceForeground,
+    surfaceRaisedForeground,
+    surfaceOverlayForeground,
     successForeground: getAccessibleTextColor('#10b981', '#000000', '#ffffff'),
     warningForeground: getAccessibleTextColor('#f59e0b', '#000000', '#ffffff'),
     errorForeground: getAccessibleTextColor('#ef4444', '#000000', '#ffffff'),
@@ -155,20 +235,26 @@ export const DesignTokenProvider: React.FC<{
   const [tintColor] = useSettings('personalization.userInterface.tintColor');
   const [opacity] = useSettings('personalization.userInterface.transparency');
   const [blur] = useSettings('personalization.userInterface.blur');
-  const [saturation] = useSettings('personalization.userInterface.backdropSaturation');
+  const [saturation] = useSettings(
+    'personalization.userInterface.backdropSaturation',
+  );
   const safeTintColor = tintColor.startsWith('#') ? tintColor : `#${tintColor}`;
 
   // Recalculate tokens when preferences change
-  const tokens = useMemo(() => generateTokens({
-    ...preferences,
-    primaryColor: safeTintColor,
-    opacity
-  }), [preferences, safeTintColor, opacity]);
+  const tokens = useMemo(
+    () =>
+      generateTokens({
+        ...preferences,
+        primaryColor: safeTintColor,
+        opacity,
+      }),
+    [preferences, safeTintColor, opacity],
+  );
 
   // Inject CSS variables into the root document so regular CSS/Tailwind can use them
   useEffect(() => {
     const root = document.documentElement;
-    // We convert hex to RGB values if using Tailwind to allow opacity adjustments, 
+    // We convert hex to RGB values if using Tailwind to allow opacity adjustments,
     // but for simplicity here we just inject the hex.
     Object.entries(tokens).forEach(([key, value]) => {
       if (typeof value === 'string') {
@@ -177,10 +263,10 @@ export const DesignTokenProvider: React.FC<{
         root.style.setProperty(cssVarKey, value);
       }
     });
-    
+
     // Inject palette
     tokens.primaryPalette.forEach((color, index) => {
-       root.style.setProperty(`--color-primary-${(index + 1) * 100}`, color);
+      root.style.setProperty(`--color-primary-${(index + 1) * 100}`, color);
     });
 
     // Inject glassmorphism effects
@@ -192,7 +278,10 @@ export const DesignTokenProvider: React.FC<{
     setPreferencesState(newPrefs);
   };
 
-  const updatePreference = <K extends keyof DesignPreferences>(key: K, value: DesignPreferences[K]) => {
+  const updatePreference = <K extends keyof DesignPreferences>(
+    key: K,
+    value: DesignPreferences[K],
+  ) => {
     setPreferencesState((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -203,17 +292,23 @@ export const DesignTokenProvider: React.FC<{
       setPreferences,
       updatePreference,
     }),
-    [tokens, preferences]
+    [tokens, preferences],
   );
 
-  return <DesignTokenContext.Provider value={value}>{children}</DesignTokenContext.Provider>;
+  return (
+    <DesignTokenContext.Provider value={value}>
+      {children}
+    </DesignTokenContext.Provider>
+  );
 };
 
 // Custom hook for consuming the tokens
 export const useDesignTokens = () => {
   const context = useContext(DesignTokenContext);
   if (context === undefined) {
-    throw new Error('useDesignTokens must be used within a DesignTokenProvider');
+    throw new Error(
+      'useDesignTokens must be used within a DesignTokenProvider',
+    );
   }
   return context;
 };
