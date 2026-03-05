@@ -11,6 +11,7 @@ import { HistoryEvent, HistoryManager } from './HistoryManager';
 import path from 'node:path';
 import os from 'node:os';
 import { TabManager } from './TabManager';
+import { AnalyticsManager } from './AnalyticsManager';
 
 const devToolsCSS = `
 body > .widget.vbox.root-view {
@@ -229,6 +230,7 @@ export class Tab extends EventTarget {
     });
 
     this.view.webContents.on('did-navigate', async () => {
+      AnalyticsManager.getInstance().capture('page_navigated');
       const historyEvent: HistoryEvent = {
         tabUuid: this.uuid,
         url: this.getCurrentUrl(),

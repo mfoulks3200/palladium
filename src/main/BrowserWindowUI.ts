@@ -12,6 +12,7 @@ import { Tab } from './Tab';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { resolveHtmlPath } from './util';
+import { AnalyticsManager } from './AnalyticsManager';
 
 class AppUpdater {
   constructor() {
@@ -120,6 +121,13 @@ export class BrowserWindowUI {
     SettingsManager.getInstance();
 
     HistoryManager.getInstance();
+
+    // Initialize analytics and respect the user's opt-in/out preference.
+    const analytics = AnalyticsManager.getInstance();
+    const analyticsEnabled =
+      SettingsManager.getInstance().getItem('analytics.enabled');
+    analytics.setEnabled(analyticsEnabled);
+    analytics.capture('app_launched');
 
     setupOverlayManager(this.mainWindow);
 

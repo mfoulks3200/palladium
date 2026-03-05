@@ -9,6 +9,7 @@ import { Tab } from './Tab';
 import { TabActionsIpc, TabManagerIpc, OverlayOptions } from '../ipc';
 import { disablePortals } from '@/components/PortalOverlay';
 import { typedIpcMain, typedWebContents } from './ipc';
+import { AnalyticsManager } from './AnalyticsManager';
 
 let browsingView: WebContentsView;
 const padding = 12;
@@ -52,6 +53,7 @@ export class TabManager {
     });
     typedIpcMain.on('open-new-tab', (_event, url) => {
       const tab = new Tab(url.newUrl);
+      AnalyticsManager.getInstance().capture('tab_opened');
       this.focusTab(tab);
     });
     typedIpcMain.on('browser-layout-change', (_event, size: OverlayOptions) => {
@@ -85,6 +87,7 @@ export class TabManager {
         this.focusTabIndex(selectedIndex - 0);
       }
       if (selectedTab) {
+        AnalyticsManager.getInstance().capture('tab_closed');
         if (this.currentTab && tabMeta.uuid === this.currentTab.uuid) {
           this.mainWindow.contentView.removeChildView(this.currentTab.view);
         }

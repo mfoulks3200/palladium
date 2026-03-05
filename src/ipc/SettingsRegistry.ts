@@ -37,6 +37,15 @@ export const settingsSchema = z.object({
         }),
     })
     .prefault({}),
+  analytics: z
+    .object({
+      enabled: z.boolean().default(true).register(settingsRegistryItem, {
+        introducedIn: '0.0.6',
+        description:
+          'Send anonymous usage analytics to help improve Palladium. No URLs or personal information are ever collected.',
+      }),
+    })
+    .prefault({}),
   personalization: z
     .object({
       userInterface: z
