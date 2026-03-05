@@ -1,12 +1,5 @@
 import { cn } from '@/lib/utils';
-import {
-  FolderClosed,
-  FolderOpen,
-  File,
-  LucideIcon,
-  CassetteTape,
-  ArchiveX,
-} from 'lucide-react';
+import { FolderClosed, FolderOpen, File, LucideIcon } from 'lucide-react';
 import { PropsWithChildren, ReactElement, useMemo, useState } from 'react';
 
 interface FileTreeBaseObject {
@@ -28,33 +21,9 @@ interface FileTreeFolderObject extends FileTreeBaseObject {
   children?: FileTreeObject[];
 }
 
-type FileTreeObject = FileTreeFileObject | FileTreeFolderObject;
+export type FileTreeObject = FileTreeFileObject | FileTreeFolderObject;
 
-const exampleTree: FileTreeObject[] = [
-  {
-    type: 'folder',
-    name: 'Example Folder',
-    children: [
-      {
-        type: 'file',
-        name: 'File Name',
-        afterElements: <CassetteTape size={'14px'} />,
-        onClick: () => console.log('File name selected!'),
-      },
-      { type: 'file', name: 'Another File' },
-      {
-        type: 'folder',
-        name: 'Another Folder',
-        children: [
-          { type: 'file', name: 'File Name' },
-          { type: 'file', name: 'Another File' },
-        ],
-      },
-    ],
-  },
-];
-
-export const FileTree = () => {
+export const FileTree = ({ tree }: { tree: FileTreeObject[] }) => {
   const [activePath, setActivePath] = useState('');
 
   const getTreeComponents = (
@@ -73,7 +42,8 @@ export const FileTree = () => {
       return (
         <FileTreeFolder
           key={parentPath + fto.name}
-          text={'Folder Name'}
+          text={fto.name}
+          icon={fto.icon}
           indentLevel={indent}
           openByDefault={fto.openByDefault}
           afterElements={fto.afterElements}
@@ -104,15 +74,14 @@ export const FileTree = () => {
 
   const treeComponents = useMemo(() => {
     const components: ReactElement[] = [];
-    for (const item of exampleTree) {
+    for (const item of tree) {
       components.push(getTreeComponents(item));
     }
     return components;
   }, [activePath]);
 
   return (
-    <div className="h-full w-full bg-white">
-      <div className="border-b border-black/10 p-2">Explorer</div>
+    <div className="h-full w-full">
       <div className="flex flex-col">{treeComponents}</div>
     </div>
   );
@@ -186,7 +155,7 @@ const FileTreeItem = ({
       <div
         className={cn(
           'group flex items-center gap-1 select-none',
-          'border-y py-0.5 pr-2 text-sm hover:bg-black/10',
+          'py-0.5 pr-2 text-sm hover:bg-black/10',
           {
             ['bg-black/20']: isActive,
           },

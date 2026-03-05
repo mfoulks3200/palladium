@@ -4,7 +4,8 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable';
+import { Workspace } from './Workspace';
 
 export const EditorPage = () => {
-  return <>Testing</>;
+  return <Workspace />;
 };

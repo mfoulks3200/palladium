@@ -1,5 +1,9 @@
-import Editor, { loader } from '@monaco-editor/react';
+import { useDesignTokens } from '@/hooks/use-design-tokens';
+import { getLuminance } from '@/lib/colors';
+import Editor, { loader, Monaco } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
+
+loader.config({ monaco });
 
 const sampleCode = `
 import React from 'react';
@@ -37,13 +41,32 @@ function App() {
 const rootElement = document.getElementById('root');
 ReactDOM.render(<App />, rootElement);`;
 
-const EditorComponent = () => {
+export const EditorComponent = () => {
+  const tokens = useDesignTokens();
+
+  const isDarkMode = getLuminance(tokens.tokens.primary) < 0.5;
+
+  const beforeMount = (editor: Monaco) => {
+    editor.editor.defineTheme('transparent-theme', {
+      base: isDarkMode ? 'vs-dark' : 'vs', // or 'vs-dark' or 'hc-black'
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': '#00000000', // transparent background
+        'editorGutter.background': isDarkMode ? '#00000055' : '#FFFFFF55',
+      },
+    });
+  };
+
   return (
     <Editor
       height="100%"
       width="100%"
       defaultLanguage="javascript"
       defaultValue={sampleCode}
+      options={{}}
+      beforeMount={beforeMount}
+      theme={'transparent-theme'}
     />
   );
 };

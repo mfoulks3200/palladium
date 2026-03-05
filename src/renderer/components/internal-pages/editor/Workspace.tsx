@@ -1,67 +1,78 @@
-import { FileTree } from '@/components/ui/file-tree';
+import { FileTree, FileTreeObject } from '@/components/ui/file-tree';
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable';
+import { EditorComponent } from './Editor';
+import { cn } from '@/lib/utils';
+import { ArrowLeft, Blocks, FishingHook, Settings } from 'lucide-react';
 
-import { Layout, Model } from 'flexlayout-react';
+export const Workspace = () => {
+  return <LegacyWorkspace />;
+};
 
-const json = {
-  global: {},
-  borders: [],
-  layout: {
-    type: 'row',
-    weight: 100,
+const treeObj: FileTreeObject[] = [
+  { type: 'file', name: 'Palladium Settings', icon: ArrowLeft },
+  {
+    type: 'folder',
+    name: 'Extensions',
+    icon: Blocks,
+    children: [],
+  },
+  {
+    type: 'folder',
+    name: 'Mods',
+    icon: FishingHook,
+    openByDefault: true,
     children: [
       {
-        type: 'tabset',
-        weight: 50,
+        type: 'folder',
+        name: 'Example Mod',
+        openByDefault: true,
         children: [
-          {
-            type: 'tab',
-            name: 'One',
-            component: 'placeholder',
-          },
+          { type: 'file', name: 'Mod Settings', icon: Settings },
+          { type: 'file', name: 'index.ts' },
         ],
       },
       {
-        type: 'tabset',
-        weight: 50,
+        type: 'folder',
+        name: 'Second Mod',
+        openByDefault: true,
         children: [
-          {
-            type: 'tab',
-            name: 'Two',
-            component: 'placeholder',
-          },
+          { type: 'file', name: 'Mod Settings', icon: Settings },
+          { type: 'file', name: 'index.ts' },
         ],
       },
     ],
   },
-};
+];
 
-const model = Model.fromJson(json);
-
-export const Workspace = () => {
-  const factory = (node) => {
-    const component = node.getComponent();
-
-    if (component === 'placeholder') {
-      return <div>{node.getName()}</div>;
-    }
-  };
-
-  return <Layout model={model} factory={factory} />;
-};
-
-const legacyWorkspace = () => {
+const LegacyWorkspace = () => {
   return (
-    <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
-      <ResizablePanel defaultSize="250px" minSize="200px" maxSize="400px">
-        <FileTree />
-      </ResizablePanel>
-      <ResizableHandle />
-      <ResizablePanel>Editor</ResizablePanel>
-    </ResizablePanelGroup>
+    <div className="flex h-full w-full flex-col">
+      <div
+        className={cn(
+          'flex h-12 w-full items-center px-4',
+          'bg-card border-b border-b-gray-200',
+        )}
+      >
+        Mods & Extensions Editor
+      </div>
+      <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
+        <ResizablePanel
+          className="bg-card"
+          defaultSize="250px"
+          minSize="200px"
+          maxSize="400px"
+        >
+          <FileTree tree={treeObj} />
+        </ResizablePanel>
+        <ResizableHandle className="bg-gray-200" />
+        <ResizablePanel>
+          <EditorComponent />
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </div>
   );
 };
