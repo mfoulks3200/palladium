@@ -9,7 +9,7 @@ import { typedIpcMain, typedWebContents } from './ipc';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
-import { diffObjects, getDeepProp, setDeepProp } from 'src/ipc/Utility';
+import { getDeepProp, setDeepProp } from 'src/ipc/Utility';
 import { AnalyticsManager } from './AnalyticsManager';
 
 import * as z from 'zod';
@@ -37,7 +37,7 @@ export class SettingsManager {
         );
       } else {
         const prevAnalytics = this.getItem('analytics.enabled');
-        this.currentSettings = diffObjects(settingsDefaults, newSettings);
+        this.currentSettings = settingsSchema.parse(newSettings);
         this.persist();
 
         // Reflect analytics opt-in/out changes immediately so toggling the
@@ -66,6 +66,7 @@ export class SettingsManager {
         this.deserializeSettings(settings);
       } catch (e) {
         console.error('Could not read or decode settings file: ', e);
+        this.currentSettings = settingsSchema.parse({});
       }
     }
   }
