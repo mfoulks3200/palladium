@@ -6,11 +6,12 @@ import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 
 /**
- * PostHog project API key.
- * Override via POSTHOG_API_KEY environment variable for custom deployments.
- * Analytics are silently disabled when no valid key is provided.
+ * PostHog project write-only ingestion token.
+ * This key is safe to ship in the client bundle — it can only send events, not
+ * read data. Override via POSTHOG_API_KEY environment variable if needed.
  */
-const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY ?? '';
+const POSTHOG_API_KEY =
+  process.env.POSTHOG_API_KEY ?? 'phc_XmGGv0hV2OkCQxC56D6tlOII9KOTYIxNGz2lCgaE71a';
 const POSTHOG_HOST = 'https://us.i.posthog.com';
 
 /** Path to the persistent anonymous identifier file. */
