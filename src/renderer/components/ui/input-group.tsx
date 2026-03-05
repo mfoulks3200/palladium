@@ -137,6 +137,7 @@ function InputGroupInput({
         'flex-1 rounded-none border-0 bg-none shadow-none focus-visible:ring-0 dark:bg-none',
         className,
       )}
+      unstyled={true}
       {...props}
     />
   );

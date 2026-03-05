@@ -78,6 +78,7 @@ export const ShaderBackground = () => {
               setShaderPreset(newVal);
             }
           }}
+          getDisplayValue={(itemVal) => backgrounds[itemVal]?.name ?? ''}
         >
           <ComboboxInput placeholder="Select a shader" />
           <ComboboxContent>

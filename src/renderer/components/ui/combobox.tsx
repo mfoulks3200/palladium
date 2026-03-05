@@ -14,7 +14,57 @@ import {
   InputGroupInput,
 } from '@/components/ui/input-group';
 
-const Combobox = ComboboxPrimitive.Root;
+const ComboboxRoot = ComboboxPrimitive.Root;
+
+/**
+ * Groups all parts of the combobox. Extends Base UI's Root with friendlier
+ * `getDisplayValue` / `getFormValue` aliases so item values can differ from
+ * what the input field shows.
+ *
+ * @example
+ * ```tsx
+ * // String values – show a human-friendly name in the input
+ * <Combobox
+ *   items={['us', 'gb', 'de']}
+ *   getDisplayValue={(code) => countryNames[code]}
+ * >
+ *   …
+ * </Combobox>
+ *
+ * // Object values – separate display from form value
+ * <Combobox
+ *   items={users}
+ *   getDisplayValue={(u) => u.name}
+ *   getFormValue={(u) => u.id}
+ * >
+ *   …
+ * </Combobox>
+ * ```
+ */
+function Combobox<Value, Multiple extends boolean | undefined = false>(
+  props: ComboboxPrimitive.Root.Props<Value, Multiple> & {
+    /** Converts an item value to the string displayed in the input when selected. */
+    getDisplayValue?: (itemValue: Value) => string;
+    /** Converts an item value to the string used for form submission. */
+    getFormValue?: (itemValue: Value) => string;
+  },
+) {
+  const {
+    getDisplayValue,
+    getFormValue,
+    itemToStringLabel,
+    itemToStringValue,
+    ...rest
+  } = props;
+
+  const rootProps = {
+    ...rest,
+    itemToStringLabel: getDisplayValue ?? itemToStringLabel,
+    itemToStringValue: getFormValue ?? itemToStringValue,
+  } as ComboboxPrimitive.Root.Props<Value, Multiple>;
+
+  return <ComboboxRoot {...rootProps} />;
+}
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
   return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />;
