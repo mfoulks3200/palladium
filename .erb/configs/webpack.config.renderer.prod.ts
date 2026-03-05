@@ -87,6 +87,11 @@ const configuration: webpack.Configuration = {
         test: /\.(png|jpg|jpeg|gif)$/i,
         type: 'asset/resource',
       },
+      // Markdown (raw text)
+      {
+        test: /\.md$/,
+        type: 'asset/source',
+      },
       // SVG
       {
         test: /\.svg$/,

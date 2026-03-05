@@ -1,14 +1,5 @@
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import {
-  Blocks,
-  FishingHook,
-  History,
-  Info,
-  Search,
-  Settings,
-  Sparkles,
-} from 'lucide-react';
 import { ReactElement, useContext, useEffect, useState } from 'react';
 import { AboutPanel } from './pages/AboutPanel';
 import { HistoryPanel } from './pages/HistoryPanel';
@@ -20,6 +11,15 @@ import { Background } from './pages/Background';
 import { UserInterface } from './pages/UserInterface';
 import { SettingsCard, SettingsTab } from './SettingComponents';
 import { Card } from '@/components/ui/card';
+import {
+  Blocks,
+  FishingHook,
+  Info,
+  Search,
+  Settings,
+  Sparkles,
+  History,
+} from 'lucide-react';
 
 interface SettingsCard {
   name?: string;
