@@ -16,7 +16,7 @@ export const SettingsCard = ({
     <Card
       className={cn(
         // 'bg-linear-to-bl from-gray-900/35 to-gray-950',
-        'min-h-48 p-0 drop-shadow-lg',
+        'min-h-24 p-0 drop-shadow-lg',
         // 'border-x-gray-600/35 border-t-gray-600/50 border-b-gray-600/20',
       )}
       apperance="Solid"
@@ -49,9 +49,7 @@ export const SettingsOption = ({
     <div className="flex min-h-9 gap-4 px-4">
       <div className="flex w-1/2 flex-col justify-center">
         <div className="text-sm font-medium">{name}</div>
-        {description && (
-          <div className="text-xs text-white/30">{description}</div>
-        )}
+        {description && <div className="text-xs opacity-30">{description}</div>}
       </div>
       <div className={cn('flex w-1/2 items-center', className)}>{children}</div>
     </div>

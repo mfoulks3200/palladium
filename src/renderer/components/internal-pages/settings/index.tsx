@@ -1,7 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { ReactElement, useContext, useEffect, useState } from 'react';
-import { AboutPanel } from './pages/AboutPanel';
+import { AboutPanel, ChangelogPanel, LinksPanel } from './pages/AboutPanel';
 import { HistoryPanel } from './pages/HistoryPanel';
 import { DefaultSearchEngines } from './pages/DefaultSearchEngines';
 import { CustomSearchEngines } from './pages/CustomSearchEngines';
@@ -136,6 +136,13 @@ const settingsUi: Record<string, SettingsPages> = {
     cards: {
       about: {
         customContents: <AboutPanel />,
+      },
+      links: {
+        customContents: <LinksPanel />,
+      },
+      changelog: {
+        name: 'Changelog',
+        customContents: <ChangelogPanel />,
       },
     },
   },
