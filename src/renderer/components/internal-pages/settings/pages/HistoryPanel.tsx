@@ -35,7 +35,7 @@ export const HistoryPanel = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end px-4">
+      <div className="-mt-14 mb-4 flex justify-end bg-none px-4">
         <Button
           variant="destructive"
           size="sm"

@@ -140,8 +140,9 @@ export class BrowserWindowUI {
       // );
 
       tabManager.addTab(new Tab('palladium://settings'));
+      tabManager.addTab(new Tab('palladium://editor'));
 
-      tabManager.focusTabIndex(2);
+      tabManager.focusTabIndex(3);
     } else {
       tabManager.focusTab(new Tab('https://google.com'));
     }

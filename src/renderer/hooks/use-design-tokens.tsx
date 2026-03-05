@@ -32,7 +32,6 @@ export interface DesignTokens {
 
 // User preferences input
 export interface DesignPreferences {
-  theme: 'light' | 'dark' | 'system';
   primaryColor: string;
   backgroundColor?: string;
   opacity?: number;
@@ -47,7 +46,6 @@ interface DesignTokenContextValue {
 }
 
 const defaultPreferences: DesignPreferences = {
-  theme: 'system',
   primaryColor: '#3b82f6', // A pleasing blue default
 };
 
@@ -73,31 +71,24 @@ const defaultTokens: DesignTokens = {
 
 const DesignTokenContext = createContext<DesignTokenContextValue | undefined>(undefined);
 
-// Helper to deduce actual theme if 'system' is selected
-const getEffectiveTheme = (themePref: 'light' | 'dark' | 'system'): 'light' | 'dark' => {
-  if (themePref === 'system') {
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
-  return themePref;
-};
-
 // Main generator function
-const generateTokens = (prefs: DesignPreferences, effectiveTheme: 'light' | 'dark'): DesignTokens => {
-  const isDark = effectiveTheme === 'dark';
-
+const generateTokens = (prefs: DesignPreferences): DesignTokens => {
   // Raw tint color and its luminance
   const rawPrimary = prefs.primaryColor;
   const primaryLuminance = chroma(rawPrimary).luminance();
+
+  // Use a dark theme if the selected tint color is dark
+  const isDark = primaryLuminance < 0.5;
 
   // Primary color from user, adjusted for extreme light/dark
   const primary = ensureVisiblePrimary(rawPrimary, isDark);
 
   // Dynamic base background that can be pulled all the way to absolute black/white regardless of the active theme
   let baseBackground = prefs.backgroundColor || (isDark ? '#09090b' : '#ffffff');
-  if (primaryLuminance < 0.05) {
+  if (primaryLuminance < 0.5) {
     baseBackground = chroma.mix(baseBackground, '#000000', 1 - (primaryLuminance / 0.05), 'rgb').hex();
-  } else if (primaryLuminance > 0.95) {
-    baseBackground = chroma.mix(baseBackground, '#ffffff', (primaryLuminance - 0.95) / 0.05, 'rgb').hex();
+  } else {
+    baseBackground = chroma.mix(baseBackground, '#ffffff', (primaryLuminance - 0.5) / 0.5, 'rgb').hex();
   }
   
   // Solid hexes for contrast calculations using raw unadjusted primary so dark tints don't accidentally lighten backgrounds
@@ -109,9 +100,14 @@ const generateTokens = (prefs: DesignPreferences, effectiveTheme: 'light' | 'dar
   const surfaceHex = chroma.mix(rawSurfaceHex, rawPrimary, isDark ? 0.15 : 0.08, 'rgb').hex();
   
   // Scale border contrast dynamically. If absolute white/black, borders dissolve too.
-  const darkBorderElev = isDark ? Math.min(1, primaryLuminance * 50) : 0;
+  const darkBorderElev = isDark ? Math.max(0.5, Math.min(1, primaryLuminance * 50)) : 0;
   const lightBorderElev = !isDark ? Math.max(-1, (primaryLuminance - 1) * 50) : 0;
-  const borderHex = isDark ? adjustLightness(backgroundHex, darkBorderElev) : adjustLightness(backgroundHex, lightBorderElev);
+  let borderHex = isDark ? adjustLightness(backgroundHex, darkBorderElev) : adjustLightness(backgroundHex, lightBorderElev);
+
+  // Enforce a minimum lightness for dark mode borders so they stand out on true black backgrounds
+  if (isDark && chroma(borderHex).get('hsl.l') < 0.12) {
+    borderHex = chroma(borderHex).set('hsl.l', 0.12).hex();
+  }
 
   // Apply user opacity for glass effect
   const opacity = prefs.opacity !== undefined ? prefs.opacity : 1;
@@ -156,39 +152,18 @@ export const DesignTokenProvider: React.FC<{
     ...initialPreferences,
   });
 
-  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>(() => getEffectiveTheme(preferences.theme));
-
-  // Listen for system theme changes if set to 'system'
-  useEffect(() => {
-    if (preferences.theme !== 'system') {
-      setEffectiveTheme(preferences.theme);
-      return;
-    }
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e: MediaQueryListEvent) => {
-      setEffectiveTheme(e.matches ? 'dark' : 'light');
-    };
-
-    // Set initial
-    setEffectiveTheme(mediaQuery.matches ? 'dark' : 'light');
-
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
-  }, [preferences.theme]);
-
   const [tintColor] = useSettings('personalization.userInterface.tintColor');
   const [opacity] = useSettings('personalization.userInterface.transparency');
   const [blur] = useSettings('personalization.userInterface.blur');
   const [saturation] = useSettings('personalization.userInterface.backdropSaturation');
   const safeTintColor = tintColor.startsWith('#') ? tintColor : `#${tintColor}`;
 
-  // Recalculate tokens when preferences or effective theme changes
+  // Recalculate tokens when preferences change
   const tokens = useMemo(() => generateTokens({
     ...preferences,
     primaryColor: safeTintColor,
     opacity
-  }, effectiveTheme), [preferences, effectiveTheme, safeTintColor, opacity]);
+  }), [preferences, safeTintColor, opacity]);
 
   // Inject CSS variables into the root document so regular CSS/Tailwind can use them
   useEffect(() => {

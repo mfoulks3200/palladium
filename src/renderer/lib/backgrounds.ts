@@ -1,4 +1,4 @@
-interface BackgroundBase {
+export interface BackgroundBase {
   name: string;
   type: string;
   link?: string;
@@ -9,12 +9,16 @@ interface BackgroundBase {
   };
 }
 
-interface ShaderBackground extends BackgroundBase {
+export interface ShaderBackground extends BackgroundBase {
   type: 'shader';
   fs: string;
+  speed?: {
+    min: number;
+    max: number;
+  };
 }
 
-type Background = ShaderBackground;
+export type Background = ShaderBackground;
 
 export const backgrounds = {
   rainbow: {
@@ -36,6 +40,10 @@ export const backgrounds = {
     author: {
       name: 'xxidbr9',
       link: 'https://www.shadertoy.com/user/xxidbr9',
+    },
+    speed: {
+      min: -0.5,
+      max: 0.5,
     },
     fs: `
             // Original by localthunk (https://www.playbalatro.com)
@@ -103,6 +111,10 @@ export const backgrounds = {
     author: {
       name: 'Frostbyte_',
       link: 'https://www.shadertoy.com/user/Frostbyte_',
+    },
+    speed: {
+      min: -0.05,
+      max: 0.05,
     },
     fs: `
             // Shader by Frostbyte
@@ -179,6 +191,10 @@ export const backgrounds = {
     author: {
       name: 'R3N',
       link: 'https://www.shadertoy.com/user/R3N',
+    },
+    speed: {
+      min: -0.1,
+      max: 0.1,
     },
     fs: `
             #extension GL_OES_standard_derivatives : enable
@@ -283,6 +299,10 @@ export const backgrounds = {
       name: 'Kali',
       link: 'https://www.shadertoy.com/user/Kali',
     },
+    speed: {
+      min: -0.1,
+      max: 0.1,
+    },
     fs: `
             // Star Nest by Pablo Roman Andrioli
             // License: MIT
@@ -358,6 +378,10 @@ export const backgrounds = {
     author: {
       name: 'nimitz',
       link: 'https://www.shadertoy.com/user/nimitz',
+    },
+    speed: {
+      min: -0.75,
+      max: 0.75,
     },
     fs: `
       // Auroras by nimitz 2017 (twitter: @stormoid)
@@ -528,7 +552,7 @@ export const backgrounds = {
         fragColor = vec4(col, 1.);
       }
 
-    `
+    `,
   },
   gradientFlow: {
     name: 'Gradient Flow',
@@ -538,6 +562,10 @@ export const backgrounds = {
     author: {
       name: 'Inigo Quilez',
       link: 'https://www.shadertoy.com/view/wdyczG',
+    },
+    speed: {
+      min: -0.5,
+      max: 0.5,
     },
     fs: `
       #define S(a,b,t) smoothstep(a,b,t)
@@ -612,6 +640,6 @@ export const backgrounds = {
           
           fragColor = vec4(col,1.0);
       }
-    `
-  }
+    `,
+  },
 } as const satisfies Record<string, Background>;

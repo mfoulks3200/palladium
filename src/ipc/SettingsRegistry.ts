@@ -41,10 +41,10 @@ export const settingsSchema = z.object({
     .object({
       userInterface: z
         .object({
-          tintColor: z.hex().length(6).default('000000'),
-          transparency: z.number().gt(0).lte(1).default(0.75),
-          blur: z.number().gte(0).lte(50).default(8),
-          backdropSaturation: z.number().gte(0).lte(500).default(200),
+          tintColor: z.hex().length(6).default('FFFFFF'),
+          transparency: z.number().gt(0).lte(1).default(0.3),
+          blur: z.number().gte(0).lte(50).default(40),
+          backdropSaturation: z.number().gte(0).lte(500).default(300),
         })
         .prefault({}),
       background: z
@@ -62,9 +62,9 @@ export const settingsSchema = z.object({
         ])
         .default({
           type: 'presetShader',
-          id: 'rainbow',
+          id: 'vortex',
           speed: 0.1,
-          maxFps: 10,
+          maxFps: 15,
         }),
     })
     .prefault({}),

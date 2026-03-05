@@ -3,6 +3,9 @@ import { ReactShaderToy } from './agents-ui/react-shader-toy';
 import { useSettings } from '@/lib/settings';
 import { useEffect, useState } from 'react';
 import { useDebounce } from 'use-debounce';
+import { type ShaderBackground as ShaderBackgroundType } from '@/lib/backgrounds';
+
+const lerp = (x: number, y: number, a: number) => x * (1 - a) + y * a;
 
 export const ShaderBackground = () => {
   const [lastShader, setLastShader] = useState('');
@@ -20,14 +23,23 @@ export const ShaderBackground = () => {
     }
   }, [lastShader, thisShader]);
 
+  const shaderObj: ShaderBackgroundType = backgrounds[shader];
+
   // console.log(shader, maxFps, speed);
+
+  const normalizedSpeed = (speed + 1) / 2;
+
+  const minSpeed = shaderObj.speed?.min ?? -1;
+  const maxSpeed = shaderObj.speed?.max ?? 1;
+
+  const adjustedSpeed = lerp(minSpeed, maxSpeed, normalizedSpeed);
 
   return (
     <>
       {lastShader === thisShader && (
         <ReactShaderToy
-          fs={backgrounds[shader].fs}
-          timeMultiplier={speed}
+          fs={shaderObj.fs}
+          timeMultiplier={adjustedSpeed}
           maxFPS={maxFps}
           precision="lowp"
         />

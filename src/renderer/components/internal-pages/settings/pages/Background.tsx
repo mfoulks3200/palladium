@@ -91,9 +91,6 @@ export const ShaderBackground = () => {
       </SettingsOption>
       <Card
         className={cn(
-          'bg-linear-to-bl from-gray-900/35 to-gray-950',
-          'drop-shadow-lg backdrop-blur-sm backdrop-saturate-200',
-          'border-x-gray-600/35 border-t-gray-600/50 border-b-gray-600/20',
           'flex flex-col gap-2 overflow-hidden p-4',
         )}
         apperance="Hero"

@@ -185,7 +185,7 @@ const BrowserPanel = ({
 }>) => {
   return (
     <Card
-      className="flex h-full grow items-center justify-center overflow-hidden bg-black/75 py-0 drop-shadow-md backdrop-blur-sm backdrop-saturate-200"
+      className="flex h-full grow items-center justify-center overflow-hidden py-0 drop-shadow-md"
       ref={ref}
     >
       {children}
