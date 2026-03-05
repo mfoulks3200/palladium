@@ -10,6 +10,7 @@ import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
 import { diffObjects, getDeepProp, setDeepProp } from 'src/ipc/Utility';
+import { AnalyticsManager } from './AnalyticsManager';
 
 import * as z from 'zod';
 
@@ -84,6 +85,15 @@ export class SettingsManager {
       key,
       value,
     ) as Partial<SettingSchema>;
+    // Reflect analytics opt-in/out changes immediately. Skip the
+    // settings_changed event for this key to avoid capturing after opt-out.
+    if (key === 'analytics.enabled') {
+      AnalyticsManager.getInstance().setEnabled(value as boolean);
+    } else {
+      AnalyticsManager.getInstance().capture('settings_changed', {
+        setting_key: key,
+      });
+    }
     this.persist();
   }
 

@@ -11,6 +11,7 @@
 import { app, BrowserWindow } from 'electron';
 import { unregisterGlobalShortcuts } from './GlobalShortcuts';
 import { BrowserWindowUI } from './BrowserWindowUI';
+import { AnalyticsManager } from './AnalyticsManager';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -82,6 +83,9 @@ app
 // });
 
 app.on('will-quit', async (e) => {
+  e.preventDefault();
   unregisterGlobalShortcuts();
-  app.quit();
+  AnalyticsManager.getInstance().capture('app_quit');
+  await AnalyticsManager.getInstance().shutdown();
+  app.exit(0);
 });
