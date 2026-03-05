@@ -5,6 +5,7 @@ import {
   ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
+  ComboboxItemWithDetail,
   ComboboxList,
 } from '@/components/ui/combobox';
 import { backgrounds } from '@/lib/backgrounds';
@@ -14,6 +15,8 @@ import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { SwatchBook } from 'lucide-react';
 import { SettingsOption } from '../SettingComponents';
+import { type ShaderBackground as ShaderBackgroundType } from '@/lib/backgrounds';
+import { ReactShaderToy } from '@/components/agents-ui/react-shader-toy';
 
 export const Background = () => {
   const shaderPresets = ['Color', 'Shader'];
@@ -75,27 +78,27 @@ export const ShaderBackground = () => {
               setShaderPreset(newVal);
             }
           }}
+          getDisplayValue={(itemVal) => backgrounds[itemVal]?.name ?? ''}
         >
           <ComboboxInput placeholder="Select a shader" />
           <ComboboxContent>
             <ComboboxEmpty>No items found.</ComboboxEmpty>
             <ComboboxList>
               {(item: (typeof shaderPresets)[number]) => (
-                <ComboboxItem key={item.id} value={item.id}>
+                <ComboboxItemWithDetail
+                  key={item.id}
+                  value={item.id}
+                  detail={<ShaderPreview shader={item.id as any} />}
+                >
                   {item.name}
-                </ComboboxItem>
+                </ComboboxItemWithDetail>
               )}
             </ComboboxList>
           </ComboboxContent>
         </Combobox>
       </SettingsOption>
       <Card
-        className={cn(
-          'bg-linear-to-bl from-gray-900/35 to-gray-950',
-          'drop-shadow-lg backdrop-blur-sm backdrop-saturate-200',
-          'border-x-gray-600/35 border-t-gray-600/50 border-b-gray-600/20',
-          'flex flex-col gap-2 overflow-hidden p-4',
-        )}
+        className={cn('flex flex-col gap-2 overflow-hidden p-4')}
         apperance="Hero"
       >
         <a href={currentBg.link ?? '#'} target="_blank" className="text-xl">
@@ -135,5 +138,19 @@ export const ShaderBackground = () => {
         />
       </SettingsOption>
     </>
+  );
+};
+
+const ShaderPreview = ({ shader }: { shader: keyof typeof backgrounds }) => {
+  const shaderObj: ShaderBackgroundType = backgrounds[shader];
+  return (
+    <div className="aspect-video w-64 bg-black">
+      <ReactShaderToy
+        fs={shaderObj.fs}
+        timeMultiplier={shaderObj.speed?.max ?? 1}
+        maxFPS={30}
+        precision="lowp"
+      />
+    </div>
   );
 };

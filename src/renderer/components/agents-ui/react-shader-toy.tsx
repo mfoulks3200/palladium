@@ -550,6 +550,17 @@ export function ReactShaderToy({
   const lastFrameTimeRef = useRef(0);
   const frameCountRef = useRef(0);
   const performanceTimeRef = useRef(0);
+  const isVisibleRef = useRef(true);
+  const isInViewportRef = useRef(true);
+  const intersectionObserverRef = useRef<IntersectionObserver | undefined>(
+    undefined,
+  );
+  const needsResizeRef = useRef(true);
+  const maxFPSRef = useRef(maxFPS);
+  const lerpRef = useRef(lerp);
+  const devicePixelRatioRef = useRef(devicePixelRatio);
+  const timeMultiplierRef = useRef(timeMultiplier);
+  const onPerformanceReportRef = useRef(onPerformanceReport);
   const resizeObserverRef = useRef<ResizeObserver | undefined>(undefined);
   const uniformsRef = useRef<
     Record<
@@ -652,7 +663,7 @@ export function ReactShaderToy({
       (canvasPositionRef.current?.height ?? 0) -
       clientY -
       (canvasPositionRef.current?.top ?? 0);
-    if (lerp !== 1) {
+    if (lerpRef.current !== 1) {
       lastMouseArrRef.current[0] = mouseX;
       lastMouseArrRef.current[1] = mouseY;
     } else {
@@ -677,11 +688,22 @@ export function ReactShaderToy({
   };
 
   const onResize = () => {
+    // Only update the cached bounding rect (for mouse calculations) and flag
+    // that the WebGL drawing buffer needs resizing.  The actual buffer resize
+    // is deferred to the start of the next drawScene frame so the browser can
+    // stretch the last rendered image via CSS in the meantime – avoiding the
+    // gray flicker caused by an immediate buffer reallocation + clear.
+    canvasPositionRef.current = canvasRef.current?.getBoundingClientRect();
+    needsResizeRef.current = true;
+  };
+
+  const applyResize = () => {
+    if (!needsResizeRef.current) return;
+    needsResizeRef.current = false;
     const gl = glRef.current;
     if (!gl) return;
     canvasPositionRef.current = canvasRef.current?.getBoundingClientRect();
-    // Force pixel ratio to be one to avoid expensive calculus on retina display.
-    const realToCSSPixels = devicePixelRatio;
+    const realToCSSPixels = devicePixelRatioRef.current;
     const displayWidth = Math.floor(
       (canvasPositionRef.current?.width ?? 1) * realToCSSPixels,
     );
@@ -842,13 +864,12 @@ export function ReactShaderToy({
     return fragmentShader;
   };
 
-  const safeTimeMultiplier = timeMultiplier === 0 ? 0.00001 : timeMultiplier;
-
   const setUniforms = (timestamp: number) => {
     const gl = glRef.current;
     if (!gl || !shaderProgramRef.current) return;
+    const currentTimeMultiplier = timeMultiplierRef.current || 0.00001;
     const delta = lastTimeRef.current
-      ? ((timestamp - lastTimeRef.current) / 1000) * safeTimeMultiplier
+      ? ((timestamp - lastTimeRef.current) / 1000) * currentTimeMultiplier
       : 0;
     lastTimeRef.current = timestamp;
     const propUniforms = propsUniformsRef.current;
@@ -967,12 +988,18 @@ export function ReactShaderToy({
   };
 
   const drawScene = (timestamp: number) => {
+    if (!isVisibleRef.current) {
+      animFrameIdRef.current = undefined;
+      lastTimeRef.current = 0;
+      return;
+    }
     animFrameIdRef.current = requestAnimationFrame(drawScene);
     const gl = glRef.current;
     if (!gl) return;
 
-    if (maxFPS) {
-      const interval = 1000 / maxFPS;
+    const currentMaxFPS = maxFPSRef.current;
+    if (currentMaxFPS) {
+      const interval = 1000 / currentMaxFPS;
       const elapsed = timestamp - lastFrameTimeRef.current;
       if (elapsed < interval) return;
       lastFrameTimeRef.current = timestamp - (elapsed % interval);
@@ -983,8 +1010,8 @@ export function ReactShaderToy({
     // Performance reporting
     frameCountRef.current++;
     if (timestamp - performanceTimeRef.current >= 1000) {
-      if (onPerformanceReport) {
-        onPerformanceReport({
+      if (onPerformanceReportRef.current) {
+        onPerformanceReportRef.current({
           fps: frameCountRef.current,
           frameTime:
             (timestamp - performanceTimeRef.current) / frameCountRef.current,
@@ -994,6 +1021,7 @@ export function ReactShaderToy({
       performanceTimeRef.current = timestamp;
     }
 
+    applyResize();
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBufferRef.current);
@@ -1009,15 +1037,40 @@ export function ReactShaderToy({
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
     const mouseValue = uniformsRef.current.iMouse?.value;
+    const currentLerp = lerpRef.current;
     if (
       uniformsRef.current.iMouse?.isNeeded &&
-      lerp !== 1 &&
+      currentLerp !== 1 &&
       Array.isArray(mouseValue)
     ) {
       const currentX = mouseValue[0] ?? 0;
       const currentY = mouseValue[1] ?? 0;
-      mouseValue[0] = lerpVal(currentX, lastMouseArrRef.current[0] ?? 0, lerp);
-      mouseValue[1] = lerpVal(currentY, lastMouseArrRef.current[1] ?? 0, lerp);
+      mouseValue[0] = lerpVal(
+        currentX,
+        lastMouseArrRef.current[0] ?? 0,
+        currentLerp,
+      );
+      mouseValue[1] = lerpVal(
+        currentY,
+        lastMouseArrRef.current[1] ?? 0,
+        currentLerp,
+      );
+    }
+  };
+
+  const tryResumeLoop = () => {
+    if (isVisibleRef.current && animFrameIdRef.current == null) {
+      lastTimeRef.current = 0;
+      animFrameIdRef.current = requestAnimationFrame(drawScene);
+    }
+  };
+
+  const onVisibilityChange = () => {
+    if (document.hidden) {
+      isVisibleRef.current = false;
+    } else if (isInViewportRef.current) {
+      isVisibleRef.current = true;
+      tryResumeLoop();
     }
   };
 
@@ -1043,7 +1096,23 @@ export function ReactShaderToy({
       resizeObserverRef.current = new ResizeObserver(onResize);
       resizeObserverRef.current.observe(canvasRef.current);
       window.addEventListener('resize', onResize, options);
+
+      intersectionObserverRef.current = new IntersectionObserver(
+        (entries) => {
+          const isIntersecting = entries[0]?.isIntersecting ?? false;
+          isInViewportRef.current = isIntersecting;
+          if (isIntersecting && !document.hidden) {
+            isVisibleRef.current = true;
+            tryResumeLoop();
+          } else if (!isIntersecting) {
+            isVisibleRef.current = false;
+          }
+        },
+        { threshold: 0 },
+      );
+      intersectionObserverRef.current.observe(canvasRef.current);
     }
+    document.addEventListener('visibilitychange', onVisibilityChange);
   };
 
   const removeEventListeners = () => {
@@ -1068,11 +1137,23 @@ export function ReactShaderToy({
       resizeObserverRef.current.disconnect();
       window.removeEventListener('resize', onResize, options);
     }
+    if (intersectionObserverRef.current) {
+      intersectionObserverRef.current.disconnect();
+    }
+    document.removeEventListener('visibilitychange', onVisibilityChange);
   };
 
   useEffect(() => {
     propsUniformsRef.current = propUniforms;
   }, [propUniforms]);
+
+  useEffect(() => {
+    maxFPSRef.current = maxFPS;
+    lerpRef.current = lerp;
+    devicePixelRatioRef.current = devicePixelRatio;
+    timeMultiplierRef.current = timeMultiplier;
+    onPerformanceReportRef.current = onPerformanceReport;
+  }, [maxFPS, lerp, devicePixelRatio, timeMultiplier, onPerformanceReport]);
 
   // Main effect for initialization and cleanup
   useEffect(() => {
@@ -1093,9 +1174,8 @@ export function ReactShaderToy({
         processTextures();
         initShaders(preProcessFragment(fs || BASIC_FS), vs || BASIC_VS);
         initBuffers();
-        requestAnimationFrame(drawScene);
         addEventListeners();
-        onResize();
+        requestAnimationFrame(drawScene);
       }
     }
 
@@ -1115,8 +1195,10 @@ export function ReactShaderToy({
         }
         shaderProgramRef.current = null;
       }
+      isVisibleRef.current = false;
       removeEventListeners();
       cancelAnimationFrame(animFrameIdRef.current ?? 0);
+      animFrameIdRef.current = undefined;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array to run only once on mount

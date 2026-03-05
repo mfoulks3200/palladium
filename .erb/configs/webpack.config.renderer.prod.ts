@@ -6,6 +6,7 @@ import path from 'path';
 import webpack from 'webpack';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
+import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import CssMinimizerPlugin from 'css-minimizer-webpack-plugin';
 import { merge } from 'webpack-merge';
@@ -114,6 +115,9 @@ const configuration: webpack.Configuration = {
   },
 
   plugins: [
+    new MonacoWebpackPlugin({
+      languages: ['javascript', 'typescript', 'json', 'css', 'html'],
+    }),
     /**
      * Create global constants which can be configured at compile time.
      *

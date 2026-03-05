@@ -137,19 +137,6 @@ const settingsUi: Record<string, SettingsPages> = {
       about: {
         customContents: <AboutPanel />,
       },
-      aboutText: {
-        name: 'Palladium',
-        description: 'The browser that gets out of your way.',
-        customContents: (
-          <div className="pt-4 text-justify text-sm">
-            Palladium is a modern, minimalist web browser built on top of{' '}
-            <a href="https://www.electronjs.org/">Electron</a>. Designed for
-            power users who value speed, efficiency, and deep customization,
-            Palladium focuses on keeping the interface clean while providing
-            powerful tools at your fingertips.
-          </div>
-        ),
-      },
     },
   },
 };

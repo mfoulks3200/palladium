@@ -20,6 +20,7 @@ import {
 import { BrowserUI } from '../../components/BrowserUI';
 import { TabManagerIpc } from '../../../ipc';
 import { SettingsProvider } from '@/lib/settings';
+import { DesignTokenProvider } from '../../hooks/use-design-tokens';
 
 interface InternalTabMetaItem {
   title: string;
@@ -68,16 +69,18 @@ function Main() {
 
   return (
     <SettingsProvider>
-      <TabMetaContext.Provider value={tabMeta}>
-        <InternalTabMetaContext.Provider
-          value={{
-            tabs: internalTabMeta,
-            setTabMeta: setTabMetaItem,
-          }}
-        >
-          <BrowserUI />
-        </InternalTabMetaContext.Provider>
-      </TabMetaContext.Provider>
+      <DesignTokenProvider>
+        <TabMetaContext.Provider value={tabMeta}>
+          <InternalTabMetaContext.Provider
+            value={{
+              tabs: internalTabMeta,
+              setTabMeta: setTabMetaItem,
+            }}
+          >
+            <BrowserUI />
+          </InternalTabMetaContext.Provider>
+        </TabMetaContext.Provider>
+      </DesignTokenProvider>
     </SettingsProvider>
   );
 }

@@ -125,7 +125,7 @@ export const Sidebar = () => {
         </Button>
       </div>
       <Card
-        className="h-10 w-full cursor-pointer bg-black/75 p-2 drop-shadow-md backdrop-blur-sm backdrop-saturate-200"
+        className="h-10 w-full cursor-pointer p-2 drop-shadow-md"
         onClick={() => {
           openCommandBar(currentTab?.uuid);
         }}
@@ -134,7 +134,7 @@ export const Sidebar = () => {
           {currentTabDisplayUrl}
         </div>
       </Card>
-      <Card className="w-full grow bg-black/75 p-2 drop-shadow-md backdrop-blur-sm backdrop-saturate-200">
+      <Card className="w-full grow p-2 drop-shadow-md">
         <div className="flex h-full w-full flex-col gap-2">
           {tabMeta &&
             tabMeta.tabs &&

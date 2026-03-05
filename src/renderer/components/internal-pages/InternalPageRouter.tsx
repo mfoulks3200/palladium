@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { SettingsPage } from './settings';
+import { EditorPage } from './editor';
 
 const routes = [
   {
@@ -10,6 +11,10 @@ const routes = [
   {
     path: '/settings',
     element: <SettingsPage />,
+  },
+  {
+    path: '/editor',
+    element: <EditorPage />,
   },
 ];
 

@@ -7,18 +7,24 @@ import '@fontsource/inter/500';
 import '@fontsource/inter/800';
 import './App.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { SettingsProvider } from '@/lib/settings';
+import { DesignTokenProvider } from '@/hooks/use-design-tokens';
 
 export const App = () => {
   return (
     <>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
-        <CommandBar className="h-full max-h-full min-h-full w-full max-w-full min-w-full" />
-      </ThemeProvider>
+      <SettingsProvider>
+        <DesignTokenProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <CommandBar className="h-full max-h-full min-h-full w-full max-w-full min-w-full" />
+          </ThemeProvider>
+        </DesignTokenProvider>
+      </SettingsProvider>
     </>
   );
 };

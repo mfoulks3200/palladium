@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { CheckIcon, ChevronDownIcon, XIcon } from 'lucide-react';
 
@@ -12,10 +13,58 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from '@/components/ui/input-group';
-import { useSettings } from '@/lib/settings';
-import chroma from 'chroma-js';
 
-const Combobox = ComboboxPrimitive.Root;
+const ComboboxRoot = ComboboxPrimitive.Root;
+
+/**
+ * Groups all parts of the combobox. Extends Base UI's Root with friendlier
+ * `getDisplayValue` / `getFormValue` aliases so item values can differ from
+ * what the input field shows.
+ *
+ * @example
+ * ```tsx
+ * // String values – show a human-friendly name in the input
+ * <Combobox
+ *   items={['us', 'gb', 'de']}
+ *   getDisplayValue={(code) => countryNames[code]}
+ * >
+ *   …
+ * </Combobox>
+ *
+ * // Object values – separate display from form value
+ * <Combobox
+ *   items={users}
+ *   getDisplayValue={(u) => u.name}
+ *   getFormValue={(u) => u.id}
+ * >
+ *   …
+ * </Combobox>
+ * ```
+ */
+function Combobox<Value, Multiple extends boolean | undefined = false>(
+  props: ComboboxPrimitive.Root.Props<Value, Multiple> & {
+    /** Converts an item value to the string displayed in the input when selected. */
+    getDisplayValue?: (itemValue: Value) => string;
+    /** Converts an item value to the string used for form submission. */
+    getFormValue?: (itemValue: Value) => string;
+  },
+) {
+  const {
+    getDisplayValue,
+    getFormValue,
+    itemToStringLabel,
+    itemToStringValue,
+    ...rest
+  } = props;
+
+  const rootProps = {
+    ...rest,
+    itemToStringLabel: getDisplayValue ?? itemToStringLabel,
+    itemToStringValue: getFormValue ?? itemToStringValue,
+  } as ComboboxPrimitive.Root.Props<Value, Multiple>;
+
+  return <ComboboxRoot {...rootProps} />;
+}
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
   return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />;
@@ -65,24 +114,12 @@ function ComboboxInput({
   showTrigger?: boolean;
   showClear?: boolean;
 }) {
-  const [tint] = useSettings('personalization.userInterface.tintColor');
-  const [opacity] = useSettings('personalization.userInterface.transparency');
-
-  let baseBgColor = chroma(tint).alpha(opacity).desaturate(3);
-
-  const lightMode =
-    chroma.contrast(baseBgColor, 'white') >
-    chroma.contrast(baseBgColor, 'black');
-
   return (
     <InputGroup
-      className={cn('w-auto border-0 shadow-sm', className)}
-      style={{
-        backgroundColor: lightMode
-          ? 'rgba(0,0,0,0.25)'
-          : 'rgba(255,255,255,0.2)',
-        color: lightMode ? 'white' : 'black',
-      }}
+      className={cn(
+        'bg-input/10 dark:bg-input/30 w-auto border-0 shadow-sm',
+        className,
+      )}
     >
       <ComboboxPrimitive.Input
         render={<InputGroupInput className="bg-none" disabled={disabled} />}
@@ -183,6 +220,125 @@ function ComboboxItem({
         <CheckIcon className="pointer-events-none size-4 pointer-coarse:size-5" />
       </ComboboxPrimitive.ItemIndicator>
     </ComboboxPrimitive.Item>
+  );
+}
+
+function ComboboxItemWithDetail({
+  className,
+  children,
+  detail,
+  detailSide = 'right',
+  detailSideOffset = 6,
+  detailClassName,
+  ...props
+}: ComboboxPrimitive.Item.Props & {
+  /** Content to render in the side-popover when this item is highlighted. */
+  detail?: React.ReactNode;
+  /** Which side of the dropdown the detail panel appears on. @default 'right' */
+  detailSide?: 'left' | 'right';
+  /** Gap (px) between the dropdown edge and the detail panel. @default 6 */
+  detailSideOffset?: number;
+  /** Extra classes applied to the detail panel. */
+  detailClassName?: string;
+}) {
+  const [showDetail, setShowDetail] = React.useState(false);
+  const itemRef = React.useRef<HTMLDivElement | null>(null);
+  const [position, setPosition] = React.useState({
+    top: 0,
+    left: 0,
+    right: 0,
+    maxHeight: 0,
+  });
+
+  // Track the data-highlighted attribute that Base UI toggles on
+  // mouse hover *and* keyboard navigation.
+  React.useEffect(() => {
+    const el = itemRef.current;
+    if (!el || !detail) return;
+
+    const update = () => {
+      setShowDetail(el.hasAttribute('data-highlighted'));
+    };
+
+    const observer = new MutationObserver(update);
+    observer.observe(el, {
+      attributes: true,
+      attributeFilter: ['data-highlighted'],
+    });
+
+    // Sync initial state in case the attribute is already set.
+    update();
+
+    return () => observer.disconnect();
+  }, [detail]);
+
+  // Recompute the floating position whenever the detail becomes visible.
+  React.useEffect(() => {
+    if (!showDetail || !itemRef.current) return;
+
+    const popup = itemRef.current.closest(
+      '[data-slot="combobox-content"]',
+    ) as HTMLElement | null;
+    if (!popup) return;
+
+    const popupRect = popup.getBoundingClientRect();
+
+    setPosition({
+      top: popupRect.top,
+      left: popupRect.right + detailSideOffset,
+      right: popupRect.left - detailSideOffset,
+      maxHeight: popupRect.height,
+    });
+  }, [showDetail, detailSide, detailSideOffset]);
+
+  return (
+    <>
+      <ComboboxPrimitive.Item
+        ref={itemRef}
+        data-slot="combobox-item"
+        className={cn(
+          "data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        <ComboboxPrimitive.ItemIndicator
+          data-slot="combobox-item-indicator"
+          render={
+            <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />
+          }
+        >
+          <CheckIcon className="pointer-events-none size-4 pointer-coarse:size-5" />
+        </ComboboxPrimitive.ItemIndicator>
+      </ComboboxPrimitive.Item>
+
+      {showDetail &&
+        detail &&
+        createPortal(
+          <div
+            data-slot="combobox-item-detail"
+            className={cn(
+              'bg-popover text-popover-foreground animate-in fade-in-0 zoom-in-95 ring-foreground/10 pointer-events-auto z-50 overflow-y-auto rounded-md shadow-md ring-1',
+              detailSide === 'right'
+                ? 'slide-in-from-left-2'
+                : 'slide-in-from-right-2',
+              detailClassName,
+            )}
+            style={{
+              position: 'fixed',
+              top: position.top,
+              ...(detailSide === 'right'
+                ? { left: position.left }
+                : { right: `calc(100vw - ${position.right}px)` }),
+              maxHeight: position.maxHeight || undefined,
+            }}
+          >
+            {detail}
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
 
@@ -316,6 +472,7 @@ export {
   ComboboxContent,
   ComboboxList,
   ComboboxItem,
+  ComboboxItemWithDetail,
   ComboboxGroup,
   ComboboxLabel,
   ComboboxCollection,

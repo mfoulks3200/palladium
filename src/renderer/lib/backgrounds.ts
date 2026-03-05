@@ -1,4 +1,4 @@
-interface BackgroundBase {
+export interface BackgroundBase {
   name: string;
   type: string;
   link?: string;
@@ -9,12 +9,16 @@ interface BackgroundBase {
   };
 }
 
-interface ShaderBackground extends BackgroundBase {
+export interface ShaderBackground extends BackgroundBase {
   type: 'shader';
   fs: string;
+  speed?: {
+    min: number;
+    max: number;
+  };
 }
 
-type Background = ShaderBackground;
+export type Background = ShaderBackground;
 
 export const backgrounds = {
   rainbow: {
@@ -36,6 +40,10 @@ export const backgrounds = {
     author: {
       name: 'xxidbr9',
       link: 'https://www.shadertoy.com/user/xxidbr9',
+    },
+    speed: {
+      min: -0.5,
+      max: 0.5,
     },
     fs: `
             // Original by localthunk (https://www.playbalatro.com)
@@ -103,6 +111,10 @@ export const backgrounds = {
     author: {
       name: 'Frostbyte_',
       link: 'https://www.shadertoy.com/user/Frostbyte_',
+    },
+    speed: {
+      min: -0.05,
+      max: 0.05,
     },
     fs: `
             // Shader by Frostbyte
@@ -179,6 +191,10 @@ export const backgrounds = {
     author: {
       name: 'R3N',
       link: 'https://www.shadertoy.com/user/R3N',
+    },
+    speed: {
+      min: -0.1,
+      max: 0.1,
     },
     fs: `
             #extension GL_OES_standard_derivatives : enable
@@ -283,6 +299,10 @@ export const backgrounds = {
       name: 'Kali',
       link: 'https://www.shadertoy.com/user/Kali',
     },
+    speed: {
+      min: -0.1,
+      max: 0.1,
+    },
     fs: `
             // Star Nest by Pablo Roman Andrioli
             // License: MIT
@@ -349,5 +369,372 @@ export const backgrounds = {
               
             }
         `,
+  },
+  auroras: {
+    name: 'Auroras',
+    type: 'shader',
+    link: 'https://www.shadertoy.com/view/XtGGRt',
+    license: 'CC BY-NC-SA 3.0',
+    author: {
+      name: 'nimitz',
+      link: 'https://www.shadertoy.com/user/nimitz',
+    },
+    speed: {
+      min: -0.75,
+      max: 0.75,
+    },
+    fs: `
+      // Auroras by nimitz 2017 (twitter: @stormoid)
+      // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
+      // Contact the author for other licensing options
+
+      /*
+        
+        There are two main hurdles I encountered rendering this effect. 
+        First, the nature of the texture that needs to be generated to get a believable effect
+        needs to be very specific, with large scale band-like structures, small scale non-smooth variations
+        to create the trail-like effect, a method for animating said texture smoothly and finally doing all
+        of this cheaply enough to be able to evaluate it several times per fragment/pixel.
+
+        The second obstacle is the need to render a large volume while keeping the computational cost low.
+        Since the effect requires the trails to extend way up in the atmosphere to look good, this means
+        that the evaluated volume cannot be as constrained as with cloud effects. My solution was to make
+        the sample stride increase polynomially, which works very well as long as the trails are lower opcaity than
+        the rest of the effect. Which is always the case for auroras.
+
+        After that, there were some issues with getting the correct emission curves and removing banding at lowered
+        sample densities, this was fixed by a combination of sample number influenced dithering and slight sample blending.
+
+        N.B. the base setup is from an old shader and ideally the effect would take an arbitrary ray origin and
+        direction. But this was not required for this demo and would be trivial to fix.
+      */
+
+      #define time iTime
+
+      mat2 mm2(in float a){float c = cos(a), s = sin(a);return mat2(c,s,-s,c);}
+      mat2 m2 = mat2(0.95534, 0.29552, -0.29552, 0.95534);
+      float tri(in float x){return clamp(abs(fract(x)-.5),0.01,0.49);}
+      vec2 tri2(in vec2 p){return vec2(tri(p.x)+tri(p.y),tri(p.y+tri(p.x)));}
+
+      float triNoise2d(in vec2 p, float spd)
+      {
+          float z=1.8;
+          float z2=2.5;
+        float rz = 0.;
+          p *= mm2(p.x*0.06);
+          vec2 bp = p;
+        for (float i=0.; i<5.; i++ )
+        {
+              vec2 dg = tri2(bp*1.85)*.75;
+              dg *= mm2(time*spd);
+              p -= dg/z2;
+
+              bp *= 1.3;
+              z2 *= .45;
+              z *= .42;
+          p *= 1.21 + (rz-1.0)*.02;
+              
+              rz += tri(p.x+tri(p.y))*z;
+              p*= -m2;
+        }
+          return clamp(1./pow(rz*29., 1.3),0.,.55);
+      }
+
+      float hash21(in vec2 n){ return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453); }
+      vec4 aurora(vec3 ro, vec3 rd)
+      {
+          vec4 col = vec4(0);
+          vec4 avgCol = vec4(0);
+          
+          for(float i=0.;i<50.;i++)
+          {
+              float of = 0.006*hash21(gl_FragCoord.xy)*smoothstep(0.,15., i);
+              float pt = ((.8+pow(i,1.4)*.002)-ro.y)/(rd.y*2.+0.4);
+              pt -= of;
+            vec3 bpos = ro + pt*rd;
+              vec2 p = bpos.zx;
+              float rzt = triNoise2d(p, 0.06);
+              vec4 col2 = vec4(0,0,0, rzt);
+              col2.rgb = (sin(1.-vec3(2.15,-.5, 1.2)+i*0.043)*0.5+0.5)*rzt;
+              avgCol =  mix(avgCol, col2, .5);
+              col += avgCol*exp2(-i*0.065 - 2.5)*smoothstep(0.,5., i);
+              
+          }
+          
+          col *= (clamp(rd.y*15.+.4,0.,1.));
+          
+          
+          //return clamp(pow(col,vec4(1.3))*1.5,0.,1.);
+          //return clamp(pow(col,vec4(1.7))*2.,0.,1.);
+          //return clamp(pow(col,vec4(1.5))*2.5,0.,1.);
+          //return clamp(pow(col,vec4(1.8))*1.5,0.,1.);
+          
+          //return smoothstep(0.,1.1,pow(col,vec4(1.))*1.5);
+          return col*1.8;
+          //return pow(col,vec4(1.))*2.
+      }
+
+
+      //-------------------Background and Stars--------------------
+
+      vec3 nmzHash33(vec3 q)
+      {
+          vec3 p3 = fract(q * vec3(0.1031, 0.1030, 0.0973));
+          p3 += dot(p3, p3.yxz + 33.33);
+          return fract((p3.xxy + p3.yxx) * p3.zyx);
+      }
+
+      vec3 stars(in vec3 p)
+      {
+          vec3 c = vec3(0.);
+          float res = iResolution.x*1.;
+          
+        for (float i=0.;i<4.;i++)
+          {
+              vec3 q = fract(p*(.15*res))-0.5;
+              vec3 id = floor(p*(.15*res));
+              vec2 rn = nmzHash33(id).xy;
+              float c2 = 1.-smoothstep(0.,.6,length(q));
+              c2 *= step(rn.x,.0005+i*i*0.001);
+              c += c2*(mix(vec3(1.0,0.49,0.1),vec3(0.75,0.9,1.),rn.y)*0.1+0.9);
+              p *= 1.3;
+          }
+          return c*c*.8;
+      }
+
+      vec3 bg(in vec3 rd)
+      {
+          float sd = dot(normalize(vec3(-0.5, -0.6, 0.9)), rd)*0.5+0.5;
+          sd = pow(sd, 5.);
+          vec3 col = mix(vec3(0.05,0.1,0.2), vec3(0.1,0.05,0.2), sd);
+          return col*.63;
+      }
+      //-----------------------------------------------------------
+
+
+      void mainImage( out vec4 fragColor, in vec2 fragCoord )
+      {
+        vec2 q = fragCoord.xy / iResolution.xy;
+          vec2 p = q - 0.5;
+        p.x*=iResolution.x/iResolution.y;
+          
+          vec3 ro = vec3(0,0,-6.7);
+          vec3 rd = normalize(vec3(p,1.3));
+          vec2 mo = iMouse.xy / iResolution.xy-.5;
+          mo = (mo==vec2(-.5))?mo=vec2(-0.1,0.1):mo;
+        mo.x *= iResolution.x/iResolution.y;
+          rd.yz *= mm2(mo.y);
+          rd.xz *= mm2(mo.x + sin(time*0.05)*0.2);
+          
+          vec3 col = vec3(0.);
+          vec3 brd = rd;
+          float fade = smoothstep(0.,0.01,abs(brd.y))*0.1+0.9;
+          
+          col = bg(rd)*fade;
+          
+          if (rd.y > 0.){
+              vec4 aur = smoothstep(0.,1.5,aurora(ro,rd))*fade;
+              col += stars(rd);
+              col = col*(1.-aur.a) + aur.rgb;
+          }
+          else //Reflections
+          {
+              rd.y = abs(rd.y);
+              col = bg(rd)*fade*0.6;
+              vec4 aur = smoothstep(0.0,2.5,aurora(ro,rd));
+              col += stars(rd)*0.1;
+              col = col*(1.-aur.a) + aur.rgb;
+              vec3 pos = ro + ((0.5-ro.y)/rd.y)*rd;
+              float nz2 = triNoise2d(pos.xz*vec2(.5,.7), 0.);
+              col += mix(vec3(0.2,0.25,0.5)*0.08,vec3(0.3,0.3,0.5)*0.7, nz2*0.4);
+          }
+          
+        fragColor = vec4(col, 1.);
+      }
+
+    `,
+  },
+  gradientFlow: {
+    name: 'Gradient Flow',
+    type: 'shader',
+    link: 'https://www.shadertoy.com/view/wdyczG',
+    license: 'CC BY-NC-SA 3.0',
+    author: {
+      name: 'Inigo Quilez',
+      link: 'https://www.shadertoy.com/view/wdyczG',
+    },
+    speed: {
+      min: -0.5,
+      max: 0.5,
+    },
+    fs: `
+      #define S(a,b,t) smoothstep(a,b,t)
+
+      mat2 Rot(float a)
+      {
+          float s = sin(a);
+          float c = cos(a);
+          return mat2(c, -s, s, c);
+      }
+
+
+      // Created by inigo quilez - iq/2014
+      // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+      vec2 hash( vec2 p )
+      {
+          p = vec2( dot(p,vec2(2127.1,81.17)), dot(p,vec2(1269.5,283.37)) );
+        return fract(sin(p)*43758.5453);
+      }
+
+      float noise( in vec2 p )
+      {
+          vec2 i = floor( p );
+          vec2 f = fract( p );
+        
+        vec2 u = f*f*(3.0-2.0*f);
+
+          float n = mix( mix( dot( -1.0+2.0*hash( i + vec2(0.0,0.0) ), f - vec2(0.0,0.0) ), 
+                              dot( -1.0+2.0*hash( i + vec2(1.0,0.0) ), f - vec2(1.0,0.0) ), u.x),
+                        mix( dot( -1.0+2.0*hash( i + vec2(0.0,1.0) ), f - vec2(0.0,1.0) ), 
+                              dot( -1.0+2.0*hash( i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y);
+        return 0.5 + 0.5*n;
+      }
+
+
+      void mainImage( out vec4 fragColor, in vec2 fragCoord )
+      {
+          vec2 uv = fragCoord/iResolution.xy;
+          float ratio = iResolution.x / iResolution.y;
+
+          vec2 tuv = uv;
+          tuv -= .5;
+
+          // rotate with Noise
+          float degree = noise(vec2(iTime*.1, tuv.x*tuv.y));
+
+          tuv.y *= 1./ratio;
+          tuv *= Rot(radians((degree-.5)*720.+180.));
+        tuv.y *= ratio;
+
+          
+          // Wave warp with sin
+          float frequency = 5.;
+          float amplitude = 30.;
+          float speed = iTime * 2.;
+          tuv.x += sin(tuv.y*frequency+speed)/amplitude;
+          tuv.y += sin(tuv.x*frequency*1.5+speed)/(amplitude*.5);
+          
+          
+          // draw the image
+          vec3 colorYellow = vec3(.957, .804, .623);
+          vec3 colorDeepBlue = vec3(.192, .384, .933);
+          vec3 layer1 = mix(colorYellow, colorDeepBlue, S(-.3, .2, (tuv*Rot(radians(-5.))).x));
+          
+          vec3 colorRed = vec3(.910, .510, .8);
+          vec3 colorBlue = vec3(0.350, .71, .953);
+          vec3 layer2 = mix(colorRed, colorBlue, S(-.3, .2, (tuv*Rot(radians(-5.))).x));
+          
+          vec3 finalComp = mix(layer1, layer2, S(.5, -.3, tuv.y));
+          
+          vec3 col = finalComp;
+          
+          fragColor = vec4(col,1.0);
+      }
+    `,
+  },
+  glossyGradients: {
+    name: 'Glossy Gradients',
+    type: 'shader',
+    link: 'https://www.shadertoy.com/view/lX2GDR',
+    license: 'CC BY-NC-SA 3.0',
+    author: {
+      name: 'Peace',
+      link: 'https://www.shadertoy.com/user/Peace',
+    },
+    speed: {
+      min: -1,
+      max: 1,
+    },
+    fs: `
+    void mainImage(out vec4 fragColor, vec2 fragCoord) {
+      float mr = min(iResolution.x, iResolution.y);
+      vec2 uv = (fragCoord * 2.0 - iResolution.xy) / mr;
+
+      float d = -iTime * 0.5;
+      float a = 0.0;
+      for (float i = 0.0; i < 8.0; ++i) {
+          a += cos(i - d - a * uv.x);
+          d += sin(uv.y * i + a);
+      }
+      d += iTime * 0.5;
+      vec3 col = vec3(cos(uv * vec2(d, a)) * 0.6 + 0.4, cos(a + d) * 0.5 + 0.5);
+      col = cos(col * cos(vec3(d, a, 2.5)) * 0.5 + 0.5);
+      fragColor = vec4(col, 1);
+    }`,
+  },
+  isoFlow: {
+    name: 'Iso Flow',
+    type: 'shader',
+    link: 'https://www.shadertoy.com/view/XfVyRm',
+    license: 'Proprietary',
+    author: {
+      name: 'Peace',
+      link: 'https://www.shadertoy.com/user/Peace',
+    },
+    speed: {
+      min: -1,
+      max: 1,
+    },
+    fs: `
+      // All rights reserved. Copyright © 2024 Lumiey. Unauthorized copying, distribution, modification, or any other use of this file or its contents is strictly prohibited.
+
+      #extension GL_OES_standard_derivatives : enable
+
+      const float PI = 3.1419265358;
+
+      vec2 get_uv(vec2 uv) {
+          float t = iTime * 0.7;
+          float a = 4.0 * uv.y - sin(uv.x * 3.0 + uv.y - t);
+          a = smoothstep(cos(a) * 0.7, sin(a) * 0.7 + 1.0, cos(a - 4.0 * uv.y) - sin(a - 3.0 * uv.x)); // mask
+          uv = cos(a) * uv + sin(a) * vec2(-uv.y, uv.x); // rotate
+          return uv;
+      }
+
+      const vec3 purple = vec3(0.68, 0.1, 0.9);
+      const vec3 blue = vec3(0.6, 0.8, 0.94);
+      const vec3 orange = vec3(1, 0.68, 0.4);
+      const vec3 red = vec3(0.98, 0.38, 0.35);
+
+      vec4 get_col(vec2 uv) {
+          uv = get_uv(uv) * 0.5 + 0.5;
+          vec3 col = mix(purple, orange, uv.x);
+          col = mix(col, blue, uv.y);
+          col *= col + 0.5 * sqrt(col);
+          return vec4(col, dot(col, vec3(0.3, 0.6, 0.1)));
+      }
+
+      vec3 traces(vec2 uv, vec4 col) {
+          vec2 e = vec2(0.001, 0);
+          float dcol = length(vec2(get_col(uv + e.xy).a, get_col(uv + e.yx).a) - col.a) / e.x;  
+          float LINE_WIDTH = 0.005;
+          float LINES = 50.0;
+          float s = abs(fract(LINES * col.a) - 0.5) / dcol / LINES - LINE_WIDTH;
+          float r = smoothstep(0.3, 0.2, sin(get_uv(uv).x * 0.3 + iTime * 0.5));
+          float w = smoothstep(length(fwidth(uv)), 0.0, s);
+          s /= LINE_WIDTH;
+          col.rgb = mix(col.rgb, col.rgb + (col.rgb - cos(s * 0.4) * s) * 0.05, max(0.0, w - r));
+          return col.rgb;
+      }
+
+      void mainImage(out vec4 fragColor, vec2 fragCoord) {
+          vec2 uv = (fragCoord * 2.0 - iResolution.xy) / (iResolution.x + iResolution.y) * 2.0;
+          
+          vec4 col = get_col(uv);
+          col.rgb = traces(uv, col);
+          
+          fragColor = vec4(col.rgb, 1);
+      }
+
+    `,
   },
 } as const satisfies Record<string, Background>;
