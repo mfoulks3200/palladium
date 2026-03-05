@@ -23,6 +23,7 @@ export const getDeepProp = <O extends object, T extends NestedKeysOf<O>>(
   path: T,
 ): GetPathType<O, T> | null => {
   if (!path) return obj as any;
+  if (obj == null) return null;
   const properties = path.split('.');
   const nextProp = properties.shift();
   if (nextProp) {
