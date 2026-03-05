@@ -26,6 +26,9 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Install Python setuptools
+        run: pip install setuptools
+
       - name: Install and build
         run: |
           npm install
