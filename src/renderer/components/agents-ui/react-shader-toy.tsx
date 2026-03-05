@@ -555,8 +555,10 @@ export function ReactShaderToy({
   const intersectionObserverRef = useRef<IntersectionObserver | undefined>(
     undefined,
   );
+  const needsResizeRef = useRef(true);
   const maxFPSRef = useRef(maxFPS);
   const lerpRef = useRef(lerp);
+  const devicePixelRatioRef = useRef(devicePixelRatio);
   const timeMultiplierRef = useRef(timeMultiplier);
   const onPerformanceReportRef = useRef(onPerformanceReport);
   const resizeObserverRef = useRef<ResizeObserver | undefined>(undefined);
@@ -686,11 +688,22 @@ export function ReactShaderToy({
   };
 
   const onResize = () => {
+    // Only update the cached bounding rect (for mouse calculations) and flag
+    // that the WebGL drawing buffer needs resizing.  The actual buffer resize
+    // is deferred to the start of the next drawScene frame so the browser can
+    // stretch the last rendered image via CSS in the meantime – avoiding the
+    // gray flicker caused by an immediate buffer reallocation + clear.
+    canvasPositionRef.current = canvasRef.current?.getBoundingClientRect();
+    needsResizeRef.current = true;
+  };
+
+  const applyResize = () => {
+    if (!needsResizeRef.current) return;
+    needsResizeRef.current = false;
     const gl = glRef.current;
     if (!gl) return;
     canvasPositionRef.current = canvasRef.current?.getBoundingClientRect();
-    // Force pixel ratio to be one to avoid expensive calculus on retina display.
-    const realToCSSPixels = devicePixelRatio;
+    const realToCSSPixels = devicePixelRatioRef.current;
     const displayWidth = Math.floor(
       (canvasPositionRef.current?.width ?? 1) * realToCSSPixels,
     );
@@ -1008,6 +1021,7 @@ export function ReactShaderToy({
       performanceTimeRef.current = timestamp;
     }
 
+    applyResize();
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBufferRef.current);
@@ -1136,9 +1150,10 @@ export function ReactShaderToy({
   useEffect(() => {
     maxFPSRef.current = maxFPS;
     lerpRef.current = lerp;
+    devicePixelRatioRef.current = devicePixelRatio;
     timeMultiplierRef.current = timeMultiplier;
     onPerformanceReportRef.current = onPerformanceReport;
-  }, [maxFPS, lerp, timeMultiplier, onPerformanceReport]);
+  }, [maxFPS, lerp, devicePixelRatio, timeMultiplier, onPerformanceReport]);
 
   // Main effect for initialization and cleanup
   useEffect(() => {
@@ -1159,9 +1174,8 @@ export function ReactShaderToy({
         processTextures();
         initShaders(preProcessFragment(fs || BASIC_FS), vs || BASIC_VS);
         initBuffers();
-        requestAnimationFrame(drawScene);
         addEventListeners();
-        onResize();
+        requestAnimationFrame(drawScene);
       }
     }
 
