@@ -6,6 +6,7 @@ import {
   History,
   Info,
   Search,
+  Settings,
   Sparkles,
 } from 'lucide-react';
 import { ReactElement, useContext, useEffect, useState } from 'react';
@@ -13,6 +14,7 @@ import { AboutPanel } from './pages/AboutPanel';
 import { HistoryPanel } from './pages/HistoryPanel';
 import { DefaultSearchEngines } from './pages/DefaultSearchEngines';
 import { CustomSearchEngines } from './pages/CustomSearchEngines';
+import { AnalyticsSettings } from './pages/GeneralSettings';
 import { InternalTabMetaContext } from '@/windows/main-ui/App';
 import { Background } from './pages/Background';
 import { UserInterface } from './pages/UserInterface';
@@ -33,6 +35,21 @@ interface SettingsPages {
 }
 
 const settingsUi: Record<string, SettingsPages> = {
+  general: {
+    name: 'General',
+    icon: <Settings />,
+    cards: {
+      analytics: {
+        name: 'Analytics',
+        description: 'Control how Palladium collects anonymous usage data.',
+        customContents: (
+          <div className="flex flex-col gap-4 pt-8">
+            <AnalyticsSettings />
+          </div>
+        ),
+      },
+    },
+  },
   personalization: {
     name: 'Personalization',
     icon: <Sparkles />,

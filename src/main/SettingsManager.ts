@@ -36,9 +36,16 @@ export class SettingsManager {
           settingsSchema.parse(this.currentSettings),
         );
       } else {
+        const prevAnalytics = this.getItem('analytics.enabled');
         this.currentSettings = diffObjects(settingsDefaults, newSettings);
-
         this.persist();
+
+        // Reflect analytics opt-in/out changes immediately so toggling the
+        // setting in the UI takes effect without an app restart.
+        const nextAnalytics = this.getItem('analytics.enabled');
+        if (prevAnalytics !== nextAnalytics) {
+          AnalyticsManager.getInstance().setEnabled(nextAnalytics);
+        }
       }
     });
 
