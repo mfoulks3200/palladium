@@ -10,6 +10,9 @@ jobs:
     # To enable auto publishing to github, update your electron publisher
     # config in package.json > "build" and remove the conditional below
 
+    permissions:
+      contents: write
+
     runs-on: ${{ matrix.os }}
 
     strategy:
