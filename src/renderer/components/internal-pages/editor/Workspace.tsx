@@ -16,12 +16,6 @@ const treeObj: FileTreeObject[] = [
   { type: 'file', name: 'Palladium Settings', icon: ArrowLeft },
   {
     type: 'folder',
-    name: 'Extensions',
-    icon: Blocks,
-    children: [],
-  },
-  {
-    type: 'folder',
     name: 'Mods',
     icon: FishingHook,
     openByDefault: true,
@@ -57,7 +51,7 @@ const LegacyWorkspace = () => {
           'bg-card border-b border-b-gray-200',
         )}
       >
-        Mods & Extensions Editor
+        Mod Editor
       </div>
       <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
         <ResizablePanel

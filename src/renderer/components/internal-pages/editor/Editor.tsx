@@ -1,5 +1,5 @@
 import { useDesignTokens } from '@/hooks/use-design-tokens';
-import { getLuminance } from '@/lib/colors';
+import { getLuminance, toHex } from '@/lib/colors';
 import Editor, { loader, Monaco } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 
@@ -44,7 +44,7 @@ ReactDOM.render(<App />, rootElement);`;
 export const EditorComponent = () => {
   const tokens = useDesignTokens();
 
-  const isDarkMode = getLuminance(tokens.tokens.primary) < 0.5;
+  const isDarkMode = getLuminance(tokens.tokens.surface) < 0.5;
 
   const beforeMount = (editor: Monaco) => {
     editor.editor.defineTheme('transparent-theme', {
@@ -52,8 +52,9 @@ export const EditorComponent = () => {
       inherit: true,
       rules: [],
       colors: {
-        'editor.background': '#00000000', // transparent background
-        'editorGutter.background': isDarkMode ? '#00000055' : '#FFFFFF55',
+        'editor.background': toHex(tokens.tokens.surface),
+        'editorGutter.background': toHex(tokens.tokens.surfaceRaised),
+        'minimap.background': toHex(tokens.tokens.surfaceRaised),
       },
     });
   };

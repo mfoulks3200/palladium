@@ -17,7 +17,13 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-14]
+        include:
+          - os: macos-14
+            platform: --mac
+          - os: ubuntu-latest
+            platform: --linux
+          - os: windows-latest
+            platform: --win
 
     steps:
       - name: Checkout git repo
@@ -48,4 +54,4 @@ jobs:
           # This is used for uploading release assets to github
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npx electron-builder build --mac --publish always
+          npx electron-builder build ${{ matrix.platform }} --publish always

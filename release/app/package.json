@@ -1,6 +1,6 @@
 {
   "name": "palladium",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "A foundation for scalable desktop apps",
   "license": "MIT",
   "author": {
@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "better-sqlite3": "^12.6.2",
-    "electron-liquid-glass": "^1.1.1",
     "node-abi": "^3.24.0",
     "node-gyp": "^12.2.0"
   },

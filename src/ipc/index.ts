@@ -103,6 +103,10 @@ export interface HistoryItem {
   timestamp: string;
 }
 
+export interface FeatureFlagsIpc {
+  flags: Record<string, string | boolean>;
+}
+
 /**
  * Protocol definition for Renderer -> Main communication
  */
@@ -125,6 +129,8 @@ export interface RendererToMainEvents {
   'settings-sync': [SettingSchema];
   'get-history': [];
   'clear-history': [];
+  'feature-flags-sync': [];
+  'feature-flags-refresh': [];
 }
 
 /**
@@ -140,6 +146,7 @@ export interface MainToRendererEvents {
   'internal-page-navigate': [InternalPageNavigateIpc];
   'settings-sync': [SettingSchema];
   'history-data': [HistoryItem[]];
+  'feature-flags-sync': [FeatureFlagsIpc];
 }
 
 export type Channels = keyof RendererToMainEvents | keyof MainToRendererEvents;

@@ -6,10 +6,13 @@
 :root {
   --background: var(--color-background, oklch(1 0 0));
   --foreground: var(--color-text, oklch(0.145 0 0));
-  --card: var(--color-surface, oklch(1 0 0));
-  --card-foreground: var(--color-surface-foreground, oklch(0.145 0 0));
-  --popover: var(--color-surface, oklch(1 0 0));
-  --popover-foreground: var(--color-surface-foreground, oklch(0.145 0 0));
+  --card: var(--color-surface-raised, oklch(1 0 0));
+  --card-foreground: var(--color-surface-raised-foreground, oklch(0.145 0 0));
+  --popover: var(--color-surface-overlay, oklch(1 0 0));
+  --popover-foreground: var(
+    --color-surface-overlay-foreground,
+    oklch(0.145 0 0)
+  );
   --primary: var(--color-primary, oklch(0.205 0 0));
   --primary-foreground: var(--color-primary-foreground, oklch(0.985 0 0));
   --secondary: var(--color-surface, oklch(0.97 0 0));
@@ -32,7 +35,10 @@
   --sidebar: var(--color-surface, oklch(0.985 0 0));
   --sidebar-foreground: var(--color-surface-foreground, oklch(0.145 0 0));
   --sidebar-primary: var(--color-primary, oklch(0.205 0 0));
-  --sidebar-primary-foreground: var(--color-primary-foreground, oklch(0.985 0 0));
+  --sidebar-primary-foreground: var(
+    --color-primary-foreground,
+    oklch(0.985 0 0)
+  );
   --sidebar-accent: var(--color-primary-100, oklch(0.97 0 0));
   --sidebar-accent-foreground: var(--color-primary-900, oklch(0.205 0 0));
   --sidebar-border: var(--color-border, oklch(0.922 0 0));
@@ -42,10 +48,13 @@
 .dark {
   --background: var(--color-background, oklch(0.145 0 0));
   --foreground: var(--color-text, oklch(0.985 0 0));
-  --card: var(--color-surface, oklch(0.145 0 0));
-  --card-foreground: var(--color-surface-foreground, oklch(0.985 0 0));
-  --popover: var(--color-surface, oklch(0.145 0 0));
-  --popover-foreground: var(--color-surface-foreground, oklch(0.985 0 0));
+  --card: var(--color-surface-raised, oklch(0.145 0 0));
+  --card-foreground: var(--color-surface-raised-foreground, oklch(0.985 0 0));
+  --popover: var(--color-surface-overlay, oklch(0.145 0 0));
+  --popover-foreground: var(
+    --color-surface-overlay-foreground,
+    oklch(0.985 0 0)
+  );
   --primary: var(--color-primary, oklch(0.985 0 0));
   --primary-foreground: var(--color-primary-foreground, oklch(0.205 0 0));
   --secondary: var(--color-surface, oklch(0.269 0 0));
@@ -67,7 +76,10 @@
   --sidebar: var(--color-surface, oklch(0.205 0 0));
   --sidebar-foreground: var(--color-surface-foreground, oklch(0.985 0 0));
   --sidebar-primary: var(--color-primary, oklch(0.488 0.243 264.376));
-  --sidebar-primary-foreground: var(--color-primary-foreground, oklch(0.985 0 0));
+  --sidebar-primary-foreground: var(
+    --color-primary-foreground,
+    oklch(0.985 0 0)
+  );
   --sidebar-accent: var(--color-primary-900, oklch(0.269 0 0));
   --sidebar-accent-foreground: var(--color-primary-100, oklch(0.985 0 0));
   --sidebar-border: var(--color-border, oklch(0.269 0 0));
@@ -81,6 +93,10 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-raised-foreground: var(--color-surface-raised-foreground);
+  --color-surface-overlay: var(--color-surface-overlay);
+  --color-surface-overlay-foreground: var(--color-surface-overlay-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -122,7 +138,17 @@
     @apply bg-background text-foreground;
   }
 
-  :is(.bg-card, .bg-popover, .bg-background, .bg-input, .bg-sidebar, .bg-muted) {
-    backdrop-filter: blur(var(--ui-blur, 0px)) saturate(var(--ui-saturation, 100%));
+  :is(
+    .bg-card,
+    .bg-popover,
+    .bg-background,
+    .bg-input,
+    .bg-sidebar,
+    .bg-muted,
+    .bg-surface-raised,
+    .bg-surface-overlay
+  ) {
+    backdrop-filter: blur(var(--ui-blur, 0px))
+      saturate(var(--ui-saturation, 100%));
   }
 }

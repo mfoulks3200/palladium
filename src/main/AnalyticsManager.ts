@@ -1,9 +1,11 @@
 import { PostHog } from 'posthog-node';
-import { app } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
+import { typedIpcMain, typedWebContents } from './ipc';
+import { FeatureFlagsIpc } from '../ipc';
 
 /**
  * PostHog project write-only ingestion token.
@@ -11,7 +13,8 @@ import { randomUUID } from 'node:crypto';
  * read data. Override via POSTHOG_API_KEY environment variable if needed.
  */
 const POSTHOG_API_KEY =
-  process.env.POSTHOG_API_KEY ?? 'phc_XmGGv0hV2OkCQxC56D6tlOII9KOTYIxNGz2lCgaE71a';
+  process.env.POSTHOG_API_KEY ??
+  'phc_XmGGv0hV2OkCQxC56D6tlOII9KOTYIxNGz2lCgaE71a';
 const POSTHOG_HOST = 'https://us.i.posthog.com';
 
 /** Path to the persistent anonymous identifier file. */
@@ -36,6 +39,13 @@ export class AnalyticsManager {
 
   private analyticsEnabled: boolean = true;
 
+  private featureFlags: Record<string, string | boolean> = {};
+
+  private flagPollTimer: ReturnType<typeof setInterval> | null = null;
+
+  /** How often (ms) to re-fetch feature flags from PostHog. */
+  private static FLAG_POLL_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
   public static getInstance(): AnalyticsManager {
     if (!AnalyticsManager.instance) {
       AnalyticsManager.instance = new AnalyticsManager();
@@ -55,6 +65,25 @@ export class AnalyticsManager {
       host: POSTHOG_HOST,
       flushAt: 20,
       flushInterval: 10000,
+    });
+
+    // Perform an initial feature flag fetch and start periodic polling.
+    this.refreshFeatureFlags();
+    this.flagPollTimer = setInterval(
+      () => this.refreshFeatureFlags(),
+      AnalyticsManager.FLAG_POLL_INTERVAL,
+    );
+
+    // When a renderer window requests the current flags (e.g. on load),
+    // respond with the cached state immediately.
+    typedIpcMain.on('feature-flags-sync', (event) => {
+      const payload: FeatureFlagsIpc = { flags: this.featureFlags };
+      typedWebContents(event.sender).send('feature-flags-sync', payload);
+    });
+
+    // Allow any renderer to force a fresh fetch from PostHog.
+    typedIpcMain.on('feature-flags-refresh', () => {
+      this.refreshFeatureFlags();
     });
   }
 
@@ -112,8 +141,54 @@ export class AnalyticsManager {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Feature Flags
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Fetch all feature flags for the current distinct ID from PostHog and
+   * broadcast them to every open renderer window.
+   */
+  public async refreshFeatureFlags(): Promise<void> {
+    if (!this.client || !this.analyticsEnabled) return;
+    try {
+      const flags = await this.client.getAllFlags(this.distinctId);
+      this.featureFlags = flags;
+      this.broadcastFlags();
+    } catch (err) {
+      console.error('[AnalyticsManager] Failed to fetch feature flags:', err);
+    }
+  }
+
+  /**
+   * Return the current locally-cached value of a single feature flag.
+   * Returns `undefined` when the flag has not been fetched yet.
+   */
+  public getFeatureFlag(key: string): string | boolean | undefined {
+    return this.featureFlags[key];
+  }
+
+  /** Return all locally-cached feature flags. */
+  public getAllFlags(): Record<string, string | boolean> {
+    return { ...this.featureFlags };
+  }
+
+  /** Send the current flag state to every BrowserWindow's renderer. */
+  private broadcastFlags(): void {
+    const payload: FeatureFlagsIpc = { flags: this.featureFlags };
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        typedWebContents(win.webContents).send('feature-flags-sync', payload);
+      }
+    }
+  }
+
   /** Flush pending events and shut down the PostHog client gracefully. */
   public async shutdown(): Promise<void> {
+    if (this.flagPollTimer) {
+      clearInterval(this.flagPollTimer);
+      this.flagPollTimer = null;
+    }
     if (this.client) {
       await this.client.shutdown();
     }

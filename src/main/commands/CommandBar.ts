@@ -1,6 +1,5 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
-import liquidGlass from 'electron-liquid-glass';
 import { resolveHtmlPath } from '../util';
 import { typedIpcMain, typedWebContents } from '../ipc';
 import { TabManager } from '../TabManager';
@@ -22,14 +21,15 @@ export const spawnCommandBarUI = (tabUuid?: string) => {
       width: 800,
       height: 500,
       transparent: true,
+      vibrancy: 'hud',
       frame: false,
       backgroundColor: '#00000000',
+      roundedCorners: true,
       resizable: false,
       webPreferences: {
         preload: app.isPackaged
           ? path.join(__dirname, 'preload.js')
           : path.join(__dirname, '../../.erb/dll/preload.js'),
-        transparent: true,
         devTools: false,
       },
     });
@@ -63,19 +63,6 @@ export const spawnCommandBarUI = (tabUuid?: string) => {
       if (process.env.START_MINIMIZED) {
         commandBarWindow.minimize();
       } else {
-        // commandBarWindow.setOpacity(0);
-        // commandBarWindow!.show();
-        // setTimeout(() => {
-        //   commandBarWindow!.setOpacity(1);
-        // }, 100);
-
-        // commandBarWindow.setBackgroundColor('#00000000');
-        // commandBarWindow.setBackgroundMaterial('mica');
-        // commandBarWindow.setVibrancy('hud');
-        // commandBarWindow.setVibrancy('menu');
-        // commandBarWindow.setVibrancy('tooltip');
-
-        // commandBarWindow.setOpacity(1);
         if (tabUuid) {
           typedWebContents(commandBarWindow.webContents).send('command-setup', {
             tabUuid: tabUuid,
@@ -92,29 +79,6 @@ export const spawnCommandBarUI = (tabUuid?: string) => {
 
         hasBeenOpenedBefore = true;
       }
-    });
-
-    commandBarWindow.webContents.once('did-finish-load', () => {
-      // 🪄 Apply effect, get handle
-      const glassId = liquidGlass.addView(
-        commandBarWindow!.getNativeWindowHandle(),
-        {
-          /* options */
-          cornerRadius: 24,
-        },
-      );
-
-      // Experimental, undocumented private APIs
-      liquidGlass.unstable_setVariant(glassId, 2);
-      //   liquidGlass.unstable_setVariant(glassId, 7);
-      //   liquidGlass.unstable_setVariant(glassId, 11);
-      //   liquidGlass.unstable_setVariant(glassId, 11);
-
-      // Scrim overlay (0 = off, 1 = on)
-      //   liquidGlass.unstable_setScrim(glassId, 1);
-
-      // Subdued state (0 = normal, 1 = subdued)
-      liquidGlass.unstable_setSubdued(glassId, 1);
     });
 
     typedIpcMain.on('command-bar', (_event, data) => {
