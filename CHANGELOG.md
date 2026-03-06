@@ -1,3 +1,26 @@
+## [0.0.7] — 2026-03-05
+
+### Added
+
+- **Feature Flag System** — React context-based feature flag infrastructure powered by PostHog ([feature-flags.tsx](src/renderer/lib/feature-flags.tsx))
+  - `FeatureFlagProvider` subscribes to Main process flag updates and exposes them via React context
+  - Supports boolean and multivariate (string) flag values
+  - On-demand flag refresh and automatic sync from `AnalyticsManager`
+- **Cross-Platform Builds** — Dev builds and build targets for all supported platforms
+- **About Page** — Polished about page content and layout
+
+### Changed
+
+- Removed liquid glass dependency
+
+### Fixed
+
+- Memory leak issue
+- Settings persistence bug
+- Editor styling improvements
+
+---
+
 ## [0.0.5] — 2026-03-05
 
 ### Added
