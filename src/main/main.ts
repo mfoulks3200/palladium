@@ -15,6 +15,26 @@ import { AnalyticsManager } from './AnalyticsManager';
 
 let mainWindow: BrowserWindow | null = null;
 
+// ---------------------------------------------------------------------------
+// Global exception handlers — forward to PostHog via AnalyticsManager
+// ---------------------------------------------------------------------------
+
+process.on('uncaughtException', (error) => {
+  AnalyticsManager.getInstance().captureException(error, { source: 'main' });
+  console.error('[Main] Uncaught exception:', error);
+});
+
+process.on('unhandledRejection', (reason) => {
+  const error =
+    reason instanceof Error
+      ? reason
+      : Object.assign(new Error(String(reason)), {
+          name: 'UnhandledRejection',
+        });
+  AnalyticsManager.getInstance().captureException(error, { source: 'main' });
+  console.error('[Main] Unhandled rejection:', reason);
+});
+
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
   sourceMapSupport.install();

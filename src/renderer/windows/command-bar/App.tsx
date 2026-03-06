@@ -9,22 +9,25 @@ import './App.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { SettingsProvider } from '@/lib/settings';
 import { DesignTokenProvider } from '@/hooks/use-design-tokens';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const App = () => {
   return (
     <>
-      <SettingsProvider>
-        <DesignTokenProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <CommandBar className="h-full max-h-full min-h-full w-full max-w-full min-w-full" />
-          </ThemeProvider>
-        </DesignTokenProvider>
-      </SettingsProvider>
+      <ErrorBoundary>
+        <SettingsProvider>
+          <DesignTokenProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <CommandBar className="h-full max-h-full min-h-full w-full max-w-full min-w-full" />
+            </ThemeProvider>
+          </DesignTokenProvider>
+        </SettingsProvider>
+      </ErrorBoundary>
     </>
   );
 };

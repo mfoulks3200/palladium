@@ -107,6 +107,13 @@ export interface FeatureFlagsIpc {
   flags: Record<string, string | boolean>;
 }
 
+export interface CaptureExceptionIpc {
+  message: string;
+  stack: string;
+  name: string;
+  source: string;
+}
+
 /**
  * Protocol definition for Renderer -> Main communication
  */
@@ -131,6 +138,7 @@ export interface RendererToMainEvents {
   'clear-history': [];
   'feature-flags-sync': [];
   'feature-flags-refresh': [];
+  'capture-exception': [CaptureExceptionIpc];
 }
 
 /**

@@ -22,6 +22,7 @@ import { TabManagerIpc } from '../../../ipc';
 import { SettingsProvider } from '@/lib/settings';
 import { FeatureFlagProvider } from '@/lib/feature-flags';
 import { DesignTokenProvider } from '../../hooks/use-design-tokens';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 interface InternalTabMetaItem {
   title: string;
@@ -104,17 +105,19 @@ export default function App() {
   }, []);
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
-      <Router>
-        <Routes>
-          <Route path="/" element={<Main />} />
-        </Routes>
-      </Router>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <Router>
+          <Routes>
+            <Route path="/" element={<Main />} />
+          </Routes>
+        </Router>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
