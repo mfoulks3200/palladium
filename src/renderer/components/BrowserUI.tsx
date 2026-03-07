@@ -172,13 +172,13 @@ const BrowserBackgroundPanel = ({
 }: {
   ref: RefObject<HTMLDivElement | null>;
 }) => {
-  const [internalPageUrl, setInternalPageUrl] = useState('');
+  const tabMeta = useContext(TabMetaContext);
 
-  useEffect(() => {
-    window.electron.ipcRenderer.on('internal-page-navigate', (response) => {
-      setInternalPageUrl(response.newPath);
-    });
-  }, []);
+  const currentTab = tabMeta?.tabs.find(
+    (tab) => tab.uuid === tabMeta.currentTabUuid,
+  );
+
+  const internalPageUrl = currentTab?.isInternal ? currentTab.url : '';
 
   return (
     <BrowserPanel ref={ref}>
