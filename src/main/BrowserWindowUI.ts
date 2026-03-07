@@ -1,6 +1,9 @@
 import { app, BrowserWindow, shell, screen, BrowserView, Menu } from 'electron';
+import os from 'node:os';
 import path from 'node:path';
 import MenuBuilder from './menu';
+import { typedIpcMain, typedWebContents } from './ipc';
+import { SystemMetaIpc, WindowActionIpc } from '../ipc';
 import { SettingsManager } from './SettingsManager';
 import { HistoryManager } from './HistoryManager';
 import { setupOverlayManager } from './OverlayManager';
@@ -61,7 +64,7 @@ export class BrowserWindowUI {
       titleBarStyle: 'hidden',
       ...(process.platform !== 'darwin'
         ? { titleBarOverlay: true }
-        : { trafficLightPosition: { x: 15, y: 20 } }),
+        : { trafficLightPosition: { x: 17, y: 17 } }),
       transparent: true,
       frame: false,
       backgroundColor: '#FFFFFF00',
@@ -132,6 +135,51 @@ export class BrowserWindowUI {
     setupOverlayManager(this.mainWindow);
 
     registerGlobalShortcuts();
+
+    // Respond to renderer requests for system metadata.
+    typedIpcMain.on('get-system-meta', (event) => {
+      const meta: SystemMetaIpc = {
+        platform: process.platform,
+        arch: process.arch,
+        osVersion: os.release(),
+        electronVersion: process.versions.electron ?? '',
+        chromeVersion: process.versions.chrome ?? '',
+        nodeVersion: process.versions.node ?? '',
+        appVersion: app.getVersion(),
+        appName: app.getName(),
+        gitInfo: {
+          version: VERSION,
+          commitHash: COMMITHASH,
+          branch: BRANCH,
+          lastCommitDateTime: LASTCOMMITDATETIME,
+        },
+      };
+      typedWebContents(event.sender).send('system-meta', meta);
+    });
+
+    // Handle window operations (close, minimize, maximize/restore).
+    typedIpcMain.on('window-action', (event, { action }: WindowActionIpc) => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (!win || win.isDestroyed()) return;
+
+      switch (action) {
+        case 'close':
+          win.close();
+          break;
+        case 'minimize':
+          win.minimize();
+          break;
+        case 'maximize':
+          if (win.isMaximized()) {
+            win.unmaximize();
+          } else {
+            win.maximize();
+          }
+          break;
+        default:
+          break;
+      }
+    });
 
     CommandParser.getInstance();
 

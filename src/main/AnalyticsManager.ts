@@ -5,7 +5,7 @@ import os from 'node:os';
 import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { typedIpcMain, typedWebContents } from './ipc';
-import { FeatureFlagsIpc } from '../ipc';
+import { CaptureExceptionIpc, FeatureFlagsIpc } from '../ipc';
 
 /**
  * PostHog project write-only ingestion token.
@@ -85,6 +85,21 @@ export class AnalyticsManager {
     typedIpcMain.on('feature-flags-refresh', () => {
       this.refreshFeatureFlags();
     });
+
+    // Forward renderer-side exceptions to PostHog.
+    typedIpcMain.on(
+      'capture-exception',
+      (_event, data: CaptureExceptionIpc) => {
+        this.captureException(
+          {
+            message: data.message,
+            stack: data.stack,
+            name: data.name,
+          } as Error,
+          { source: data.source },
+        );
+      },
+    );
   }
 
   /** Load the persisted anonymous ID or create a new one. */
@@ -138,6 +153,21 @@ export class AnalyticsManager {
         platform: process.platform,
         ...properties,
       },
+    });
+  }
+
+  /**
+   * Capture an exception event.
+   *
+   * @param error  - The Error (or Error-like) object.
+   * @param extra  - Optional extra properties (e.g. `{ source: 'main' }`).
+   */
+  public captureException(error: Error, extra?: Record<string, string>): void {
+    this.capture('exception', {
+      error_name: error.name,
+      error_message: error.message,
+      error_stack: error.stack ?? '',
+      ...extra,
     });
   }
 

@@ -152,3 +152,8 @@
       saturate(var(--ui-saturation, 100%));
   }
 }
+
+.windowDragRegion {
+  -webkit-app-region: drag;
+  -webkit-user-select: none;
+}
