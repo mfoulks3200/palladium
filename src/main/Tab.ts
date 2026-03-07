@@ -6,7 +6,7 @@ import {
   WebContentsView,
   session,
 } from 'electron';
-import { TabIpcPacket } from '../ipc';
+import { MediaState, TabIpcPacket } from '../ipc';
 import { HistoryEvent, HistoryManager } from './HistoryManager';
 import path from 'node:path';
 import os from 'node:os';
@@ -40,6 +40,7 @@ export class Tab extends EventTarget {
   private currentUrl: string = '';
   private faviconB64: string | null = null;
   private isPlayingAudio: boolean = false;
+  private mediaStates: Map<string, MediaState> = new Map();
   public view: WebContentsView;
   public devToolsView: WebContentsView = null as any;
   private static session: Session;
@@ -184,6 +185,33 @@ export class Tab extends EventTarget {
   public setMuted(shouldMute: boolean) {
     this.view.webContents.setAudioMuted(shouldMute);
     this.publishMetadataUpdateEvent();
+  }
+
+  public addMediaState(state: MediaState) {
+    this.mediaStates.set(state.id, state);
+    this.publishMediaStateEvent();
+  }
+
+  public updateMediaState(state: Partial<MediaState> & { id: string }) {
+    const existing = this.mediaStates.get(state.id);
+    if (existing) {
+      this.mediaStates.set(state.id, { ...existing, ...state });
+      this.publishMediaStateEvent();
+    }
+  }
+
+  public removeMediaState(id: string) {
+    if (this.mediaStates.delete(id)) {
+      this.publishMediaStateEvent();
+    }
+  }
+
+  public getMediaStates(): MediaState[] {
+    return [...this.mediaStates.values()];
+  }
+
+  private publishMediaStateEvent() {
+    this.dispatchEvent(new CustomEvent('media-state-changed'));
   }
 
   public getTabIpcMeta(): TabIpcPacket {

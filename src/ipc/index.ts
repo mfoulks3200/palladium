@@ -121,6 +121,23 @@ export interface WindowActionIpc {
   action: 'close' | 'minimize' | 'maximize';
 }
 
+export interface MediaState {
+  id: string;
+  type: string;
+  title?: string;
+  artist?: string;
+  album?: string;
+  artworkUrl?: string;
+  playing?: boolean;
+  progress?: number;
+  duration?: number;
+}
+
+export type MediaStateIpc =
+  | { action: 'add'; state: MediaState }
+  | { action: 'update'; state: Partial<MediaState> & { id: string } }
+  | { action: 'remove'; id: string };
+
 export interface SystemMetaIpc {
   platform: string;
   arch: string;
@@ -183,6 +200,7 @@ export interface MainToRendererEvents {
   'history-data': [HistoryItem[]];
   'feature-flags-sync': [FeatureFlagsIpc];
   'system-meta': [SystemMetaIpc];
+  'media-state': [MediaStateIpc];
 }
 
 export type Channels = keyof RendererToMainEvents | keyof MainToRendererEvents;

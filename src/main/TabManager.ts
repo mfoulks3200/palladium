@@ -6,7 +6,12 @@ import {
   WebContentsView,
 } from 'electron';
 import { Tab } from './Tab';
-import { TabActionsIpc, TabManagerIpc, OverlayOptions } from '../ipc';
+import {
+  MediaState,
+  TabActionsIpc,
+  TabManagerIpc,
+  OverlayOptions,
+} from '../ipc';
 import { disablePortals } from '@/components/PortalOverlay';
 import { typedIpcMain, typedWebContents } from './ipc';
 import { AnalyticsManager } from './AnalyticsManager';
@@ -20,6 +25,7 @@ export class TabManager {
   private mainWindow: BrowserWindow;
   private currentTab: Tab | null = null;
   private tabs: Set<Tab> = new Set();
+  private mediaStates: Map<string, MediaState> = new Map();
 
   public static getInstance() {
     return TabManager.instance;
@@ -239,6 +245,26 @@ export class TabManager {
       tab.addEventListener('tab-updated', () => {
         this.updateRenderProcess();
       });
+      tab.addEventListener('media-state-changed', () => {
+        this.syncMediaStates();
+      });
+    }
+  }
+
+  private syncMediaStates() {
+    this.mediaStates.clear();
+    for (const tab of this.tabs) {
+      for (const state of tab.getMediaStates()) {
+        this.mediaStates.set(state.id, state);
+      }
+    }
+    if (!this.mainWindow.isDestroyed()) {
+      for (const state of this.mediaStates.values()) {
+        typedWebContents(this.mainWindow.webContents).send('media-state', {
+          action: 'add',
+          state,
+        });
+      }
     }
   }
 

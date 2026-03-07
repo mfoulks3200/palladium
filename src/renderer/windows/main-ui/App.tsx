@@ -25,6 +25,7 @@ import { SettingsProvider } from '@/lib/settings';
 import { FeatureFlagProvider } from '@/lib/feature-flags';
 import { SystemMetaProvider } from '@/lib/system-meta';
 import { DesignTokenProvider } from '../../hooks/use-design-tokens';
+import { MediaStateProvider } from '@/lib/media-state';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 interface InternalTabMetaItem {
@@ -89,11 +90,13 @@ function Main() {
       <FeatureFlagProvider>
         <SystemMetaProvider>
           <DesignTokenProvider>
-            <TabMetaContext.Provider value={tabMeta}>
-              <InternalTabMetaContext.Provider value={internalTabMetaValue}>
-                <BrowserUI />
-              </InternalTabMetaContext.Provider>
-            </TabMetaContext.Provider>
+            <MediaStateProvider>
+              <TabMetaContext.Provider value={tabMeta}>
+                <InternalTabMetaContext.Provider value={internalTabMetaValue}>
+                  <BrowserUI />
+                </InternalTabMetaContext.Provider>
+              </TabMetaContext.Provider>
+            </MediaStateProvider>
           </DesignTokenProvider>
         </SystemMetaProvider>
       </FeatureFlagProvider>
