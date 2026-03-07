@@ -36,7 +36,6 @@ export const OverlayPortal = (props: PropsWithChildren<OverlayPortalProps>) => {
           width: dummyBounds.width,
         },
       };
-      console.log(overlayInfo);
       const dropdownWindow = window.open(
         '',
         'overlay',

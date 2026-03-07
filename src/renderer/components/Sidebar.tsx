@@ -94,15 +94,12 @@ export const Sidebar = () => {
     }
   }
 
-  const openCommandBar = useCallback(
-    (uuid?: string) => {
-      window.electron.ipcRenderer.sendMessage('command-bar', {
-        action: 'open',
-        tabUuid: uuid,
-      });
-    },
-    [currentTab],
-  );
+  const openCommandBar = useCallback((uuid?: string) => {
+    window.electron.ipcRenderer.sendMessage('command-bar', {
+      action: 'open',
+      tabUuid: uuid,
+    });
+  }, []);
 
   return (
     <div className="flex h-full max-h-full flex-col gap-2">

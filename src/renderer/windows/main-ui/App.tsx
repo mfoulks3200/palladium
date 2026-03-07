@@ -15,6 +15,8 @@ import {
   ReactElement,
   useCallback,
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from 'react';
 import { BrowserUI } from '../../components/BrowserUI';
@@ -54,20 +56,32 @@ function Main() {
     window.electron.ipcRenderer.sendMessage('update-tab-meta');
   }, []);
 
+  const tabMetaRef = useRef(tabMeta);
+  tabMetaRef.current = tabMeta;
+
   const setTabMetaItem = useCallback(
     (meta: InternalTabMetaItem, tabId?: string) => {
       setInternalTabMeta((oldMeta) => {
-        if (tabId || (tabMeta && tabMeta?.currentTabUuid)) {
+        const currentTabMeta = tabMetaRef.current;
+        if (tabId || (currentTabMeta && currentTabMeta?.currentTabUuid)) {
           return {
             ...oldMeta,
-            [(tabId ?? tabMeta!.currentTabUuid)!]: meta,
+            [(tabId ?? currentTabMeta!.currentTabUuid)!]: meta,
           };
         } else {
           return oldMeta;
         }
       });
     },
-    [tabMeta],
+    [],
+  );
+
+  const internalTabMetaValue = useMemo(
+    () => ({
+      tabs: internalTabMeta,
+      setTabMeta: setTabMetaItem,
+    }),
+    [internalTabMeta, setTabMetaItem],
   );
 
   return (
@@ -76,12 +90,7 @@ function Main() {
         <SystemMetaProvider>
           <DesignTokenProvider>
             <TabMetaContext.Provider value={tabMeta}>
-              <InternalTabMetaContext.Provider
-                value={{
-                  tabs: internalTabMeta,
-                  setTabMeta: setTabMetaItem,
-                }}
-              >
+              <InternalTabMetaContext.Provider value={internalTabMetaValue}>
                 <BrowserUI />
               </InternalTabMetaContext.Provider>
             </TabMetaContext.Provider>
