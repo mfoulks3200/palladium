@@ -56,6 +56,16 @@ export class TabManager {
       AnalyticsManager.getInstance().capture('tab_opened');
       this.focusTab(tab);
     });
+    typedIpcMain.on('open-settings', () => {
+      const existing = this.getAllTabs().find(
+        (tab) => tab.getCurrentUrl() === 'palladium://settings',
+      );
+      if (existing) {
+        this.focusTab(existing);
+      } else {
+        this.focusTab(new Tab('palladium://settings'));
+      }
+    });
     typedIpcMain.on('browser-layout-change', (_event, size: OverlayOptions) => {
       this.updateBrowsingView({
         x: size.position.x,

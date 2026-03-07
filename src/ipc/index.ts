@@ -162,6 +162,7 @@ export interface RendererToMainEvents {
   'capture-exception': [CaptureExceptionIpc];
   'get-system-meta': [];
   'window-action': [WindowActionIpc];
+  'open-settings': [];
 }
 
 /**

@@ -1,6 +1,7 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Cog,
   Maximize2,
   Minus,
   Plus,
@@ -193,17 +194,29 @@ export const Sidebar = () => {
           <BrowserTab isActive={false} title={'Example Tab'} isDevMode={true} />
           <BrowserTab isActive={false} title={'Example Tab'} /> */}
           <div className="grow" />
-          <div
-            className={
-              'flex h-10 cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-white/5'
-            }
-            onClick={() => {
-              openCommandBar();
-            }}
-          >
-            <Plus size="18px" className="max-w-[18px] min-w-[18px]" />
-            <div className="flex flex-col justify-center overflow-hidden text-ellipsis">
-              <div className="truncate text-sm">New Tab</div>
+          <div className="flex w-full gap-2">
+            <div
+              className={
+                'flex h-10 grow cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-white/5'
+              }
+              onClick={() => {
+                openCommandBar();
+              }}
+            >
+              <Plus size="18px" className="max-w-[18px] min-w-[18px]" />
+              <div className="flex flex-col justify-center overflow-hidden text-ellipsis">
+                <div className="truncate text-sm">New Tab</div>
+              </div>
+            </div>
+            <div
+              className={
+                'flex h-10 cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-white/5'
+              }
+              onClick={() => {
+                window.electron.ipcRenderer.sendMessage('open-settings');
+              }}
+            >
+              <Cog size="18px" className="max-w-[18px] min-w-[18px]" />
             </div>
           </div>
         </div>
