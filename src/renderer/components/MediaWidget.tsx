@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 import img from '../../../assets/images/kalen-emsley-Bkci_8qcdvQ-unsplash.jpg';
 import { useMediaStates } from '@/lib/media-state';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { MediaState } from 'src/ipc';
 
 export const MediaWidget = () => {
@@ -16,6 +16,18 @@ export const MediaWidget = () => {
   const [currentMediaState, setCurrentMediaState] =
     useState<MediaState | null>();
   const mediaState = useMediaStates();
+
+  const sendMediaControl = useCallback(
+    (action: 'play' | 'pause' | 'next' | 'previous') => {
+      if (currentMediaState) {
+        window.electron.ipcRenderer.sendMessage('media-control', {
+          mediaId: currentMediaState.id,
+          action,
+        });
+      }
+    },
+    [currentMediaState],
+  );
 
   if (JSON.stringify(allMediaStates) !== JSON.stringify(mediaState)) {
     console.log('Media state updated: ', mediaState);
@@ -116,16 +128,39 @@ export const MediaWidget = () => {
             '-mb-10 rounded-none opacity-0 group-hover:mb-0 group-hover:opacity-100',
           )}
         >
-          <Button className="" variant="ghost">
+          <Button
+            className=""
+            variant="ghost"
+            onClick={() => sendMediaControl('previous')}
+          >
             <SkipBack />
           </Button>
-          <Button className="" variant="ghost">
+          <Button
+            className=""
+            variant="ghost"
+            onClick={() =>
+              sendMediaControl(currentMediaState.playing ? 'pause' : 'play')
+            }
+          >
             {currentMediaState.playing ? <Pause /> : <Play />}
           </Button>
-          <Button className="" variant="ghost">
+          <Button
+            className=""
+            variant="ghost"
+            onClick={() => sendMediaControl('next')}
+          >
             <SkipForward />
           </Button>
-          <Button className="" variant="ghost">
+          <Button
+            className=""
+            variant="ghost"
+            onClick={() => {
+              const tabUuid = currentMediaState.id.replace(/^audio-/, '');
+              window.electron.ipcRenderer.sendMessage('update-active-tab', {
+                activeTabUuid: tabUuid,
+              });
+            }}
+          >
             <ExternalLink />
           </Button>
         </div>

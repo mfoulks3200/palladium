@@ -138,6 +138,11 @@ export type MediaStateIpc =
   | { action: 'update'; state: Partial<MediaState> & { id: string } }
   | { action: 'remove'; id: string };
 
+export interface MediaControlIpc {
+  mediaId: string;
+  action: 'play' | 'pause' | 'next' | 'previous';
+}
+
 export interface SystemMetaIpc {
   platform: string;
   arch: string;
@@ -183,6 +188,7 @@ export interface RendererToMainEvents {
   'get-system-meta': [];
   'window-action': [WindowActionIpc];
   'open-settings': [];
+  'media-control': [MediaControlIpc];
 }
 
 /**
