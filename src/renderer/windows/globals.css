@@ -157,3 +157,40 @@
   -webkit-app-region: drag;
   -webkit-user-select: none;
 }
+
+@property --scrollbarColor {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: black;
+}
+
+.mac-scrollbar {
+  --scrollbarColor: rgba(0, 0, 0, 0);
+  transition: --scrollbarColor 0.25s;
+
+  &:hover {
+    --scrollbarColor: rgba(0, 0, 0, 0.2);
+  }
+
+  &::-webkit-scrollbar {
+    width: 6px; /* Default thin width */
+    height: 0px;
+    /* position: absolute;
+    margin-right: -6px; */
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbarColor);
+    border-radius: 10px;
+    width: 6px;
+    transform: translateX(6px);
+  }
+
+  &::-webkit-scrollbar-corner {
+    display: none;
+  }
+}

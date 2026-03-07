@@ -1,3 +1,4 @@
+import fuzzysort from 'fuzzysort';
 import { CommandResponseIpc } from 'src/ipc';
 import { typedIpcMain, typedWebContents } from '../ipc';
 
@@ -18,6 +19,8 @@ export interface CommandProvider {
     metadata?: CommandMetadata,
   ) => void;
 }
+
+const providerWeightInfluence = 0.1;
 
 export class CommandParser {
   private static instance: CommandParser;
@@ -80,12 +83,37 @@ export class CommandParser {
     for (const provider of Object.values(this.providers)) {
       const metadata = provider.getProviderMetadata();
       const suggestions = provider.getSuggestions(input);
-      if (suggestions.length > 0) {
+
+      let scored: {
+        command: CommandProviderResponse['commands'][number];
+        score?: number;
+      }[];
+
+      if (!input) {
+        scored = suggestions.map((cmd) => ({ command: cmd }));
+      } else {
+        const results = fuzzysort.go(input, suggestions, {
+          keys: ['name', 'keywords'],
+          threshold: -1000,
+        });
+        scored = results.map((result) => {
+          const influencedWeight =
+            (result.obj.weight ?? 0) * providerWeightInfluence;
+          const invWeight = 1 - influencedWeight;
+          return {
+            command: result.obj,
+            score: result.score * invWeight,
+          };
+        });
+      }
+
+      if (scored.length > 0) {
         suggestionSections[metadata.id] = {
           section: metadata,
-          commands: suggestions.map((suggestion) => ({
-            ...suggestion,
-            value: `${metadata.id}.${suggestion.value}`,
+          commands: scored.map(({ command, score }) => ({
+            ...command,
+            value: `${metadata.id}.${command.value}`,
+            score,
           })),
         };
       }

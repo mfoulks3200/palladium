@@ -89,6 +89,7 @@ export class SearchEngines implements CommandProvider {
             : `Search ${engine.name}`,
         value: engine.id,
         icon: 'Search',
+        keywords: [engine.name, engine.name.toLowerCase()],
       };
 
       if (engine.shortcut) {
