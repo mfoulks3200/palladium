@@ -105,7 +105,7 @@ export const Sidebar = () => {
   );
 
   return (
-    <div className="flex h-full flex-col gap-2">
+    <div className="flex h-full max-h-full flex-col gap-2">
       <Card className="p-0">
         <div className={cn('z-10 flex h-8 w-full items-center gap-0')}>
           {meta?.platform !== 'darwin' && <NonNativeWindowControls />}
@@ -157,35 +157,37 @@ export const Sidebar = () => {
           {currentTabDisplayUrl}
         </div>
       </Card>
-      <Card className="w-full grow p-2 drop-shadow-md">
-        <div className="flex h-full w-full flex-col gap-2">
-          {tabMeta &&
-            tabMeta.tabs &&
-            tabMeta.tabs.map((singleTabMeta, index) => (
-              <BrowserTab
-                key={singleTabMeta.uuid}
-                uuid={singleTabMeta.uuid}
-                url={singleTabMeta.url}
-                index={index}
-                data-tabUuid={singleTabMeta.uuid}
-                isActive={tabMeta.currentTabUuid === singleTabMeta.uuid}
-                isPlayingAudio={singleTabMeta.isPlayingAudio}
-                title={
-                  singleTabMeta.isInternal
-                    ? (internalTabMeta?.tabs[singleTabMeta.uuid]?.title ?? '')
-                    : singleTabMeta.title
-                }
-                favicon={singleTabMeta.faviconB64 ?? undefined}
-                onClick={() => {
-                  console.log('Switching to tab ', singleTabMeta.uuid);
-                  switchToTab(singleTabMeta.uuid);
-                }}
-                isDevMode={singleTabMeta.isDevMode}
-                isMuted={singleTabMeta.isMuted}
-                isLoading={singleTabMeta.isLoading}
-              />
-            ))}
-          {/* <BrowserTab isActive={true} title={'Electron JS'} />
+      <Card className="max-h-full min-h-0 w-full grow p-2 drop-shadow-md">
+        <div className="flex h-full max-h-full w-full flex-col gap-1">
+          <div className="scrollbar-gutter-stable mac-scrollbar flex h-full max-h-full w-full flex-col gap-2 overflow-scroll">
+            {tabMeta &&
+              tabMeta.tabs &&
+              tabMeta.tabs.map((singleTabMeta, index) => (
+                <BrowserTab
+                  key={singleTabMeta.uuid}
+                  uuid={singleTabMeta.uuid}
+                  url={singleTabMeta.url}
+                  index={index}
+                  data-tabUuid={singleTabMeta.uuid}
+                  isActive={tabMeta.currentTabUuid === singleTabMeta.uuid}
+                  isPlayingAudio={singleTabMeta.isPlayingAudio}
+                  title={
+                    singleTabMeta.isInternal
+                      ? (internalTabMeta?.tabs[singleTabMeta.uuid]?.title ?? '')
+                      : singleTabMeta.title
+                  }
+                  favicon={singleTabMeta.faviconB64 ?? undefined}
+                  onClick={() => {
+                    console.log('Switching to tab ', singleTabMeta.uuid);
+                    switchToTab(singleTabMeta.uuid);
+                  }}
+                  isDevMode={singleTabMeta.isDevMode}
+                  isMuted={singleTabMeta.isMuted}
+                  isLoading={singleTabMeta.isLoading}
+                />
+              ))}
+
+            {/* <BrowserTab isActive={true} title={'Electron JS'} />
           <BrowserTab
             isActive={false}
             title={'Example Tab'}
@@ -193,6 +195,7 @@ export const Sidebar = () => {
           />
           <BrowserTab isActive={false} title={'Example Tab'} isDevMode={true} />
           <BrowserTab isActive={false} title={'Example Tab'} /> */}
+          </div>
           <div className="grow" />
           <div className="flex w-full gap-2">
             <div
@@ -210,7 +213,7 @@ export const Sidebar = () => {
             </div>
             <div
               className={
-                'flex h-10 cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-white/5'
+                'flex h-10 w-10 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-white/5'
               }
               onClick={() => {
                 window.electron.ipcRenderer.sendMessage('open-settings');
