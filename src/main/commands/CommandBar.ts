@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, screen } from 'electron';
 import path from 'node:path';
 import { resolveHtmlPath } from '../util';
 import { typedIpcMain, typedWebContents } from '../ipc';
@@ -9,19 +9,32 @@ let commandBarWindow: BrowserWindow | null = null;
 // Fixes a bug where the first call to this window flashes white
 let hasBeenOpenedBefore = false;
 
+const COMMAND_BAR_WIDTH = 800;
+const COMMAND_BAR_HEIGHT = 500;
+
 export const spawnCommandBarUI = (tabUuid?: string) => {
   if (commandBarWindow == null) {
     const RESOURCES_PATH = app.isPackaged
       ? path.join(process.resourcesPath, 'assets')
       : path.join(__dirname, '../../assets');
 
+    // Determine which display the cursor is on and center the window there.
+    const cursorPoint = screen.getCursorScreenPoint();
+    const targetDisplay = screen.getDisplayNearestPoint(cursorPoint);
+    const { x, y, width, height } = targetDisplay.workArea;
+    const centeredX = Math.round(x + (width - COMMAND_BAR_WIDTH) / 2);
+    const centeredY = Math.round(y + (height - COMMAND_BAR_HEIGHT) / 2);
+
     commandBarWindow = new BrowserWindow({
       opacity: hasBeenOpenedBefore ? 1 : 0,
       show: hasBeenOpenedBefore ? false : true,
-      width: 800,
-      height: 500,
+      x: centeredX,
+      y: centeredY,
+      width: COMMAND_BAR_WIDTH,
+      height: COMMAND_BAR_HEIGHT,
       transparent: true,
       vibrancy: 'hud',
+      backgroundMaterial: 'acrylic',
       frame: false,
       backgroundColor: '#00000000',
       roundedCorners: true,
