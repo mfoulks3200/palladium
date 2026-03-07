@@ -9,6 +9,7 @@ const Markdown = lazy(() => import('react-markdown'));
 
 import styles from './AboutPanel.module.css';
 import { Github, Heart } from 'lucide-react';
+import { useSystemMeta } from '@/lib/system-meta';
 
 export const AboutPanel = () => {
   const [iconLoaded, setIconLoaded] = useState(false);
@@ -64,34 +65,81 @@ export const LinksPanel = () => {
 
 export const ChangelogPanel = () => {
   return (
-    <Suspense fallback={null}>
-      <Markdown
-        disallowedElements={['hr']}
-        components={{
-          h2: (props: PropsWithChildren) => (
-            <div className="mt-6 text-lg font-bold">{props.children}</div>
-          ),
-          h3: (props: PropsWithChildren) => (
-            <div className="text-base font-bold">{props.children}</div>
-          ),
-          ul: (props: PropsWithChildren) => (
-            <ul className="list-outside list-disc pl-4">{props.children}</ul>
-          ),
-          //@ts-expect-error
-          a: (props: PropsWithChildren<{ href: string }>) => (
-            <a href={props.href} className="text-blue-700 underline">
-              {props.children}
-            </a>
-          ),
-          code: (props: PropsWithChildren) => (
-            <code className="rounded-md border border-amber-700 bg-amber-900/20 px-1.5 py-0.5 text-amber-800">
-              {props.children}
-            </code>
-          ),
-        }}
-      >
-        {Changelog}
-      </Markdown>
-    </Suspense>
+    <div className="mt-2 max-h-96 w-full overflow-scroll">
+      <Suspense fallback={null}>
+        <Markdown
+          disallowedElements={['hr']}
+          components={{
+            h2: (props: PropsWithChildren) => (
+              <div className="mt-6 text-lg font-bold">{props.children}</div>
+            ),
+            h3: (props: PropsWithChildren) => (
+              <div className="text-base font-bold">{props.children}</div>
+            ),
+            ul: (props: PropsWithChildren) => (
+              <ul className="list-outside list-disc pl-4">{props.children}</ul>
+            ),
+            //@ts-expect-error
+            a: (props: PropsWithChildren<{ href: string }>) => (
+              <a href={props.href} className="text-blue-700 underline">
+                {props.children}
+              </a>
+            ),
+            code: (props: PropsWithChildren) => (
+              <code className="rounded-md border border-amber-700 bg-amber-900/20 px-1.5 py-0.5 text-amber-800">
+                {props.children}
+              </code>
+            ),
+          }}
+        >
+          {Changelog}
+        </Markdown>
+      </Suspense>
+    </div>
+  );
+};
+
+export const VersionsPanel = () => {
+  const meta = useSystemMeta();
+  console.log('Meta', meta);
+  const rows = [
+    {
+      label: 'Palladium Version',
+      value: meta?.appVersion + ' ' + meta?.arch.toUpperCase(),
+    },
+    {
+      label: 'Palladium Build',
+      value:
+        meta?.gitInfo.branch.toUpperCase() +
+        ' ' +
+        meta?.gitInfo.commitHash.substring(0, 7).toUpperCase(),
+    },
+    {
+      label: 'Chromium Version',
+      value: meta?.chromeVersion,
+    },
+    {
+      label: 'Electron Version',
+      value: meta?.electronVersion,
+    },
+    {
+      label: 'Node Version',
+      value: meta?.nodeVersion,
+    },
+  ];
+
+  return (
+    <table className="mt-4 w-full text-sm">
+      <tbody>
+        {rows.map((row) => {
+          return (
+            <tr key={row.label}>
+              <th className="w-48 py-1 text-left">{row.label}</th>
+              <td>{row.value}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 };

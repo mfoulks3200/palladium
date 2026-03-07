@@ -147,6 +147,12 @@ export class BrowserWindowUI {
         nodeVersion: process.versions.node ?? '',
         appVersion: app.getVersion(),
         appName: app.getName(),
+        gitInfo: {
+          version: VERSION,
+          commitHash: COMMITHASH,
+          branch: BRANCH,
+          lastCommitDateTime: LASTCOMMITDATETIME,
+        },
       };
       typedWebContents(event.sender).send('system-meta', meta);
     });

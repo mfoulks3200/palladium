@@ -127,6 +127,12 @@ export interface SystemMetaIpc {
   nodeVersion: string;
   appVersion: string;
   appName: string;
+  gitInfo: {
+    version: string;
+    commitHash: string;
+    branch: string;
+    lastCommitDateTime: string;
+  };
 }
 
 /**
