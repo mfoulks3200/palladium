@@ -127,7 +127,10 @@ export const CommandBar = ({ className }: CommandBarProps) => {
               }
             }
             return (
-              <CommandItem value={command.value}>
+              <CommandItem
+                value={command.value}
+                keywords={[command.value, command.name]}
+              >
                 {!!command.icon && icon}
                 <span>{command.name}</span>
 
@@ -153,7 +156,7 @@ export const CommandBar = ({ className }: CommandBarProps) => {
       onValueChange={setSelectedCommand}
       value={selectedCommand}
       className={cn('h-full w-full transition-none', className)}
-      shouldFilter={false}
+      // shouldFilter={false}
     >
       <CommandInput
         className="p-1 px-4 text-xl"

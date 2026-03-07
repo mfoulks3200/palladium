@@ -33,7 +33,7 @@ export const spawnCommandBarUI = (tabUuid?: string) => {
       width: COMMAND_BAR_WIDTH,
       height: COMMAND_BAR_HEIGHT,
       transparent: true,
-      vibrancy: 'hud',
+      vibrancy: 'titlebar',
       backgroundMaterial: 'acrylic',
       frame: false,
       backgroundColor: '#00000000',
