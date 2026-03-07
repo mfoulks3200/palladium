@@ -188,9 +188,6 @@ export const CommandBar = ({ className }: CommandBarProps) => {
         }}
         value={currentText}
         onKeyDown={onKeyDown as any}
-        onBlur={() => {
-          closeCommandBar();
-        }}
         ref={inputRef}
       />
       <CommandList>

@@ -91,12 +91,12 @@ export const spawnCommandBarUI = (tabUuid?: string) => {
         }
 
         hasBeenOpenedBefore = true;
-      }
-    });
 
-    typedIpcMain.on('command-bar', (_event, data) => {
-      if (data.action === 'close' && commandBarWindow) {
-        commandBarWindow.close();
+        commandBarWindow.on('blur', () => {
+          if (commandBarWindow) {
+            commandBarWindow.close();
+          }
+        });
       }
     });
 
@@ -114,6 +114,8 @@ export const commandBarSetup = () => {
   typedIpcMain.on('command-bar', (_event, data) => {
     if (data.action === 'open') {
       spawnCommandBarUI(data.tabUuid);
+    } else if (data.action === 'close' && commandBarWindow) {
+      commandBarWindow.close();
     }
   });
 };
