@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -30,39 +31,46 @@ export const SettingsProvider = ({ children }: PropsWithChildren) => {
   const [settingsValues, setSettingsValues] =
     useState<SettingSchema>(settingsDefaults);
 
+  const settingsRef = useRef(settingsValues);
+  settingsRef.current = settingsValues;
+
   useEffect(() => {
-    window.electron.ipcRenderer.on('settings-sync', (response) => {
-      console.log(response);
-      setSettingsValues(response as SettingSchema);
-    });
+    const removeListener = window.electron.ipcRenderer.on(
+      'settings-sync',
+      (response) => {
+        setSettingsValues(response as SettingSchema);
+      },
+    );
 
     window.electron.ipcRenderer.sendMessage('settings-sync', null as any);
+
+    return () => {
+      removeListener();
+    };
   }, []);
 
-  const setNewSettingItemValue = <T extends SettingsKeys>(
-    settingKey: T,
-    value: SettingKeyType<T>,
-  ) => {
-    setSettingsValues((_oldSettings) => {
-      console.log(`Set setting "${settingKey}" to: ${value}`);
+  const setNewSettingItemValue = useCallback(
+    <T extends SettingsKeys>(settingKey: T, value: SettingKeyType<T>) => {
+      setSettingsValues((_oldSettings) => {
+        const oldSettings = structuredClone(_oldSettings);
 
-      const oldSettings = structuredClone(_oldSettings);
-
-      const newSettings = setDeepProp(
-        oldSettings,
-        settingKey,
-        value,
-      ) as SettingSchema;
-      window.electron.ipcRenderer.sendMessage('settings-sync', newSettings);
-      return newSettings;
-    });
-  };
+        const newSettings = setDeepProp(
+          oldSettings,
+          settingKey,
+          value,
+        ) as SettingSchema;
+        window.electron.ipcRenderer.sendMessage('settings-sync', newSettings);
+        return newSettings;
+      });
+    },
+    [],
+  );
 
   const useSetting = useCallback(
     <T extends SettingsKeys>(
       settingKey: T,
     ): [SettingKeyType<T>, (newValue: SettingKeyType<T>) => void] => {
-      const value = getDeepProp(settingsValues, settingKey)!;
+      const value = getDeepProp(settingsRef.current, settingKey)!;
 
       return [
         value,
@@ -70,7 +78,7 @@ export const SettingsProvider = ({ children }: PropsWithChildren) => {
           setNewSettingItemValue(settingKey, newValue),
       ];
     },
-    [settingsValues],
+    [setNewSettingItemValue],
   );
 
   return (

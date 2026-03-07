@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useState,
   useMemo,
@@ -274,16 +275,19 @@ export const DesignTokenProvider: React.FC<{
     root.style.setProperty('--ui-saturation', `${saturation}%`);
   }, [tokens, blur, saturation]);
 
-  const setPreferences = (newPrefs: DesignPreferences) => {
+  const setPreferences = useCallback((newPrefs: DesignPreferences) => {
     setPreferencesState(newPrefs);
-  };
+  }, []);
 
-  const updatePreference = <K extends keyof DesignPreferences>(
-    key: K,
-    value: DesignPreferences[K],
-  ) => {
-    setPreferencesState((prev) => ({ ...prev, [key]: value }));
-  };
+  const updatePreference = useCallback(
+    <K extends keyof DesignPreferences>(
+      key: K,
+      value: DesignPreferences[K],
+    ) => {
+      setPreferencesState((prev) => ({ ...prev, [key]: value }));
+    },
+    [],
+  );
 
   const value = useMemo(
     () => ({

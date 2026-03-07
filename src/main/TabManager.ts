@@ -6,7 +6,13 @@ import {
   WebContentsView,
 } from 'electron';
 import { Tab } from './Tab';
-import { TabActionsIpc, TabManagerIpc, OverlayOptions } from '../ipc';
+import {
+  MediaControlIpc,
+  MediaState,
+  TabActionsIpc,
+  TabManagerIpc,
+  OverlayOptions,
+} from '../ipc';
 import { disablePortals } from '@/components/PortalOverlay';
 import { typedIpcMain, typedWebContents } from './ipc';
 import { AnalyticsManager } from './AnalyticsManager';
@@ -20,6 +26,7 @@ export class TabManager {
   private mainWindow: BrowserWindow;
   private currentTab: Tab | null = null;
   private tabs: Set<Tab> = new Set();
+  private mediaStates: Map<string, MediaState> = new Map();
 
   public static getInstance() {
     return TabManager.instance;
@@ -162,6 +169,9 @@ export class TabManager {
         menu.popup({});
       }
     });
+    typedIpcMain.on('media-control', (_event, data: MediaControlIpc) => {
+      this.handleMediaControl(data);
+    });
     setInterval(() => {
       this.updateRenderProcess();
     }, 500);
@@ -239,7 +249,42 @@ export class TabManager {
       tab.addEventListener('tab-updated', () => {
         this.updateRenderProcess();
       });
+      tab.addEventListener('media-state-changed', () => {
+        this.syncMediaStates();
+      });
     }
+  }
+
+  private syncMediaStates() {
+    const previousIds = new Set(this.mediaStates.keys());
+    const nextStates = new Map<string, MediaState>();
+    for (const tab of this.tabs) {
+      for (const state of tab.getMediaStates()) {
+        nextStates.set(state.id, state);
+      }
+    }
+
+    if (!this.mainWindow.isDestroyed()) {
+      // Remove states that no longer exist
+      for (const id of previousIds) {
+        if (!nextStates.has(id)) {
+          typedWebContents(this.mainWindow.webContents).send('media-state', {
+            action: 'remove',
+            id,
+          });
+        }
+      }
+
+      // Add or update current states
+      for (const [id, state] of nextStates) {
+        typedWebContents(this.mainWindow.webContents).send('media-state', {
+          action: previousIds.has(id) ? 'update' : 'add',
+          state,
+        });
+      }
+    }
+
+    this.mediaStates = nextStates;
   }
 
   public focusTab(tab: Tab) {
@@ -298,5 +343,77 @@ export class TabManager {
 
   public getAllTabs() {
     return [...this.tabs];
+  }
+
+  /**
+   * Find the tab that owns a given media state ID.
+   */
+  private getTabByMediaId(mediaId: string): Tab | undefined {
+    for (const tab of this.tabs) {
+      if (tab.getMediaStates().some((s) => s.id === mediaId)) {
+        return tab;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Execute a media control action (play, pause, next, previous) on the tab
+   * that owns the given media state by injecting JavaScript into its
+   * WebContents.
+   */
+  private async handleMediaControl(data: MediaControlIpc) {
+    const tab = this.getTabByMediaId(data.mediaId);
+    if (!tab || tab.view.webContents.isDestroyed()) return;
+
+    const js = (() => {
+      switch (data.action) {
+        case 'play':
+          return `
+            (() => {
+              if (navigator.mediaSession.playbackState !== 'playing') {
+                const v = document.querySelectorAll('video');
+                const a = document.querySelectorAll('audio');
+                const all = [...v, ...a].sort((a, b) => b.duration - a.duration);
+                if (all.length) all[0].play();
+              }
+            })()`;
+        case 'pause':
+          return `
+            (() => {
+              const v = document.querySelectorAll('video');
+              const a = document.querySelectorAll('audio');
+              const all = [...v, ...a].sort((a, b) => b.duration - a.duration);
+              if (all.length) all[0].pause();
+            })()`;
+        case 'next':
+          return `
+            (() => {
+              const handlers = navigator.mediaSession;
+              if (handlers && handlers.metadata) {
+                const evt = new Event('nexttrack');
+                document.dispatchEvent(evt);
+              }
+              // Many sites use the MediaSession API action handler
+              // Try triggering it directly via the internal action handler
+              try { navigator.mediaSession.callActionHandler?.('nexttrack'); } catch {}
+            })()`;
+        case 'previous':
+          return `
+            (() => {
+              try { navigator.mediaSession.callActionHandler?.('previoustrack'); } catch {}
+            })()`;
+        default:
+          return '';
+      }
+    })();
+
+    if (js) {
+      try {
+        await tab.view.webContents.executeJavaScript(js);
+      } catch (e) {
+        console.error(`Failed to execute media control '${data.action}':`, e);
+      }
+    }
   }
 }

@@ -138,6 +138,18 @@ export class HistoryManager extends EventTarget {
       .all();
   }
 
+  public searchHistory(query: string, limit: number = 20) {
+    const pattern = `%${query}%`;
+    return this.db
+      .prepare(
+        `SELECT * FROM history
+         WHERE title LIKE ? OR url LIKE ? OR metaDescription LIKE ? OR metaKeywords LIKE ?
+         ORDER BY timestamp DESC
+         LIMIT ?`,
+      )
+      .all(pattern, pattern, pattern, pattern, limit) as HistoryItem[];
+  }
+
   public getTabHistory(tabUuid: string) {
     return this.db
       .prepare(

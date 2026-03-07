@@ -1,6 +1,14 @@
 import { cn } from '@/lib/utils';
 import { Cog, LoaderCircle, Volume2, VolumeOff, X } from 'lucide-react';
-import { ReactElement, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Button } from './ui/button';
 import {
   draggable,
@@ -29,9 +37,7 @@ interface BrowserTabProps {
   isLoading: boolean;
 }
 
-export const BrowserTab = (props: BrowserTabProps) => {
-  const [afterIcon, setAfterIcon] = useState<ReactElement | null>(null);
-  const [showAfterIcon, setShowAfterIcon] = useState<boolean>(false);
+export const BrowserTab = memo(function BrowserTab(props: BrowserTabProps) {
   const tabRef = useRef<HTMLDivElement>(null);
 
   const [closestEdge, setClosestEdge] = useState<Edge | null>(null);
@@ -92,23 +98,26 @@ export const BrowserTab = (props: BrowserTabProps) => {
     }
   }
 
-  useEffect(() => {
+  const { afterIcon, showAfterIcon } = useMemo(() => {
     if (!props.isMuted && props.isPlayingAudio) {
-      setAfterIcon(
-        <Volume2
-          size="18px"
-          className={cn('mr-[-28px] min-w-[18px] opacity-0 transition-all', {
-            ['mr-0 opacity-100']: props.isPlayingAudio,
-          })}
-        />,
-      );
-      setShowAfterIcon(true);
+      return {
+        afterIcon: (
+          <Volume2
+            size="18px"
+            className={cn('mr-[-28px] min-w-[18px] opacity-0 transition-all', {
+              ['mr-0 opacity-100']: props.isPlayingAudio,
+            })}
+          />
+        ),
+        showAfterIcon: true,
+      };
     } else if (props.isMuted) {
-      setAfterIcon(<VolumeOff size="18px" />);
-      setShowAfterIcon(true);
-    } else {
-      setShowAfterIcon(false);
+      return {
+        afterIcon: <VolumeOff size="18px" />,
+        showAfterIcon: true,
+      };
     }
+    return { afterIcon: null, showAfterIcon: false };
   }, [props.isMuted, props.isPlayingAudio]);
 
   const closeTab = useCallback((uuid: string) => {
@@ -118,22 +127,21 @@ export const BrowserTab = (props: BrowserTabProps) => {
   }, []);
 
   useEffect(() => {
+    const el = tabRef.current;
+    if (!el) return;
+
     const onContextMenu = (event: { preventDefault: () => void }) => {
       event.preventDefault();
       window.electron.ipcRenderer.sendMessage('tab-context-menu', {
         uuid: props.uuid,
       });
     };
-    if (tabRef.current) {
-      tabRef.current.addEventListener('contextmenu', onContextMenu);
-    }
+    el.addEventListener('contextmenu', onContextMenu);
 
     return () => {
-      if (tabRef.current) {
-        tabRef.current.removeEventListener('contextmenu', onContextMenu);
-      }
+      el.removeEventListener('contextmenu', onContextMenu);
     };
-  }, []);
+  }, [props.uuid]);
 
   let title = props.title;
   if (props.title.trim().length === 0 && props.url.startsWith('palladium://')) {
@@ -198,4 +206,4 @@ export const BrowserTab = (props: BrowserTabProps) => {
       {closestEdge && <DropIndicator edge={closestEdge} gap={'8px'} />}
     </div>
   );
-};
+});

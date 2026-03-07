@@ -32,7 +32,6 @@ export const BrowserUI = () => {
   );
   const isShowingDevtools = currentTab?.isDevMode ?? false;
 
-  console.log(currentTab);
   const browserPanelRef = useRef<HTMLDivElement>(null);
   const devtoolsPanelRef = useRef<HTMLDivElement>(null);
 
@@ -48,10 +47,10 @@ export const BrowserUI = () => {
         },
       } as OverlayOptions);
     }
-  }, [browserPanelRef.current]);
+  }, []);
 
   const onDevtoolsResize = useCallback(() => {
-    if (devtoolsPanelRef.current && isShowingDevtools) {
+    if (devtoolsPanelRef.current) {
       const rect = devtoolsPanelRef.current.getBoundingClientRect();
       window.electron.ipcRenderer.sendMessage('devtools-layout-change', {
         position: {
@@ -62,16 +61,22 @@ export const BrowserUI = () => {
         },
       } as OverlayOptions);
     }
-  }, [devtoolsPanelRef.current, isShowingDevtools]);
+  }, []);
 
   useEffect(() => {
-    window.electron.ipcRenderer.on('browser-layout-change', () => {
-      onBrowserResize();
-    });
+    const removeBrowserListener = window.electron.ipcRenderer.on(
+      'browser-layout-change',
+      () => {
+        onBrowserResize();
+      },
+    );
 
-    window.electron.ipcRenderer.on('devtools-layout-change', () => {
-      onDevtoolsResize();
-    });
+    const removeDevtoolsListener = window.electron.ipcRenderer.on(
+      'devtools-layout-change',
+      () => {
+        onDevtoolsResize();
+      },
+    );
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -88,18 +93,25 @@ export const BrowserUI = () => {
     });
 
     if (browserPanelRef.current) {
-      // browserPanelRef.current.addEventListener('resize', onBrowserResize);
       resizeObserver.observe(browserPanelRef.current);
     }
     if (devtoolsPanelRef.current) {
-      // browserPanelRef.current.addEventListener('resize', onBrowserResize);
       resizeObserver.observe(devtoolsPanelRef.current);
+    }
+
+    // Fire an immediate layout update so the main process knows about the
+    // current geometry (important after devtools toggles on/off).
+    onBrowserResize();
+    if (isShowingDevtools) {
+      onDevtoolsResize();
     }
 
     return () => {
       resizeObserver.disconnect();
+      removeBrowserListener();
+      removeDevtoolsListener();
     };
-  }, [browserPanelRef.current, devtoolsPanelRef.current]);
+  }, [onBrowserResize, onDevtoolsResize, isShowingDevtools]);
 
   const browserBackgroundPanel = (
     <BrowserBackgroundPanel ref={browserPanelRef} />
@@ -160,13 +172,13 @@ const BrowserBackgroundPanel = ({
 }: {
   ref: RefObject<HTMLDivElement | null>;
 }) => {
-  const [internalPageUrl, setInternalPageUrl] = useState('');
+  const tabMeta = useContext(TabMetaContext);
 
-  useEffect(() => {
-    window.electron.ipcRenderer.on('internal-page-navigate', (response) => {
-      setInternalPageUrl(response.newPath);
-    });
-  }, []);
+  const currentTab = tabMeta?.tabs.find(
+    (tab) => tab.uuid === tabMeta.currentTabUuid,
+  );
+
+  const internalPageUrl = currentTab?.isInternal ? currentTab.url : '';
 
   return (
     <BrowserPanel ref={ref}>

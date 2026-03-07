@@ -6,7 +6,7 @@ import {
   WebContentsView,
   session,
 } from 'electron';
-import { TabIpcPacket } from '../ipc';
+import { MediaState, TabIpcPacket } from '../ipc';
 import { HistoryEvent, HistoryManager } from './HistoryManager';
 import path from 'node:path';
 import os from 'node:os';
@@ -40,6 +40,8 @@ export class Tab extends EventTarget {
   private currentUrl: string = '';
   private faviconB64: string | null = null;
   private isPlayingAudio: boolean = false;
+  private mediaStates: Map<string, MediaState> = new Map();
+  private activeMediaId: string | null = null;
   public view: WebContentsView;
   public devToolsView: WebContentsView = null as any;
   private static session: Session;
@@ -186,6 +188,33 @@ export class Tab extends EventTarget {
     this.publishMetadataUpdateEvent();
   }
 
+  public addMediaState(state: MediaState) {
+    this.mediaStates.set(state.id, state);
+    this.publishMediaStateEvent();
+  }
+
+  public updateMediaState(state: Partial<MediaState> & { id: string }) {
+    const existing = this.mediaStates.get(state.id);
+    if (existing) {
+      this.mediaStates.set(state.id, { ...existing, ...state });
+      this.publishMediaStateEvent();
+    }
+  }
+
+  public removeMediaState(id: string) {
+    if (this.mediaStates.delete(id)) {
+      this.publishMediaStateEvent();
+    }
+  }
+
+  public getMediaStates(): MediaState[] {
+    return [...this.mediaStates.values()];
+  }
+
+  private publishMediaStateEvent() {
+    this.dispatchEvent(new CustomEvent('media-state-changed'));
+  }
+
   public getTabIpcMeta(): TabIpcPacket {
     return {
       uuid: this.uuid,
@@ -215,6 +244,54 @@ export class Tab extends EventTarget {
 
     this.view.webContents.on('audio-state-changed', async (event) => {
       this.isPlayingAudio = event.audible;
+      const mediaId = `audio-${this.uuid}`;
+      try {
+        const session = await this.view.webContents.executeJavaScript(`
+          (() => {
+            const players = [...document.querySelectorAll('video')];
+            const player = players.length > 0
+              ? players.sort((a, b) => b.duration - a.duration)[0]
+              : null;
+            return {
+              playbackState: navigator.mediaSession.playbackState,
+              metadata: navigator.mediaSession.metadata ? {
+                album: navigator.mediaSession.metadata.album ?? "",
+                artist: navigator.mediaSession.metadata.artist ?? "",
+                artwork: navigator.mediaSession.metadata.artwork ?? [],
+                title: navigator.mediaSession.metadata.title ?? "",
+              } : null,
+              duration: player?.duration ?? 0,
+              currentTime: player?.currentTime ?? 0,
+            };
+          })()
+        `);
+        if (session.metadata) {
+          if (this.activeMediaId && this.activeMediaId === mediaId) {
+            this.updateMediaState({
+              id: mediaId,
+              title: session.metadata.title,
+              playing: event.audible,
+              progress: session.currentTime,
+              duration: session.duration,
+            });
+          } else {
+            this.activeMediaId = mediaId;
+            this.addMediaState({
+              id: mediaId,
+              type: 'audio',
+              title: session.metadata.title,
+              album: session.metadata.album,
+              artist: session.metadata.artist,
+              artworkUrl: session.metadata.artwork?.[0]?.src ?? '',
+              playing: event.audible,
+              progress: session.currentTime,
+              duration: session.duration,
+            });
+          }
+        }
+      } catch {
+        // Tab may have been destroyed
+      }
       this.publishMetadataUpdateEvent();
     });
 
@@ -230,6 +307,10 @@ export class Tab extends EventTarget {
     });
 
     this.view.webContents.on('did-navigate', async () => {
+      if (this.activeMediaId) {
+        this.removeMediaState(this.activeMediaId);
+        this.activeMediaId = null;
+      }
       AnalyticsManager.getInstance().capture('page_navigated');
       const historyEvent: HistoryEvent = {
         tabUuid: this.uuid,
