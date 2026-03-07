@@ -1,3 +1,32 @@
+## [0.0.9] — 2026-03-07
+
+### Added
+
+- **Media Widget** — Now-playing media widget with album artwork, playback controls, and progress scrubber
+  - Media state synchronization between tabs and the browser chrome via IPC
+  - Play/pause, skip forward, and skip backward controls that execute on the originating tab's `WebContents`
+  - Focus-tab button to quickly navigate to the tab playing media
+- **History Command Parser** — Command bar can now search and navigate browsing history
+- **AGENTS.md** — Architecture & agent guide documentation for contributors and AI agents
+
+### Changed
+
+- **Command Bar Search** — Improved search relevance and result ranking
+- **React Performance Improvements** — Comprehensive re-render audit across the renderer process
+  - Wrapped `BrowserTab` in `React.memo` and replaced `useEffect` derived state with `useMemo`
+  - Stabilized context values with `useMemo` and callback refs to prevent cascading re-renders
+  - Fixed IPC listener leaks in settings and command bar components
+
+### Fixed
+
+- Settings tab content not rendering until clicking the tab a second time
+- Internal pages incorrectly appearing in command bar search results
+- Command bar regression causing empty content on respawn
+- Open command not executing correctly
+- Sidebar scroll position resetting unexpectedly
+
+---
+
 ## [0.0.8] — 2026-03-06
 
 ### Added
