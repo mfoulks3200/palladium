@@ -9,6 +9,7 @@ export class Tabs implements CommandProvider {
   public getSuggestions(input: string) {
     return TabManager.getInstance()
       .getAllTabs()
+      .filter((tab) => !tab.getCurrentUrl().startsWith('palladium://'))
       .map(
         (tab) =>
           ({
