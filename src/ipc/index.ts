@@ -67,8 +67,11 @@ export interface CommandResponseIpc {
       commands: {
         icon?: IpcIcons | string;
         name: string;
+        subname?: string;
         keywords?: string[];
         value: string;
+        score?: number;
+        weight?: number;
         shortcut?: {
           shortcutStr: string;
           name: string;
