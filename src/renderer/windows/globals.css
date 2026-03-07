@@ -174,7 +174,9 @@
 
   &::-webkit-scrollbar {
     width: 6px; /* Default thin width */
-    height: 6px;
+    height: 0px;
+    /* position: absolute;
+    margin-right: -6px; */
   }
 
   &::-webkit-scrollbar-track {
@@ -185,6 +187,7 @@
     background-color: var(--scrollbarColor);
     border-radius: 10px;
     width: 6px;
+    transform: translateX(6px);
   }
 
   &::-webkit-scrollbar-corner {

@@ -23,6 +23,7 @@ import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hi
 import styles from './Sidebar.module.css';
 import { cn } from '@/lib/utils';
 import { useSystemMeta } from '@/lib/system-meta';
+import { MediaWidget } from './MediaWidget';
 
 export const Sidebar = () => {
   const tabMeta = useContext(TabMetaContext);
@@ -155,8 +156,17 @@ export const Sidebar = () => {
         </div>
       </Card>
       <Card className="max-h-full min-h-0 w-full grow p-2 drop-shadow-md">
-        <div className="flex h-full max-h-full w-full flex-col gap-1">
-          <div className="scrollbar-gutter-stable mac-scrollbar flex h-full max-h-full w-full flex-col gap-2 overflow-scroll">
+        <div className="flex h-full max-h-full w-full flex-col gap-2">
+          <div
+            className={cn(
+              'scrollbar-gutter-stable mac-scrollbar -pr-[8px] flex h-full max-h-full w-full flex-col gap-2 overflow-scroll',
+              // 'rounded-md border border-red-600',
+            )}
+            style={{
+              width: 'calc( 100% + 8px )',
+              clipPath: 'rect(0px calc( 100% - 7px) 100% 0px round 6px)',
+            }}
+          >
             {tabMeta &&
               tabMeta.tabs &&
               tabMeta.tabs.map((singleTabMeta, index) => (
@@ -193,7 +203,8 @@ export const Sidebar = () => {
           <BrowserTab isActive={false} title={'Example Tab'} isDevMode={true} />
           <BrowserTab isActive={false} title={'Example Tab'} /> */}
           </div>
-          <div className="grow" />
+          {/* <div className="grow" /> */}
+          <MediaWidget />
           <div className="flex w-full gap-2">
             <div
               className={
