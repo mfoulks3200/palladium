@@ -11,7 +11,12 @@ export class History implements CommandProvider {
   public getSuggestions(input: string) {
     if (input.length === 0) return [];
 
-    const results = HistoryManager.getInstance().searchHistory(input);
+    let results;
+    try {
+      results = HistoryManager.getInstance().searchHistory(input);
+    } catch {
+      return [];
+    }
 
     const seen = new Set<string>();
     const unique = results.filter((item) => {
