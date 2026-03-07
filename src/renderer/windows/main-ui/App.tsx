@@ -21,6 +21,7 @@ import { BrowserUI } from '../../components/BrowserUI';
 import { TabManagerIpc } from '../../../ipc';
 import { SettingsProvider } from '@/lib/settings';
 import { FeatureFlagProvider } from '@/lib/feature-flags';
+import { SystemMetaProvider } from '@/lib/system-meta';
 import { DesignTokenProvider } from '../../hooks/use-design-tokens';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 
@@ -72,18 +73,20 @@ function Main() {
   return (
     <SettingsProvider>
       <FeatureFlagProvider>
-        <DesignTokenProvider>
-          <TabMetaContext.Provider value={tabMeta}>
-            <InternalTabMetaContext.Provider
-              value={{
-                tabs: internalTabMeta,
-                setTabMeta: setTabMetaItem,
-              }}
-            >
-              <BrowserUI />
-            </InternalTabMetaContext.Provider>
-          </TabMetaContext.Provider>
-        </DesignTokenProvider>
+        <SystemMetaProvider>
+          <DesignTokenProvider>
+            <TabMetaContext.Provider value={tabMeta}>
+              <InternalTabMetaContext.Provider
+                value={{
+                  tabs: internalTabMeta,
+                  setTabMeta: setTabMetaItem,
+                }}
+              >
+                <BrowserUI />
+              </InternalTabMetaContext.Provider>
+            </TabMetaContext.Provider>
+          </DesignTokenProvider>
+        </SystemMetaProvider>
       </FeatureFlagProvider>
     </SettingsProvider>
   );

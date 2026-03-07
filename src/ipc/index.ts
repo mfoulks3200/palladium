@@ -114,6 +114,21 @@ export interface CaptureExceptionIpc {
   source: string;
 }
 
+export interface WindowActionIpc {
+  action: 'close' | 'minimize' | 'maximize';
+}
+
+export interface SystemMetaIpc {
+  platform: string;
+  arch: string;
+  osVersion: string;
+  electronVersion: string;
+  chromeVersion: string;
+  nodeVersion: string;
+  appVersion: string;
+  appName: string;
+}
+
 /**
  * Protocol definition for Renderer -> Main communication
  */
@@ -139,6 +154,8 @@ export interface RendererToMainEvents {
   'feature-flags-sync': [];
   'feature-flags-refresh': [];
   'capture-exception': [CaptureExceptionIpc];
+  'get-system-meta': [];
+  'window-action': [WindowActionIpc];
 }
 
 /**
@@ -155,6 +172,7 @@ export interface MainToRendererEvents {
   'settings-sync': [SettingSchema];
   'history-data': [HistoryItem[]];
   'feature-flags-sync': [FeatureFlagsIpc];
+  'system-meta': [SystemMetaIpc];
 }
 
 export type Channels = keyof RendererToMainEvents | keyof MainToRendererEvents;
