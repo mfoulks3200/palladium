@@ -1,4 +1,13 @@
-import { ChevronLeft, ChevronRight, Plus, RotateCw } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Cog,
+  Maximize2,
+  Minus,
+  Plus,
+  RotateCw,
+  X,
+} from 'lucide-react';
 import { BrowserTab } from './BrowserTab';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -13,10 +22,12 @@ import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hi
 
 import styles from './Sidebar.module.css';
 import { cn } from '@/lib/utils';
+import { useSystemMeta } from '@/lib/system-meta';
 
 export const Sidebar = () => {
   const tabMeta = useContext(TabMetaContext);
   const internalTabMeta = useContext(InternalTabMetaContext);
+  const meta = useSystemMeta();
 
   useEffect(() => {
     return monitorForElements({
@@ -95,35 +106,47 @@ export const Sidebar = () => {
 
   return (
     <div className="flex h-full flex-col gap-2">
-      <div
-        className={cn(
-          'z-10 flex h-8 w-full items-center gap-2',
-          styles.invertedIcons,
-        )}
-      >
-        <div className="grow"></div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => sendTabAction('back')}
-        >
-          <ChevronLeft />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => sendTabAction('forward')}
-        >
-          <ChevronRight />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => sendTabAction('refresh')}
-        >
-          <RotateCw />
-        </Button>
-      </div>
+      <Card className="p-0">
+        <div className={cn('z-10 flex h-8 w-full items-center gap-0')}>
+          {meta?.platform !== 'darwin' && <NonNativeWindowControls />}
+          <div className="windowDragRegion h-full grow"></div>
+          <div className={cn('flex items-center gap-2 pr-1')}>
+            <Button
+              variant="ghost"
+              className={cn(
+                'max-h-6 max-w-6',
+                'hover:dark:bg-surface-raised hover:dark:text-surface-overlay-foreground',
+              )}
+              size="icon-sm"
+              onClick={() => sendTabAction('back')}
+            >
+              <ChevronLeft />
+            </Button>
+            <Button
+              variant="ghost"
+              className={cn(
+                'max-h-6 max-w-6',
+                'hover:dark:bg-surface-raised hover:dark:text-surface-overlay-foreground',
+              )}
+              size="icon-sm"
+              onClick={() => sendTabAction('forward')}
+            >
+              <ChevronRight />
+            </Button>
+            <Button
+              variant="ghost"
+              className={cn(
+                'max-h-6 max-w-6',
+                'hover:dark:bg-surface-raised hover:dark:text-surface-overlay-foreground',
+              )}
+              size="icon-sm"
+              onClick={() => sendTabAction('refresh')}
+            >
+              <RotateCw />
+            </Button>
+          </div>
+        </div>
+      </Card>
       <Card
         className="h-10 w-full cursor-pointer p-2 drop-shadow-md"
         onClick={() => {
@@ -171,21 +194,106 @@ export const Sidebar = () => {
           <BrowserTab isActive={false} title={'Example Tab'} isDevMode={true} />
           <BrowserTab isActive={false} title={'Example Tab'} /> */}
           <div className="grow" />
-          <div
-            className={
-              'flex h-10 cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-white/5'
-            }
-            onClick={() => {
-              openCommandBar();
-            }}
-          >
-            <Plus size="18px" className="max-w-[18px] min-w-[18px]" />
-            <div className="flex flex-col justify-center overflow-hidden text-ellipsis">
-              <div className="truncate text-sm">New Tab</div>
+          <div className="flex w-full gap-2">
+            <div
+              className={
+                'flex h-10 grow cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-white/5'
+              }
+              onClick={() => {
+                openCommandBar();
+              }}
+            >
+              <Plus size="18px" className="max-w-[18px] min-w-[18px]" />
+              <div className="flex flex-col justify-center overflow-hidden text-ellipsis">
+                <div className="truncate text-sm">New Tab</div>
+              </div>
+            </div>
+            <div
+              className={
+                'flex h-10 cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-white/5'
+              }
+              onClick={() => {
+                window.electron.ipcRenderer.sendMessage('open-settings');
+              }}
+            >
+              <Cog size="18px" className="max-w-[18px] min-w-[18px]" />
             </div>
           </div>
         </div>
       </Card>
+    </div>
+  );
+};
+
+const NonNativeWindowControls = () => {
+  return (
+    <div className={cn('group flex items-center gap-1 pl-2')}>
+      <Button
+        variant="ghost"
+        className={cn(
+          'max-h-4 max-w-4 cursor-pointer rounded-full',
+          'bg-red-500/75 hover:bg-red-500/75',
+          'hover:bg-red-500/75 dark:hover:bg-red-500/75',
+        )}
+        size="icon-xs"
+        onClick={() =>
+          window.electron.ipcRenderer.sendMessage('window-action', {
+            action: 'close',
+          })
+        }
+      >
+        <X
+          strokeWidth={4}
+          className={cn(
+            'text-foreground dark:text-foreground scale-75 opacity-0 transition-all duration-200',
+            'group-hover:text-black group-hover:opacity-50 group-hover:dark:text-black',
+          )}
+        />
+      </Button>
+      <Button
+        variant="ghost"
+        className={cn(
+          'max-h-4 max-w-4 cursor-pointer rounded-full',
+          'bg-amber-500/75 hover:bg-amber-500/75',
+          'hover:bg-amber-500/75 dark:hover:bg-amber-500/75',
+        )}
+        size="icon-xs"
+        onClick={() =>
+          window.electron.ipcRenderer.sendMessage('window-action', {
+            action: 'minimize',
+          })
+        }
+      >
+        <Minus
+          strokeWidth={4}
+          className={cn(
+            'text-foreground dark:text-foreground scale-75 opacity-0 transition-all duration-200',
+            'group-hover:text-black group-hover:opacity-50 group-hover:dark:text-black',
+          )}
+        />
+      </Button>
+      <Button
+        variant="ghost"
+        className={cn(
+          'max-h-4 max-w-4 cursor-pointer rounded-full',
+          'bg-green-500/75 hover:bg-green-500/75',
+          'hover:bg-green-500/75 dark:hover:bg-green-500/75',
+        )}
+        size="icon-xs"
+        onClick={() =>
+          window.electron.ipcRenderer.sendMessage('window-action', {
+            action: 'maximize',
+          })
+        }
+      >
+        <Maximize2
+          strokeWidth={4}
+          className={cn(
+            'text-foreground dark:text-foreground scale-75 opacity-0 transition-all duration-200',
+            'group-hover:text-black group-hover:opacity-50 group-hover:dark:text-black',
+          )}
+        />
+      </Button>
     </div>
   );
 };

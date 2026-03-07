@@ -1,7 +1,12 @@
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { ReactElement, useContext, useEffect, useState } from 'react';
-import { AboutPanel, ChangelogPanel, LinksPanel } from './pages/AboutPanel';
+import {
+  AboutPanel,
+  ChangelogPanel,
+  LinksPanel,
+  VersionsPanel,
+} from './pages/AboutPanel';
 import { HistoryPanel } from './pages/HistoryPanel';
 import { DefaultSearchEngines } from './pages/DefaultSearchEngines';
 import { CustomSearchEngines } from './pages/CustomSearchEngines';
@@ -143,6 +148,10 @@ const settingsUi: Record<string, SettingsPages> = {
       changelog: {
         name: 'Changelog',
         customContents: <ChangelogPanel />,
+      },
+      version: {
+        name: 'About Palladium',
+        customContents: <VersionsPanel />,
       },
     },
   },
