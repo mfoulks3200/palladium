@@ -1,3 +1,27 @@
+## [0.0.8] — 2026-03-06
+
+### Added
+
+- **Exception Tracking** — Comprehensive error reporting via PostHog across both processes
+  - Main process handlers for `uncaughtException` and `unhandledRejection`
+  - Renderer-side `window.onerror` and `window.onunhandledrejection` forwarded over IPC
+  - React `ErrorBoundary` component wrapping both app roots with a user-friendly fallback UI
+  - `captureException()` helper on `AnalyticsManager` funneling all errors through the opt-out gate
+- **System Metadata IPC** — `get-system-meta` / `system-meta` channel exposing platform, arch, OS version, Electron/Chrome/Node versions, and app info
+  - `SystemMetaProvider` and `useSystemMeta()` hook for renderer consumption
+- **Window Action IPC** — `window-action` channel for close, minimize, and maximize/restore from the renderer
+- **Open Settings IPC** — `open-settings` channel that focuses an existing settings tab or creates one
+- **Native Window Controls** — Renderer-side window control buttons using the new `window-action` channel
+- **Version Information** — Build and git revision info displayed in the UI
+- **Command Bar Multi-Monitor Support** — Command bar now spawns centered on the monitor where the cursor is located
+
+### Changed
+
+- **Source Maps Preserved in Production** — Removed `deleteSourceMaps()` from both production webpack configs so `.map` files ship with the build, enabling meaningful stack traces in error reports
+- Command bar window styling improvements for cross-platform consistency
+
+---
+
 ## [0.0.7] — 2026-03-05
 
 ### Added
