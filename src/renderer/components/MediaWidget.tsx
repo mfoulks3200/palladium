@@ -1,18 +1,63 @@
 import { Button } from './ui/button';
 import { Card } from './ui/card';
-import { ExternalLink, Play, SkipBack, SkipForward } from 'lucide-react';
+import { ExternalLink, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
 
 import img from '../../../assets/images/kalen-emsley-Bkci_8qcdvQ-unsplash.jpg';
+import { useMediaStates } from '@/lib/media-state';
+import { useEffect, useState } from 'react';
+import { MediaState } from 'src/ipc';
 
 export const MediaWidget = () => {
+  const [selectedMediaState, setSelectedMediaState] = useState(0);
+  const [currentProgress, setCurrentProgress] = useState(0);
+  const [allMediaStates, setAllMediaStates] = useState<MediaState[]>([]);
+  const [currentMediaState, setCurrentMediaState] =
+    useState<MediaState | null>();
+  const mediaState = useMediaStates();
+
+  if (JSON.stringify(allMediaStates) !== JSON.stringify(mediaState)) {
+    console.log('Media state updated: ', mediaState);
+    setAllMediaStates(mediaState);
+    setCurrentMediaState(mediaState[selectedMediaState]);
+    if (mediaState.length > 0) {
+      setCurrentProgress(mediaState[selectedMediaState].progress ?? 0);
+    }
+  }
+
+  useEffect(() => {
+    const interval = 500;
+
+    let update;
+    update = setInterval(() => {
+      if (currentMediaState && currentMediaState.playing) {
+        const seconds = interval / 1000;
+        setCurrentProgress((current) =>
+          Math.min(current + seconds, currentMediaState?.duration ?? 0),
+        );
+      }
+    }, interval);
+
+    return () => {
+      if (update) {
+        clearInterval(update);
+      }
+    };
+  }, [currentMediaState, currentProgress]);
+
+  if (mediaState.length === 0 || !currentMediaState) {
+    return <></>;
+  }
+
+  const progress = currentProgress / (currentMediaState.duration ?? 0.00001);
+
   const animationRules = 'transition-all delay-100 duration-200 transform-gpu';
   return (
     <Card
       apperance="Hero"
       className="group min-h-fit transform-gpu overflow-hidden bg-white bg-cover p-0"
-      style={{ backgroundImage: `url('${img}')` }}
+      style={{ backgroundImage: `url('${currentMediaState.artworkUrl}')` }}
     >
       <div
         className={cn(
@@ -23,20 +68,25 @@ export const MediaWidget = () => {
           'bg-primary-foreground/90 group-hover:bg-primary-foreground/75',
         )}
       >
-        <div className="justify-left mb-2 flex w-full items-center gap-2 px-4">
+        <div className="justify-left mb-2 flex w-full max-w-full min-w-0 items-center gap-2 px-4">
           <div
             className={cn(
               'aspect-square rounded-sm bg-white bg-cover',
               'h-8 group-hover:h-11',
               animationRules,
             )}
-            style={{ backgroundImage: `url('${img}')` }}
+            style={{
+              backgroundImage: `url('${currentMediaState.artworkUrl}')`,
+            }}
           ></div>
-          <div className="justify-left flex grow flex-col select-none">
+          <div className="justify-left flex w-full max-w-full min-w-0 grow flex-col select-none">
             <span
-              className={cn('text-sm group-hover:text-base', animationRules)}
+              className={cn(
+                'max-w-full min-w-0 truncate overflow-hidden text-sm group-hover:text-base',
+                animationRules,
+              )}
             >
-              Track Name
+              {currentMediaState.title}
             </span>
             <span
               className={cn(
@@ -44,7 +94,7 @@ export const MediaWidget = () => {
                 animationRules,
               )}
             >
-              Artist
+              {currentMediaState.artist}
             </span>
           </div>
         </div>
@@ -52,8 +102,11 @@ export const MediaWidget = () => {
           className={cn('h-fit w-full px-0 group-hover:px-4', animationRules)}
         >
           <Progress
-            className={cn('max-h-0.5 group-hover:max-h-2', animationRules)}
-            value={33}
+            className={cn(
+              'max-h-0.5 duration-500 group-hover:max-h-2',
+              animationRules,
+            )}
+            value={progress * 100}
           />
         </div>
         <div
@@ -67,7 +120,7 @@ export const MediaWidget = () => {
             <SkipBack />
           </Button>
           <Button className="" variant="ghost">
-            <Play />
+            {currentMediaState.playing ? <Pause /> : <Play />}
           </Button>
           <Button className="" variant="ghost">
             <SkipForward />

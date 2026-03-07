@@ -252,20 +252,35 @@ export class TabManager {
   }
 
   private syncMediaStates() {
-    this.mediaStates.clear();
+    const previousIds = new Set(this.mediaStates.keys());
+    const nextStates = new Map<string, MediaState>();
     for (const tab of this.tabs) {
       for (const state of tab.getMediaStates()) {
-        this.mediaStates.set(state.id, state);
+        nextStates.set(state.id, state);
       }
     }
+
     if (!this.mainWindow.isDestroyed()) {
-      for (const state of this.mediaStates.values()) {
+      // Remove states that no longer exist
+      for (const id of previousIds) {
+        if (!nextStates.has(id)) {
+          typedWebContents(this.mainWindow.webContents).send('media-state', {
+            action: 'remove',
+            id,
+          });
+        }
+      }
+
+      // Add or update current states
+      for (const [id, state] of nextStates) {
         typedWebContents(this.mainWindow.webContents).send('media-state', {
-          action: 'add',
+          action: previousIds.has(id) ? 'update' : 'add',
           state,
         });
       }
     }
+
+    this.mediaStates = nextStates;
   }
 
   public focusTab(tab: Tab) {

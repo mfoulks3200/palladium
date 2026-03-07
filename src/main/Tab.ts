@@ -41,6 +41,7 @@ export class Tab extends EventTarget {
   private faviconB64: string | null = null;
   private isPlayingAudio: boolean = false;
   private mediaStates: Map<string, MediaState> = new Map();
+  private activeMediaId: string | null = null;
   public view: WebContentsView;
   public devToolsView: WebContentsView = null as any;
   private static session: Session;
@@ -243,6 +244,54 @@ export class Tab extends EventTarget {
 
     this.view.webContents.on('audio-state-changed', async (event) => {
       this.isPlayingAudio = event.audible;
+      const mediaId = `audio-${this.uuid}`;
+      try {
+        const session = await this.view.webContents.executeJavaScript(`
+          (() => {
+            const players = [...document.querySelectorAll('video')];
+            const player = players.length > 0
+              ? players.sort((a, b) => b.duration - a.duration)[0]
+              : null;
+            return {
+              playbackState: navigator.mediaSession.playbackState,
+              metadata: navigator.mediaSession.metadata ? {
+                album: navigator.mediaSession.metadata.album ?? "",
+                artist: navigator.mediaSession.metadata.artist ?? "",
+                artwork: navigator.mediaSession.metadata.artwork ?? [],
+                title: navigator.mediaSession.metadata.title ?? "",
+              } : null,
+              duration: player?.duration ?? 0,
+              currentTime: player?.currentTime ?? 0,
+            };
+          })()
+        `);
+        if (session.metadata) {
+          if (this.activeMediaId && this.activeMediaId === mediaId) {
+            this.updateMediaState({
+              id: mediaId,
+              title: session.metadata.title,
+              playing: event.audible,
+              progress: session.currentTime,
+              duration: session.duration,
+            });
+          } else {
+            this.activeMediaId = mediaId;
+            this.addMediaState({
+              id: mediaId,
+              type: 'audio',
+              title: session.metadata.title,
+              album: session.metadata.album,
+              artist: session.metadata.artist,
+              artworkUrl: session.metadata.artwork?.[0]?.src ?? '',
+              playing: event.audible,
+              progress: session.currentTime,
+              duration: session.duration,
+            });
+          }
+        }
+      } catch {
+        // Tab may have been destroyed
+      }
       this.publishMetadataUpdateEvent();
     });
 
@@ -258,6 +307,10 @@ export class Tab extends EventTarget {
     });
 
     this.view.webContents.on('did-navigate', async () => {
+      if (this.activeMediaId) {
+        this.removeMediaState(this.activeMediaId);
+        this.activeMediaId = null;
+      }
       AnalyticsManager.getInstance().capture('page_navigated');
       const historyEvent: HistoryEvent = {
         tabUuid: this.uuid,
