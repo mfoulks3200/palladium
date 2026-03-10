@@ -72,9 +72,11 @@ export const OverlayPortal = (props: PropsWithChildren<OverlayPortalProps>) => {
     setPortalDomRoot(null);
   };
 
-  if (disablePortals && portalDomWindow) {
-    destroyOverlay();
-  }
+  useEffect(() => {
+    if (disablePortals && portalDomWindow) {
+      destroyOverlay();
+    }
+  }, [disablePortals, portalDomWindow]);
 
   const dummyDiv = (
     <div
