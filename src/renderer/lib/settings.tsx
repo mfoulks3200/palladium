@@ -70,7 +70,7 @@ export const SettingsProvider = ({ children }: PropsWithChildren) => {
     <T extends SettingsKeys>(
       settingKey: T,
     ): [SettingKeyType<T>, (newValue: SettingKeyType<T>) => void] => {
-      const value = getDeepProp(settingsRef.current, settingKey)!;
+      const value = getDeepProp(settingsValues, settingKey)!;
 
       return [
         value,
@@ -78,7 +78,7 @@ export const SettingsProvider = ({ children }: PropsWithChildren) => {
           setNewSettingItemValue(settingKey, newValue),
       ];
     },
-    [setNewSettingItemValue],
+    [settingsValues, setNewSettingItemValue],
   );
 
   return (
