@@ -13,9 +13,9 @@ export class Base implements CommandProvider {
   }
 
   private isUrl(input: string) {
-    const hasProtocolStr = /^[a-zA-Z]*:\/\/[0-9a-zA-Z]{3,}/m;
+    const hasProtocolStr = /^[a-zA-Z]*:\/\/[0-9a-zA-Z]{3,}/;
     const followsUrlFormat =
-      /\b(?:(?:[A-Za-z][A-Za-z0-9+.\-]*):(?:\/\/))?(?:www\.)?[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}(?:\/\S*)?(?=\s|$)/m;
+      /\b(?:(?:[A-Za-z][A-Za-z0-9+.\-]*):(?:\/\/))?(?:www\.)?[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}(?:\/\S*)?(?=\s|$)/;
     return hasProtocolStr.test(input) || followsUrlFormat.test(input);
   }
 
