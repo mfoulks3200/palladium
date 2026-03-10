@@ -20,7 +20,6 @@ import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/ad
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index';
 
-import styles from './Sidebar.module.css';
 import { cn } from '@/lib/utils';
 import { useSystemMeta } from '@/lib/system-meta';
 import { MediaWidget } from './MediaWidget';
