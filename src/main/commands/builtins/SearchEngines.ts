@@ -20,8 +20,8 @@ const searchEngines: SearchEngine[] = [
     shortcutCode: 'go',
     getSearchUrl: (query: string) => {
       const params = new URLSearchParams();
-      params.append('q', encodeURIComponent(query));
-      params.append('oq', encodeURIComponent(query));
+      params.append('q', query);
+      params.append('oq', query);
       params.append('sourceid', 'chrome');
       params.append('ie', 'utf8');
       params.append('hl', 'en');
