@@ -45,7 +45,6 @@ export const setDeepProp = <O extends object, T extends NestedKeysOf<O>>(
   const nextProp = properties.shift();
   if (nextProp) {
     if (properties.length === 0) {
-      (obj as Record<string, any>)[nextProp] = value;
       return { ...obj, [nextProp]: value } as any;
     } else {
       return {
