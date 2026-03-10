@@ -29,20 +29,21 @@ export const MediaWidget = () => {
     [currentMediaState],
   );
 
-  if (JSON.stringify(allMediaStates) !== JSON.stringify(mediaState)) {
-    console.log('Media state updated: ', mediaState);
-    setAllMediaStates(mediaState);
-    setCurrentMediaState(mediaState[selectedMediaState]);
-    if (mediaState.length > 0) {
-      setCurrentProgress(mediaState[selectedMediaState].progress ?? 0);
+  useEffect(() => {
+    if (JSON.stringify(allMediaStates) !== JSON.stringify(mediaState)) {
+      console.log('Media state updated: ', mediaState);
+      setAllMediaStates(mediaState);
+      setCurrentMediaState(mediaState[selectedMediaState]);
+      if (mediaState.length > 0) {
+        setCurrentProgress(mediaState[selectedMediaState].progress ?? 0);
+      }
     }
-  }
+  }, [mediaState, allMediaStates, selectedMediaState]);
 
   useEffect(() => {
     const interval = 500;
 
-    let update;
-    update = setInterval(() => {
+    const update = setInterval(() => {
       if (currentMediaState && currentMediaState.playing) {
         const seconds = interval / 1000;
         setCurrentProgress((current) =>
@@ -52,11 +53,9 @@ export const MediaWidget = () => {
     }, interval);
 
     return () => {
-      if (update) {
-        clearInterval(update);
-      }
+      clearInterval(update);
     };
-  }, [currentMediaState, currentProgress]);
+  }, [currentMediaState]);
 
   if (mediaState.length === 0 || !currentMediaState) {
     return <></>;
