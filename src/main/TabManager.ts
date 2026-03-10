@@ -100,8 +100,8 @@ export class TabManager {
       console.log('Closing tab uuid', tabMeta.uuid);
       const selectedIndex = this.getTabIndex(tabMeta.uuid);
       const selectedTab = this.getTabByUuid(tabMeta.uuid);
-      if (selectedIndex - 0 > 0) {
-        this.focusTabIndex(selectedIndex - 0);
+      if (selectedIndex - 1 > 0) {
+        this.focusTabIndex(selectedIndex - 1);
       }
       if (selectedTab) {
         AnalyticsManager.getInstance().capture('tab_closed');
