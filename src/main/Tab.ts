@@ -340,10 +340,6 @@ export class Tab extends EventTarget {
       this.publishMetadataUpdateEvent();
     });
 
-    this.view.webContents.on('did-start-loading', async () => {
-      this.publishMetadataUpdateEvent();
-    });
-
     this.view.webContents.setWindowOpenHandler((edata) => {
       if (edata.disposition === 'background-tab') {
         TabManager.getInstance().addTab(new Tab(edata.url));
