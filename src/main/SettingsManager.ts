@@ -11,6 +11,7 @@ import os from 'node:os';
 import fs from 'node:fs';
 import { getDeepProp, setDeepProp } from 'src/ipc/Utility';
 import { AnalyticsManager } from './AnalyticsManager';
+import { rebindCommandBarShortcut } from './GlobalShortcuts';
 
 import * as z from 'zod';
 
@@ -35,6 +36,7 @@ export class SettingsManager {
 
     typedIpcMain.on('settings-sync', (_event, newSettings) => {
       const prevAnalytics = this.getItem('analytics.enabled');
+      const prevShortcut = this.getItem('shortcuts.commandBar');
       this.currentSettings = settingsSchema.parse(newSettings);
       this.persist();
 
@@ -43,6 +45,12 @@ export class SettingsManager {
       const nextAnalytics = this.getItem('analytics.enabled');
       if (prevAnalytics !== nextAnalytics) {
         AnalyticsManager.getInstance().setEnabled(nextAnalytics);
+      }
+
+      // Rebind the global shortcut if it changed.
+      const nextShortcut = this.getItem('shortcuts.commandBar');
+      if (prevShortcut !== nextShortcut) {
+        rebindCommandBarShortcut(nextShortcut);
       }
     });
 
