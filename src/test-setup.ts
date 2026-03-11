@@ -8,3 +8,9 @@ if (!global.TextDecoder) {
   // @ts-ignore
   global.TextDecoder = TextDecoder;
 }
+
+// JSDOM does not implement structuredClone
+if (!global.structuredClone) {
+  global.structuredClone = <T>(val: T): T =>
+    JSON.parse(JSON.stringify(val)) as T;
+}
