@@ -38,7 +38,10 @@ describe('GlobalShortcuts', () => {
       (globalShortcut.register as jest.Mock).mockReturnValue(false);
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
       registerGlobalShortcuts();
-      expect(consoleSpy).toHaveBeenCalledWith('registration failed');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'registration failed for shortcut:',
+        'CommandOrControl+Shift+T',
+      );
       consoleSpy.mockRestore();
     });
   });

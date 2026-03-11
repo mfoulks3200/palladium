@@ -8,6 +8,7 @@ Object.defineProperty(window, 'electron', {
   value: {
     ipcRenderer: {
       sendMessage: mockSendMessage,
+      invoke: jest.fn().mockResolvedValue(null),
       on: jest.fn(() => jest.fn()),
     },
   },
@@ -107,7 +108,7 @@ describe('BrowserTab', () => {
     const { container } = render(
       <BrowserTab {...defaultProps} isActive={true} />,
     );
-    const tabEl = container.querySelector('.bg-white\\/10');
+    const tabEl = container.querySelector('.bg-foreground\\/10');
     expect(tabEl).toBeInTheDocument();
   });
 

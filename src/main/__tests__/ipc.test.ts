@@ -20,13 +20,13 @@ describe('typedIpcMain', () => {
 
   it('registers a listener with ipcMain.on', () => {
     const listener = jest.fn();
-    typedIpcMain.on('update-tab-meta', listener);
-    expect(mockOn).toHaveBeenCalledWith('update-tab-meta', expect.any(Function));
+    typedIpcMain.on('request-tab-meta', listener);
+    expect(mockOn).toHaveBeenCalledWith('request-tab-meta', expect.any(Function));
   });
 
   it('forwards events to the typed listener', () => {
     const listener = jest.fn();
-    typedIpcMain.on('update-tab-meta', listener);
+    typedIpcMain.on('request-tab-meta', listener);
 
     // Simulate ipcMain calling the wrapper
     const wrapper = mockOn.mock.calls[0][1];
@@ -37,14 +37,14 @@ describe('typedIpcMain', () => {
 
   it('registers a one-time listener with ipcMain.once', () => {
     const listener = jest.fn();
-    typedIpcMain.once('update-tab-meta', listener);
-    expect(mockOnce).toHaveBeenCalledWith('update-tab-meta', expect.any(Function));
+    typedIpcMain.once('request-tab-meta', listener);
+    expect(mockOnce).toHaveBeenCalledWith('request-tab-meta', expect.any(Function));
   });
 
   it('removes a listener via ipcMain.removeListener', () => {
     const listener = jest.fn();
-    typedIpcMain.removeListener('update-tab-meta', listener);
-    expect(mockRemoveListener).toHaveBeenCalledWith('update-tab-meta', listener);
+    typedIpcMain.removeListener('request-tab-meta', listener);
+    expect(mockRemoveListener).toHaveBeenCalledWith('request-tab-meta', listener);
   });
 });
 

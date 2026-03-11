@@ -3,11 +3,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { createContext } from 'react';
 import { TabManagerIpc } from 'src/ipc';
 
-// Mock App module to avoid CSS font imports being pulled in
+// Mock tab-meta module to avoid pulling in real context dependencies
 const TabMetaContext = createContext<TabManagerIpc | null>(null);
 const InternalTabMetaContext = createContext<any>(null);
 
-jest.mock('@/windows/main-ui/App', () => ({
+jest.mock('@/lib/tab-meta', () => ({
   TabMetaContext,
   InternalTabMetaContext,
 }));
@@ -21,6 +21,7 @@ Object.defineProperty(window, 'electron', {
   value: {
     ipcRenderer: {
       sendMessage: mockSendMessage,
+      invoke: jest.fn().mockResolvedValue(null),
       on: jest.fn(() => jest.fn()),
     },
   },

@@ -23,6 +23,7 @@ jest.mock('@/components/ui/card', () => ({
 // Track IPC listener callbacks so we can invoke them in tests
 let ipcListeners: Record<string, (...args: any[]) => void> = {};
 const mockSendMessage = jest.fn();
+const mockInvoke = jest.fn();
 const mockOn = jest.fn((channel: string, callback: (...args: any[]) => void) => {
   ipcListeners[channel] = callback;
   return jest.fn(); // cleanup function
@@ -32,6 +33,7 @@ Object.defineProperty(window, 'electron', {
   value: {
     ipcRenderer: {
       sendMessage: mockSendMessage,
+      invoke: mockInvoke,
       on: mockOn,
     },
   },
@@ -56,29 +58,36 @@ describe('HistoryPanel', () => {
   beforeEach(() => {
     ipcListeners = {};
     mockSendMessage.mockClear();
+    mockInvoke.mockReset();
+    mockInvoke.mockResolvedValue([]);
     mockOn.mockClear();
   });
 
-  it('renders "No history found" when there are no history items', () => {
-    render(<HistoryPanel />);
+  it('renders "No history found" when there are no history items', async () => {
+    mockInvoke.mockResolvedValue([]);
+
+    await act(async () => {
+      render(<HistoryPanel />);
+    });
+
     expect(screen.getByText('No history found')).toBeInTheDocument();
   });
 
-  it('sends get-history IPC message on mount', () => {
+  it('sends get-history IPC invoke on mount', () => {
     render(<HistoryPanel />);
-    expect(mockSendMessage).toHaveBeenCalledWith('get-history');
+    expect(mockInvoke).toHaveBeenCalledWith('get-history');
   });
 
-  it('renders history items when data is received via IPC', () => {
-    render(<HistoryPanel />);
-
+  it('renders history items when data is received via invoke', async () => {
     const items: HistoryItem[] = [
       makeHistoryItem({ id: 1, title: 'First Page', url: 'https://first.com' }),
       makeHistoryItem({ id: 2, title: 'Second Page', url: 'https://second.com' }),
     ];
 
-    act(() => {
-      ipcListeners['history-data'](items);
+    mockInvoke.mockResolvedValue(items);
+
+    await act(async () => {
+      render(<HistoryPanel />);
     });
 
     expect(screen.getByText('First Page')).toBeInTheDocument();
@@ -88,21 +97,26 @@ describe('HistoryPanel', () => {
     expect(screen.queryByText('No history found')).not.toBeInTheDocument();
   });
 
-  it('disables Clear History button when there is no history', () => {
-    render(<HistoryPanel />);
+  it('disables Clear History button when there is no history', async () => {
+    mockInvoke.mockResolvedValue([]);
+
+    await act(async () => {
+      render(<HistoryPanel />);
+    });
+
     const clearButton = screen.getByText('Clear History').closest('button');
     expect(clearButton).toBeDisabled();
   });
 
-  it('shows "Untitled" for history items without a title', () => {
-    render(<HistoryPanel />);
-
+  it('shows "Untitled" for history items without a title', async () => {
     const items: HistoryItem[] = [
       makeHistoryItem({ id: 1, title: '', url: 'https://no-title.com' }),
     ];
 
-    act(() => {
-      ipcListeners['history-data'](items);
+    mockInvoke.mockResolvedValue(items);
+
+    await act(async () => {
+      render(<HistoryPanel />);
     });
 
     expect(screen.getByText('Untitled')).toBeInTheDocument();

@@ -24,7 +24,7 @@ export class Tabs implements CommandProvider {
       );
   }
 
-  public runCommand(command: string): CommandResult {
+  public runCommand(command: string, _input: string): CommandResult {
     TabManager.getInstance().focusTabUuid(command);
     return { success: true };
   }

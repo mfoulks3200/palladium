@@ -10,7 +10,11 @@ export function navigateOrCreateTab(
   url: string,
   metadata?: CommandMetadata,
 ): void {
-  const tab = metadata?.tab;
+  const tab =
+    metadata?.tab ??
+    (metadata?.tabUuid
+      ? TabManager.getInstance().getTabByUuid(metadata.tabUuid)
+      : undefined);
   if (tab) {
     tab.view.webContents.loadURL(url);
   } else {
