@@ -10,7 +10,6 @@ import { MediaState, TabIpcPacket } from '../ipc';
 import { HistoryEvent, HistoryManager } from './HistoryManager';
 import path from 'node:path';
 import os from 'node:os';
-import { TabManager } from './TabManager';
 import { AnalyticsManager } from './AnalyticsManager';
 
 const devToolsCSS = `
@@ -107,10 +106,7 @@ export class Tab extends EventTarget {
       if (!this.view.webContents.isDestroyed()) {
         this.setDevMode(false);
         this.setupDevtoolsWindow();
-        const tabMan = TabManager.getInstance();
-        if (tabMan && tabMan.getCurrentTab() === this) {
-          tabMan.focusTab(this);
-        }
+        this.dispatchEvent(new CustomEvent('request-focus'));
       }
     });
   }
@@ -340,12 +336,16 @@ export class Tab extends EventTarget {
       this.publishMetadataUpdateEvent();
     });
 
+    this.view.webContents.on('did-stop-loading', async () => {
+      this.publishMetadataUpdateEvent();
+    });
+
     this.view.webContents.setWindowOpenHandler((edata) => {
-      if (edata.disposition === 'background-tab') {
-        TabManager.getInstance().addTab(new Tab(edata.url));
-      } else {
-        TabManager.getInstance().focusTab(new Tab(edata.url));
-      }
+      this.dispatchEvent(
+        new CustomEvent('new-window-requested', {
+          detail: { url: edata.url, disposition: edata.disposition },
+        }),
+      );
       return { action: 'deny' };
     });
   }
