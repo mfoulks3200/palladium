@@ -176,16 +176,12 @@ export interface RendererToMainEvents {
   'browser-layout-change': [OverlayOptions];
   'devtools-layout-change': [OverlayOptions];
   'ipc-example': [string];
-  'command-input': [CommandInputIpc];
   'command-bar': [CommandBarIpc];
   'internal-page-navigate': [InternalPageNavigateIpc];
   'settings-sync': [SettingSchema];
-  'get-history': [];
   'clear-history': [];
-  'feature-flags-sync': [];
   'feature-flags-refresh': [];
   'capture-exception': [CaptureExceptionIpc];
-  'get-system-meta': [];
   'window-action': [WindowActionIpc];
   'open-settings': [];
   'media-control': [MediaControlIpc];
@@ -199,14 +195,29 @@ export interface MainToRendererEvents {
   'browser-layout-change': [];
   'devtools-layout-change': [];
   'ipc-example': [string];
-  'command-response': [CommandResponseIpc];
   'command-setup': [CommandBarSetupIpc];
   'internal-page-navigate': [InternalPageNavigateIpc];
-  'settings-sync': [SettingSchema];
-  'history-data': [HistoryItem[]];
   'feature-flags-sync': [FeatureFlagsIpc];
-  'system-meta': [SystemMetaIpc];
   'media-state': [MediaStateIpc];
 }
 
-export type Channels = keyof RendererToMainEvents | keyof MainToRendererEvents;
+/**
+ * Protocol definition for Renderer -> Main request-response communication.
+ * Uses ipcMain.handle / ipcRenderer.invoke pattern.
+ * Each key maps to { args: [...], result: ReturnType }.
+ */
+export interface RendererToMainInvocations {
+  'get-history': { args: []; result: HistoryItem[] };
+  'get-system-meta': { args: []; result: SystemMetaIpc };
+  'get-settings': { args: []; result: SettingSchema };
+  'get-feature-flags': { args: []; result: FeatureFlagsIpc };
+  'command-input': {
+    args: [CommandInputIpc];
+    result: CommandResponseIpc | void;
+  };
+}
+
+export type Channels =
+  | keyof RendererToMainEvents
+  | keyof MainToRendererEvents
+  | keyof RendererToMainInvocations;

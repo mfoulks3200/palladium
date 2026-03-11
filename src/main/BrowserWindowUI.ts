@@ -2,7 +2,7 @@ import { app, BrowserWindow, shell, screen, BrowserView, Menu } from 'electron';
 import os from 'node:os';
 import path from 'node:path';
 import MenuBuilder from './menu';
-import { typedIpcMain, typedWebContents } from './ipc';
+import { typedIpcMain } from './ipc';
 import { SystemMetaIpc, WindowActionIpc } from '../ipc';
 import { SettingsManager } from './SettingsManager';
 import { HistoryManager } from './HistoryManager';
@@ -137,8 +137,8 @@ export class BrowserWindowUI {
     registerGlobalShortcuts();
 
     // Respond to renderer requests for system metadata.
-    typedIpcMain.on('get-system-meta', (event) => {
-      const meta: SystemMetaIpc = {
+    typedIpcMain.handle('get-system-meta', () => {
+      return {
         platform: process.platform,
         arch: process.arch,
         osVersion: os.release(),
@@ -153,8 +153,7 @@ export class BrowserWindowUI {
           branch: BRANCH,
           lastCommitDateTime: LASTCOMMITDATETIME,
         },
-      };
-      typedWebContents(event.sender).send('system-meta', meta);
+      } satisfies SystemMetaIpc;
     });
 
     // Handle window operations (close, minimize, maximize/restore).

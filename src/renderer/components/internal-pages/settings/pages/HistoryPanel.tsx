@@ -8,18 +8,10 @@ export const HistoryPanel = () => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   useEffect(() => {
-    const removeListener = window.electron.ipcRenderer.on(
-      'history-data',
-      (data: HistoryItem[]) => {
-        setHistory(data);
-      },
-    );
-
-    window.electron.ipcRenderer.sendMessage('get-history');
-
-    return () => {
-      removeListener();
-    };
+    window.electron.ipcRenderer
+      .invoke('get-history')
+      .then(setHistory)
+      .catch(console.error);
   }, []);
 
   const clearHistory = () => {
