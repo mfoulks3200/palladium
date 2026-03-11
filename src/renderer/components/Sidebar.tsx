@@ -23,6 +23,7 @@ import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hi
 import { cn } from '@/lib/utils';
 import { useSystemMeta } from '@/lib/system-meta';
 import { MediaWidget } from './MediaWidget';
+import { ComponentErrorBoundary } from './ErrorBoundary';
 
 export const Sidebar = () => {
   const tabMeta = useContext(TabMetaContext);
@@ -203,7 +204,9 @@ export const Sidebar = () => {
           <BrowserTab isActive={false} title={'Example Tab'} /> */}
           </div>
           {/* <div className="grow" /> */}
-          <MediaWidget />
+          <ComponentErrorBoundary name="MediaWidget">
+            <MediaWidget />
+          </ComponentErrorBoundary>
           <div className="flex w-full gap-2">
             <div
               className={

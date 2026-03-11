@@ -23,6 +23,7 @@ import styles from './BrowserUI.module.css';
 import { cn } from '@/lib/utils';
 import { TabMetaContext } from '@/lib/tab-meta';
 import { ShaderBackground } from './ShaderBackground';
+import { ComponentErrorBoundary } from './ErrorBoundary';
 
 export const BrowserUI = () => {
   const tabMeta = useContext(TabMetaContext);
@@ -157,7 +158,9 @@ export const BrowserUI = () => {
           onLayoutChange={onBrowserResize}
         >
           <ResizablePanel defaultSize="250px" maxSize="400px" minSize="200px">
-            <Sidebar />
+            <ComponentErrorBoundary name="Sidebar">
+              <Sidebar />
+            </ComponentErrorBoundary>
           </ResizablePanel>
           <ResizableHandle className="mx-0.5 w-1 rounded-sm border-none bg-transparent transition-colors after:hidden after:border-none hover:bg-black/50" />
           <ResizablePanel minSize="30%">{browserPanel}</ResizablePanel>
@@ -183,7 +186,9 @@ const BrowserBackgroundPanel = ({
   return (
     <BrowserPanel ref={ref}>
       {internalPageUrl.trim().length > 0 && (
-        <InternalPageRouter path={internalPageUrl} />
+        <ComponentErrorBoundary name="InternalPage">
+          <InternalPageRouter path={internalPageUrl} />
+        </ComponentErrorBoundary>
       )}
     </BrowserPanel>
   );
