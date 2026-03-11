@@ -227,7 +227,9 @@ export const CommandBar = ({ className }: CommandBarProps) => {
       lastSection = command.section;
     }
 
-    addSection(lastSection!.name);
+    if (lastSection) {
+      addSection(lastSection.name);
+    }
 
     return commandSections;
   }, [commandResponse]);
