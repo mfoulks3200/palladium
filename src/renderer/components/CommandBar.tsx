@@ -9,13 +9,7 @@ import {
   CommandShortcut,
 } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import './CommandBar.css';
 import { CommandResponseIpc } from 'src/ipc';
@@ -41,27 +35,15 @@ export const CommandBar = ({ className }: CommandBarProps) => {
   );
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // The command bar is a separate BrowserWindow that always needs focus when
+  // shown. win.focus() in the main process is async with the OS, so autoFocus
+  // fires before the window actually has keyboard focus and gets silently
+  // dropped. Listening to the window 'focus' event fires only after the OS
+  // grants focus, at which point the input focus call is guaranteed to land.
   useEffect(() => {
-    const removeListener = window.electron.ipcRenderer.on(
-      'command-setup',
-      (response) => {
-        setTabUuid(
-          response.tabUuid.length === 0 ? undefined : response.tabUuid,
-        );
-        if (response.prefill.trim().length > 0) {
-          setCurrentText(response.prefill);
-          setTimeout(() => {
-            if (inputRef.current) {
-              inputRef.current.select();
-            }
-          }, 1);
-        }
-      },
-    );
-
-    return () => {
-      removeListener();
-    };
+    const focusInput = () => inputRef.current?.focus();
+    window.addEventListener('focus', focusInput);
+    return () => window.removeEventListener('focus', focusInput);
   }, []);
 
   const handleSuggestionResponse = useCallback(
@@ -79,6 +61,47 @@ export const CommandBar = ({ className }: CommandBarProps) => {
     },
     [],
   );
+
+  useEffect(() => {
+    const removeListener = window.electron.ipcRenderer.on(
+      'command-setup',
+      (response) => {
+        const newText =
+          response.prefill.trim().length > 0 ? response.prefill : '';
+        setTabUuid(
+          response.tabUuid.length === 0 ? undefined : response.tabUuid,
+        );
+        setCurrentText(newText);
+        // Reset stale results from the previous session so the window
+        // doesn't flash old suggestions while the new fetch is in flight.
+        setCommandResponse(null);
+        setSelectedCommand(undefined);
+
+        // Fetch fresh suggestions for the new context.
+        window.electron.ipcRenderer
+          .invoke('command-input', {
+            mode: 'suggestions' as const,
+            input: newText,
+          })
+          .then((res) => {
+            if (res) handleSuggestionResponse(res);
+          })
+          .catch(console.error);
+
+        setTimeout(() => {
+          if (newText.length > 0) {
+            inputRef.current?.select();
+          } else {
+            inputRef.current?.focus();
+          }
+        }, 1);
+      },
+    );
+
+    return () => {
+      removeListener();
+    };
+  }, [handleSuggestionResponse]);
 
   useEffect(() => {
     window.electron.ipcRenderer
@@ -143,7 +166,10 @@ export const CommandBar = ({ className }: CommandBarProps) => {
 
     const allCommands = Object.values(commandResponse.suggestions).flatMap(
       (section) =>
-        section.commands.map((cmd) => ({ section: section.section, command: cmd })),
+        section.commands.map((cmd) => ({
+          section: section.section,
+          command: cmd,
+        })),
     );
 
     allCommands.sort((a, b) => (b.command.score ?? 0) - (a.command.score ?? 0));
@@ -166,10 +192,6 @@ export const CommandBar = ({ className }: CommandBarProps) => {
     return sections;
   }, [commandResponse]);
 
-  if (!commandResponse) {
-    return <></>;
-  }
-
   return (
     <Command
       onValueChange={setSelectedCommand}
@@ -179,10 +201,10 @@ export const CommandBar = ({ className }: CommandBarProps) => {
     >
       <CommandInput
         className="p-1 px-4 text-xl"
-        placeholder={commandResponse.provider.prompt}
-        showBeforeElement={!!commandResponse.provider.lozenge}
-        beforeElement={<>{commandResponse.provider.lozenge?.name ?? ''}</>}
-        beforeElementClass={commandResponse.provider.lozenge?.color ?? ''}
+        placeholder={commandResponse?.provider.prompt}
+        showBeforeElement={!!commandResponse?.provider.lozenge}
+        beforeElement={<>{commandResponse?.provider.lozenge?.name ?? ''}</>}
+        beforeElementClass={commandResponse?.provider.lozenge?.color ?? ''}
         autoFocus={true}
         onInput={(event) => {
           //@ts-expect-error
@@ -193,14 +215,31 @@ export const CommandBar = ({ className }: CommandBarProps) => {
         ref={inputRef}
       />
       <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
-        {groupedSections.map((section, idx) => (
-          <div key={section.sectionId}>
-            {idx > 0 && <CommandSeparator />}
-            <CommandGroup heading={section.sectionName}>
-              {section.commands.map((command) => (
-                <CommandSuggestionItem key={command.value} command={command} />
-              ))}
+        {commandResponse && <CommandEmpty>No results found.</CommandEmpty>}
+        {groupedSections.map((section, sectionIdx) => (
+          <div key={section.sectionId + '.' + sectionIdx}>
+            {sectionIdx > 0 && <CommandSeparator />}
+            <CommandGroup
+              heading={section.sectionName}
+              key={section.sectionName + '.' + sectionIdx}
+            >
+              {section.commands.map((command, commandIdx) => {
+                const key =
+                  section.sectionName +
+                  '.' +
+                  sectionIdx +
+                  '.' +
+                  command.value +
+                  '.' +
+                  commandIdx;
+                return (
+                  <CommandSuggestionItem
+                    key={key}
+                    keyValue={key}
+                    command={command}
+                  />
+                );
+              })}
             </CommandGroup>
           </div>
         ))}
@@ -220,9 +259,16 @@ const CommandIcon = ({ icon }: { icon: string }) => {
   return <img src={icon} className="h-[18px] w-[18px]" />;
 };
 
-const CommandSuggestionItem = ({ command }: { command: CommandSuggestion }) => {
+const CommandSuggestionItem = ({
+  command,
+  keyValue,
+}: {
+  command: CommandSuggestion;
+  keyValue: string;
+}) => {
   return (
     <CommandItem
+      key={keyValue}
       value={command.value}
       keywords={[command.value, command.name]}
     >
@@ -237,9 +283,7 @@ const CommandSuggestionItem = ({ command }: { command: CommandSuggestion }) => {
       </div>
       <CommandShortcut>
         <div className="flex gap-0.5">
-          <span>
-            ({((command.weight ?? 0) * 100).toFixed(1)}%){' '}
-          </span>
+          <span>({((command.weight ?? 0) * 100).toFixed(1)}%) </span>
           <span>{((command.score ?? 0) * 100).toFixed(1)}%</span>
         </div>
       </CommandShortcut>
