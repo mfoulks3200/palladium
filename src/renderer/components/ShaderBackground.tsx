@@ -1,9 +1,8 @@
-import { backgrounds } from '@/lib/backgrounds';
+import { backgrounds, type ShaderBackground as ShaderBackgroundType } from '../../ipc/backgrounds';
 import { ReactShaderToy } from './agents-ui/react-shader-toy';
 import { useSettings } from '@/lib/settings';
 import { useEffect, useState } from 'react';
 import { useDebounce } from 'use-debounce';
-import { type ShaderBackground as ShaderBackgroundType } from '@/lib/backgrounds';
 
 const lerp = (x: number, y: number, a: number) => x * (1 - a) + y * a;
 
