@@ -86,21 +86,17 @@ function Main() {
   );
 
   return (
-    <SettingsProvider>
-      <FeatureFlagProvider>
-        <SystemMetaProvider>
-          <DesignTokenProvider>
-            <MediaStateProvider>
-              <TabMetaContext.Provider value={tabMeta}>
-                <InternalTabMetaContext.Provider value={internalTabMetaValue}>
-                  <BrowserUI />
-                </InternalTabMetaContext.Provider>
-              </TabMetaContext.Provider>
-            </MediaStateProvider>
-          </DesignTokenProvider>
-        </SystemMetaProvider>
-      </FeatureFlagProvider>
-    </SettingsProvider>
+    <FeatureFlagProvider>
+      <SystemMetaProvider>
+        <MediaStateProvider>
+          <TabMetaContext.Provider value={tabMeta}>
+            <InternalTabMetaContext.Provider value={internalTabMetaValue}>
+              <BrowserUI />
+            </InternalTabMetaContext.Provider>
+          </TabMetaContext.Provider>
+        </MediaStateProvider>
+      </SystemMetaProvider>
+    </FeatureFlagProvider>
   );
 }
 
@@ -121,18 +117,22 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
-        <Router>
-          <Routes>
-            <Route path="/" element={<Main />} />
-          </Routes>
-        </Router>
-      </ThemeProvider>
+      <SettingsProvider>
+        <DesignTokenProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <Router>
+              <Routes>
+                <Route path="/" element={<Main />} />
+              </Routes>
+            </Router>
+          </ThemeProvider>
+        </DesignTokenProvider>
+      </SettingsProvider>
     </ErrorBoundary>
   );
 }
