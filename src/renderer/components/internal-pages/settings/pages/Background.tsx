@@ -8,14 +8,14 @@ import {
   ComboboxItemWithDetail,
   ComboboxList,
 } from '@/components/ui/combobox';
-import { backgrounds } from '@/lib/backgrounds';
+import { backgrounds } from '../../../../../ipc/backgrounds';
 import { useState } from 'react';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { SwatchBook } from 'lucide-react';
 import { SettingsOption } from '../SettingComponents';
-import { type ShaderBackground as ShaderBackgroundType } from '@/lib/backgrounds';
+import { type ShaderBackground as ShaderBackgroundType } from '../../../../../ipc/backgrounds';
 import { ReactShaderToy } from '@/components/agents-ui/react-shader-toy';
 
 export const Background = () => {

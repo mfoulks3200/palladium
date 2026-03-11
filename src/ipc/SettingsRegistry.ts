@@ -1,6 +1,6 @@
 import * as z from 'zod';
 import { GetPathType, NestedKeysOf } from './Utility';
-import { backgrounds } from '@/lib/backgrounds';
+import { backgrounds } from './backgrounds';
 
 const settingsRegistryItem = z.registry<{
   introducedIn: string;
