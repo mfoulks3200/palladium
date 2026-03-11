@@ -54,7 +54,7 @@ function Main() {
       setTabMeta(args);
     });
 
-    window.electron.ipcRenderer.sendMessage('update-tab-meta');
+    window.electron.ipcRenderer.sendMessage('request-tab-meta');
   }, []);
 
   const tabMetaRef = useRef(tabMeta);

@@ -65,7 +65,7 @@ export interface CommandResponseIpc {
         id: string;
       };
       commands: {
-        icon?: IpcIcons | string;
+        icon?: IpcIcons;
         name: string;
         subname?: string;
         keywords?: string[];
@@ -164,7 +164,7 @@ export interface SystemMetaIpc {
  * Protocol definition for Renderer -> Main communication
  */
 export interface RendererToMainEvents {
-  'update-tab-meta': [];
+  'request-tab-meta': [];
   'update-active-tab': [{ activeTabUuid: string }];
   'update-tab-url': [{ newUrl: string }];
   'open-new-tab': [{ newUrl: string }];
@@ -175,9 +175,7 @@ export interface RendererToMainEvents {
   'app-resize': [{ width: number; height: number }];
   'browser-layout-change': [OverlayOptions];
   'devtools-layout-change': [OverlayOptions];
-  'ipc-example': [string];
   'command-bar': [CommandBarIpc];
-  'internal-page-navigate': [InternalPageNavigateIpc];
   'settings-sync': [SettingSchema];
   'clear-history': [];
   'feature-flags-refresh': [];
@@ -192,9 +190,8 @@ export interface RendererToMainEvents {
  */
 export interface MainToRendererEvents {
   'update-tab-meta': [TabManagerIpc];
-  'browser-layout-change': [];
-  'devtools-layout-change': [];
-  'ipc-example': [string];
+  'request-browser-layout': [];
+  'request-devtools-layout': [];
   'command-setup': [CommandBarSetupIpc];
   'internal-page-navigate': [InternalPageNavigateIpc];
   'feature-flags-sync': [FeatureFlagsIpc];

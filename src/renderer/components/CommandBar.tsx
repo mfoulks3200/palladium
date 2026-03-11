@@ -21,7 +21,7 @@ import {
 
 import './CommandBar.css';
 import { CommandResponseIpc } from 'src/ipc';
-import { LucideIcons } from 'src/ipc/Icons';
+import { LucideIcons } from '@/lib/icons';
 import { flushSync } from 'react-dom';
 
 interface CommandBarProps {
@@ -190,7 +190,6 @@ export const CommandBar = ({ className }: CommandBarProps) => {
       let icon = <></>;
       if (command.command.icon) {
         if (Object.hasOwn(LucideIcons, command.command.icon)) {
-          // @ts-expect-error
           const CommandIcon = LucideIcons[command.command.icon];
           icon = <CommandIcon />;
         } else {

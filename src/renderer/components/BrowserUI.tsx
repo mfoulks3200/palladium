@@ -65,14 +65,14 @@ export const BrowserUI = () => {
 
   useEffect(() => {
     const removeBrowserListener = window.electron.ipcRenderer.on(
-      'browser-layout-change',
+      'request-browser-layout',
       () => {
         onBrowserResize();
       },
     );
 
     const removeDevtoolsListener = window.electron.ipcRenderer.on(
-      'devtools-layout-change',
+      'request-devtools-layout',
       () => {
         onDevtoolsResize();
       },

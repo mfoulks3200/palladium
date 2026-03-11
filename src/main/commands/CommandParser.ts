@@ -1,23 +1,41 @@
 import fuzzysort from 'fuzzysort';
 import { CommandResponseIpc } from 'src/ipc';
 import { typedIpcMain } from '../ipc';
+import { TabManager } from '../TabManager';
+import { Tab } from '../Tab';
 
 import * as BuiltInProviders from './builtins';
 
 type CommandProviderResponse = CommandResponseIpc['suggestions'][string];
 
+/** A single suggestion item returned by a command provider. */
+export type CommandSuggestion = CommandProviderResponse['commands'][number];
+
+/** An array of suggestion items returned by a command provider. */
+export type CommandSuggestions = CommandProviderResponse['commands'];
+
+export interface CommandResult {
+  success: boolean;
+  error?: string;
+}
+
 export interface CommandMetadata {
   tabUuid?: string;
+  tab?: Tab;
 }
 
 export interface CommandProvider {
   getProviderMetadata: () => CommandProviderResponse['section'];
-  getSuggestions: (input: string) => CommandProviderResponse['commands'];
+  getSuggestions: (
+    input: string,
+  ) =>
+    | CommandProviderResponse['commands']
+    | Promise<CommandProviderResponse['commands']>;
   runCommand: (
     commandId: string,
     input: string,
     metadata?: CommandMetadata,
-  ) => void;
+  ) => CommandResult | Promise<CommandResult>;
 }
 
 const providerWeightInfluence = 0.1;
@@ -35,33 +53,43 @@ export class CommandParser {
   }
 
   private constructor() {
-    typedIpcMain.handle('command-input', (_event, commandInput) => {
+    typedIpcMain.handle('command-input', async (_event, commandInput) => {
       if (commandInput.mode === 'suggestions') {
         return this.generateSuggestions(commandInput.input);
       }
       if (commandInput.mode === 'execute' && commandInput.command) {
-        console.log('Executing command: ', commandInput);
+        const metadata = this.resolveMetadata(commandInput.tabUuid);
         for (const provider of Object.keys(this.providers)) {
           if (commandInput.command!.startsWith(provider)) {
-            this.providers[provider].runCommand(
+            const result = await this.providers[provider].runCommand(
               commandInput.command.substring(provider.length + 1),
               commandInput.input,
-              {
-                tabUuid: commandInput.tabUuid,
-              },
+              metadata,
             );
+            if (!result.success) {
+              console.error(
+                `Command failed (${commandInput.command}):`,
+                result.error,
+              );
+            }
             return undefined;
           }
         }
-        console.log(
-          'Error: Could not find provider for ' + commandInput.command,
-        );
+        console.error('Could not find provider for ' + commandInput.command);
       }
       return undefined;
     });
     for (const BuiltInProvider of Object.values(BuiltInProviders)) {
       this.addProvider(new BuiltInProvider());
     }
+  }
+
+  private resolveMetadata(tabUuid?: string): CommandMetadata {
+    const metadata: CommandMetadata = { tabUuid };
+    if (tabUuid) {
+      metadata.tab = TabManager.getInstance().getTabByUuid(tabUuid);
+    }
+    return metadata;
   }
 
   public addProvider(provider: CommandProvider) {
@@ -76,12 +104,29 @@ export class CommandParser {
     delete this.providers[meta.id];
   }
 
-  private generateSuggestions(input: string): CommandResponseIpc {
+  private async generateSuggestions(
+    input: string,
+  ): Promise<CommandResponseIpc> {
     const suggestionSections: Record<string, CommandProviderResponse> = {};
 
-    for (const provider of Object.values(this.providers)) {
-      const metadata = provider.getProviderMetadata();
-      const suggestions = provider.getSuggestions(input);
+    const results = await Promise.allSettled(
+      Object.values(this.providers).map(async (provider) => {
+        const metadata = provider.getProviderMetadata();
+        const suggestions = await provider.getSuggestions(input);
+        return { metadata, suggestions };
+      }),
+    );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error(
+          'Command provider failed during suggestions:',
+          result.reason,
+        );
+        continue;
+      }
+
+      const { metadata, suggestions } = result.value;
 
       let scored: {
         command: CommandProviderResponse['commands'][number];
@@ -91,17 +136,17 @@ export class CommandParser {
       if (!input) {
         scored = suggestions.map((cmd) => ({ command: cmd }));
       } else {
-        const results = fuzzysort.go(input, suggestions, {
+        const fuzzyResults = fuzzysort.go(input, suggestions, {
           keys: ['name', 'keywords'],
           threshold: -1000,
         });
-        scored = results.map((result) => {
+        scored = fuzzyResults.map((r) => {
           const influencedWeight =
-            (result.obj.weight ?? 0) * providerWeightInfluence;
+            (r.obj.weight ?? 0) * providerWeightInfluence;
           const invWeight = 1 - influencedWeight;
           return {
-            command: result.obj,
-            score: result.score * invWeight,
+            command: r.obj,
+            score: r.score * invWeight,
           };
         });
       }

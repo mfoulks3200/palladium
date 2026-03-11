@@ -61,7 +61,7 @@ export class TabManager {
   ) {
     if (!dimensions) {
       typedWebContents(this.mainWindow.webContents).send(
-        'browser-layout-change',
+        'request-browser-layout',
       );
       return;
     }
@@ -86,7 +86,7 @@ export class TabManager {
   ) {
     if (!dimensions) {
       typedWebContents(this.mainWindow.webContents).send(
-        'devtools-layout-change',
+        'request-devtools-layout',
       );
       return;
     }
