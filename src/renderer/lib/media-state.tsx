@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -62,7 +63,7 @@ export const MediaStateProvider = ({ children }: PropsWithChildren) => {
 
 export const useMediaStates = (): MediaState[] => {
   const { mediaStates } = useContext(MediaStateContext);
-  return [...mediaStates.values()];
+  return useMemo(() => [...mediaStates.values()], [mediaStates]);
 };
 
 export const useMediaState = (id: string): MediaState | undefined => {
