@@ -57,7 +57,7 @@ export const MediaWidget = () => {
     };
   }, []);
 
-  if (mediaState.length === 0 || !currentMediaState) {
+  if (mediaStates.length === 0 || !currentMediaState) {
     return <></>;
   }
 
