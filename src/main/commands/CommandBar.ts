@@ -36,7 +36,7 @@ const createCommandBarWindow = (): BrowserWindow => {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
-      devTools: true,
+      devTools: false,
     },
   });
 
