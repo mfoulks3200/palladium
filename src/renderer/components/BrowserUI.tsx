@@ -21,7 +21,7 @@ import { InternalPageRouter } from './internal-pages/InternalPageRouter';
 
 import styles from './BrowserUI.module.css';
 import { cn } from '@/lib/utils';
-import { TabMetaContext } from '@/windows/main-ui/App';
+import { TabMetaContext } from '@/lib/tab-meta';
 import { ShaderBackground } from './ShaderBackground';
 
 export const BrowserUI = () => {
