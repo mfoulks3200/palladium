@@ -1,3 +1,40 @@
+## [0.0.10] — 2026-03-11
+
+### Added
+
+- **Global Shortcut Customization** — UI to configure the system-wide keyboard shortcut for opening the command bar
+- **Granular Error Boundaries** — React error boundaries wrapping each major UI section (sidebar, tabs, command bar) to prevent full-app crashes from isolated failures
+
+### Changed
+
+- **Command Bar Performance** — Refactored sprawling `useMemo` chains in the command bar into declarative components, significantly reducing unnecessary re-computation
+- **Tab Manager Refactor** — Overhauled `TabManager` as a proper singleton with clean lifecycle management; moved background state to the shared IPC layer
+- **Electron Invoke/Handle Pattern** — Migrated IPC calls to use `ipcMain.handle` / `ipcRenderer.invoke` for request-response channels instead of fire-and-forget events
+- **Sidebar Decomposition** — Broke the monolithic `Sidebar` component into focused sub-components for maintainability
+- **Context Module Extraction** — Moved `TabMetaContext` and `InternalTabMetaContext` into their own module to reduce circular dependency risk
+- **Design Token Coverage** — Replaced all remaining hardcoded Tailwind color classes with design token equivalents
+
+### Fixed
+
+- Tab and sidebar backgrounds rendering as solid black instead of using design tokens
+- `MediaWidget` referencing a stale variable name after a prior refactor
+- `MediaWidget` interval being torn down and recreated every 500 ms due to unstable deps
+- `useMediaStates` producing a new array reference every render, causing unnecessary re-renders downstream
+- `PortalOverlay` `destroyOverlay` callback instability causing stale closures and missed cleanups
+- Inconsistent provider nesting order between `main-ui` and `command-bar` windows
+- Dead state management code in `DesignTokenProvider` removed
+- Missing `internalTabMeta` dependency in settings `useEffect`
+- Missing `key` props on settings page list renders
+- `useForwardedRef` missing `useEffect` dependency array
+
+### Tests & Tooling
+
+- **CI Lint Workflow** — New GitHub Actions workflow running ESLint on every push and pull request
+- **Jest Test Suite** — Co-located test files added across main process, renderer, and IPC layers with comprehensive coverage for settings, providers, and command providers
+- **PR Test Workflow** — Automated test run on every pull request via CI
+
+---
+
 ## [0.0.9] — 2026-03-07
 
 ### Added

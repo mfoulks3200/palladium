@@ -27,18 +27,10 @@ export const SystemMetaProvider = ({ children }: PropsWithChildren) => {
   const [meta, setMeta] = useState<SystemMetaIpc | null>(null);
 
   useEffect(() => {
-    const removeListener = window.electron.ipcRenderer.on(
-      'system-meta',
-      (data) => {
-        setMeta(data);
-      },
-    );
-
-    window.electron.ipcRenderer.sendMessage('get-system-meta');
-
-    return () => {
-      removeListener();
-    };
+    window.electron.ipcRenderer
+      .invoke('get-system-meta')
+      .then(setMeta)
+      .catch(console.error);
   }, []);
 
   return (

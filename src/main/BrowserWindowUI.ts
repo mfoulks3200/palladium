@@ -1,8 +1,8 @@
-import { app, BrowserWindow, shell, screen, BrowserView, Menu } from 'electron';
+import { app, BrowserWindow, screen, Menu } from 'electron';
 import os from 'node:os';
 import path from 'node:path';
 import MenuBuilder from './menu';
-import { typedIpcMain, typedWebContents } from './ipc';
+import { typedIpcMain } from './ipc';
 import { SystemMetaIpc, WindowActionIpc } from '../ipc';
 import { SettingsManager } from './SettingsManager';
 import { HistoryManager } from './HistoryManager';
@@ -12,7 +12,6 @@ import { CommandParser } from './commands/CommandParser';
 import { commandBarSetup } from './commands/CommandBar';
 import { TabManager } from './TabManager';
 import { Tab } from './Tab';
-import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { resolveHtmlPath } from './util';
 import { AnalyticsManager } from './AnalyticsManager';
@@ -100,12 +99,8 @@ export class BrowserWindowUI {
       { role: 'cut' },
       { role: 'paste' },
     ]);
-    this.mainWindow.webContents.on('context-menu', (_event, params) => {
-      // only show the context menu if the element is editable
-      // if (params.isEditable) {
-      console.log(params);
+    this.mainWindow.webContents.on('context-menu', () => {
       menu.popup();
-      // }
     });
 
     // Open urls in the user's browser
@@ -121,90 +116,111 @@ export class BrowserWindowUI {
   }
 
   public initializeSubsystems() {
-    SettingsManager.getInstance();
+    const initSubsystem = (name: string, init: () => void) => {
+      try {
+        init();
+      } catch (error) {
+        console.error(`Failed to initialize subsystem "${name}":`, error);
+      }
+    };
 
-    HistoryManager.getInstance();
-
-    // Initialize analytics and respect the user's opt-in/out preference.
-    const analytics = AnalyticsManager.getInstance();
-    const analyticsEnabled =
-      SettingsManager.getInstance().getItem('analytics.enabled');
-    analytics.setEnabled(analyticsEnabled);
-    analytics.capture('app_launched');
-
-    setupOverlayManager(this.mainWindow);
-
-    registerGlobalShortcuts();
-
-    // Respond to renderer requests for system metadata.
-    typedIpcMain.on('get-system-meta', (event) => {
-      const meta: SystemMetaIpc = {
-        platform: process.platform,
-        arch: process.arch,
-        osVersion: os.release(),
-        electronVersion: process.versions.electron ?? '',
-        chromeVersion: process.versions.chrome ?? '',
-        nodeVersion: process.versions.node ?? '',
-        appVersion: app.getVersion(),
-        appName: app.getName(),
-        gitInfo: {
-          version: VERSION,
-          commitHash: COMMITHASH,
-          branch: BRANCH,
-          lastCommitDateTime: LASTCOMMITDATETIME,
-        },
-      };
-      typedWebContents(event.sender).send('system-meta', meta);
+    initSubsystem('SettingsManager', () => {
+      SettingsManager.getInstance();
     });
 
-    // Handle window operations (close, minimize, maximize/restore).
-    typedIpcMain.on('window-action', (event, { action }: WindowActionIpc) => {
-      const win = BrowserWindow.fromWebContents(event.sender);
-      if (!win || win.isDestroyed()) return;
+    initSubsystem('HistoryManager', () => {
+      HistoryManager.getInstance();
+    });
 
-      switch (action) {
-        case 'close':
-          win.close();
-          break;
-        case 'minimize':
-          win.minimize();
-          break;
-        case 'maximize':
-          if (win.isMaximized()) {
-            win.unmaximize();
-          } else {
-            win.maximize();
-          }
-          break;
-        default:
-          break;
+    initSubsystem('AnalyticsManager', () => {
+      const analytics = AnalyticsManager.getInstance();
+      const analyticsEnabled =
+        SettingsManager.getInstance().getItem('analytics.enabled');
+      analytics.setEnabled(analyticsEnabled);
+      analytics.capture('app_launched');
+    });
+
+    initSubsystem('OverlayManager', () => {
+      setupOverlayManager(this.mainWindow);
+    });
+
+    initSubsystem('GlobalShortcuts', () => {
+      const savedShortcut =
+        SettingsManager.getInstance().getItem('shortcuts.commandBar');
+      registerGlobalShortcuts(savedShortcut);
+    });
+
+    initSubsystem('SystemMetaIpc', () => {
+      typedIpcMain.handle('get-system-meta', () => {
+        return {
+          platform: process.platform,
+          arch: process.arch,
+          osVersion: os.release(),
+          electronVersion: process.versions.electron ?? '',
+          chromeVersion: process.versions.chrome ?? '',
+          nodeVersion: process.versions.node ?? '',
+          appVersion: app.getVersion(),
+          appName: app.getName(),
+          gitInfo: {
+            version: VERSION,
+            commitHash: COMMITHASH,
+            branch: BRANCH,
+            lastCommitDateTime: LASTCOMMITDATETIME,
+          },
+        } satisfies SystemMetaIpc;
+      });
+    });
+
+    initSubsystem('WindowActions', () => {
+      typedIpcMain.on('window-action', (event, { action }: WindowActionIpc) => {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (!win || win.isDestroyed()) return;
+
+        switch (action) {
+          case 'close':
+            win.close();
+            break;
+          case 'minimize':
+            win.minimize();
+            break;
+          case 'maximize':
+            if (win.isMaximized()) {
+              win.unmaximize();
+            } else {
+              win.maximize();
+            }
+            break;
+          default:
+            break;
+        }
+      });
+    });
+
+    initSubsystem('CommandParser', () => {
+      CommandParser.getInstance();
+    });
+
+    initSubsystem('CommandBar', () => {
+      commandBarSetup();
+    });
+
+    initSubsystem('TabManager', () => {
+      const tabManager = TabManager.initialize(this.mainWindow);
+      if (this.debugMode) {
+        tabManager.addTab(new Tab('https://www.electronjs.org'));
+        tabManager.addTab(new Tab('https://www.google.com'));
+
+        tabManager.addTab(new Tab('palladium://settings'));
+        tabManager.addTab(new Tab('palladium://editor'));
+
+        tabManager.focusTabIndex(3);
+      } else {
+        tabManager.focusTab(new Tab('https://google.com'));
       }
     });
-
-    CommandParser.getInstance();
-
-    commandBarSetup();
-
-    const tabManager = new TabManager(this.mainWindow);
-    if (this.debugMode) {
-      tabManager.addTab(new Tab('https://www.electronjs.org'));
-      tabManager.addTab(new Tab('https://www.google.com'));
-      // tabManager.addTab(
-      //   new Tab(
-      //     'https://www.youtube.com/watch?v=WUbnO5hz_-U&list=RDWUbnO5hz_-U&start_radio=1',
-      //   ),
-      // );
-
-      tabManager.addTab(new Tab('palladium://settings'));
-      tabManager.addTab(new Tab('palladium://editor'));
-
-      tabManager.focusTabIndex(3);
-    } else {
-      tabManager.focusTab(new Tab('https://google.com'));
-    }
   }
 
   public createMenu() {
-    const menuBuilder = new MenuBuilder(this.mainWindow);
+    new MenuBuilder(this.mainWindow);
   }
 }

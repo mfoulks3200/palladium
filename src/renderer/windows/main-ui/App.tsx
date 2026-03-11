@@ -10,15 +10,7 @@ import '@fontsource/inter/800';
 import './App.css';
 import '../globals.css';
 import { ThemeProvider } from '../../components/ThemeProvider';
-import {
-  createContext,
-  ReactElement,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserUI } from '../../components/BrowserUI';
 import { TabManagerIpc } from '../../../ipc';
 import { SettingsProvider } from '@/lib/settings';
@@ -27,21 +19,11 @@ import { SystemMetaProvider } from '@/lib/system-meta';
 import { DesignTokenProvider } from '../../hooks/use-design-tokens';
 import { MediaStateProvider } from '@/lib/media-state';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
-
-interface InternalTabMetaItem {
-  title: string;
-  icon: ReactElement;
-}
-
-interface InternalTabMeta {
-  tabs: Record<string, InternalTabMetaItem>;
-  setTabMeta: (meta: InternalTabMetaItem, tabId?: string) => void;
-}
-
-export const TabMetaContext = createContext<TabManagerIpc | null>(null);
-export const InternalTabMetaContext = createContext<InternalTabMeta | null>(
-  null,
-);
+import {
+  InternalTabMetaContext,
+  InternalTabMetaItem,
+  TabMetaContext,
+} from '@/lib/tab-meta';
 
 function Main() {
   const [tabMeta, setTabMeta] = useState<TabManagerIpc | null>(null);
@@ -54,7 +36,7 @@ function Main() {
       setTabMeta(args);
     });
 
-    window.electron.ipcRenderer.sendMessage('update-tab-meta');
+    window.electron.ipcRenderer.sendMessage('request-tab-meta');
   }, []);
 
   const tabMetaRef = useRef(tabMeta);
@@ -86,21 +68,17 @@ function Main() {
   );
 
   return (
-    <SettingsProvider>
-      <FeatureFlagProvider>
-        <SystemMetaProvider>
-          <DesignTokenProvider>
-            <MediaStateProvider>
-              <TabMetaContext.Provider value={tabMeta}>
-                <InternalTabMetaContext.Provider value={internalTabMetaValue}>
-                  <BrowserUI />
-                </InternalTabMetaContext.Provider>
-              </TabMetaContext.Provider>
-            </MediaStateProvider>
-          </DesignTokenProvider>
-        </SystemMetaProvider>
-      </FeatureFlagProvider>
-    </SettingsProvider>
+    <FeatureFlagProvider>
+      <SystemMetaProvider>
+        <MediaStateProvider>
+          <TabMetaContext.Provider value={tabMeta}>
+            <InternalTabMetaContext.Provider value={internalTabMetaValue}>
+              <BrowserUI />
+            </InternalTabMetaContext.Provider>
+          </TabMetaContext.Provider>
+        </MediaStateProvider>
+      </SystemMetaProvider>
+    </FeatureFlagProvider>
   );
 }
 
@@ -121,18 +99,22 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
-        <Router>
-          <Routes>
-            <Route path="/" element={<Main />} />
-          </Routes>
-        </Router>
-      </ThemeProvider>
+      <SettingsProvider>
+        <DesignTokenProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <Router>
+              <Routes>
+                <Route path="/" element={<Main />} />
+              </Routes>
+            </Router>
+          </ThemeProvider>
+        </DesignTokenProvider>
+      </SettingsProvider>
     </ErrorBoundary>
   );
 }

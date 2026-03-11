@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
-import { createContext } from 'react';
+
 import { CustomSearchEngines } from '../CustomSearchEngines';
 import { SettingsContext } from '@/lib/settings';
 
@@ -62,7 +62,7 @@ const renderWithSettings = (
   engines: Array<{ name: string; shortcut: string; urlPattern: string }> = initialEngines,
 ) => {
   const mockSetCustomEngines = jest.fn();
-  const mockUseSetting = jest.fn((_key: string) => {
+  const mockUseSetting = jest.fn(() => {
     return [engines, mockSetCustomEngines];
   });
 

@@ -1,38 +1,35 @@
-import {
-  BrowserWindow,
-  clipboard,
-  Menu,
-  MenuItem,
-  WebContentsView,
-} from 'electron';
+import { BrowserWindow, clipboard, Menu, MenuItem } from 'electron';
 import { Tab } from './Tab';
-import {
-  MediaControlIpc,
-  MediaState,
-  TabActionsIpc,
-  TabManagerIpc,
-  OverlayOptions,
-} from '../ipc';
-import { disablePortals } from '@/components/PortalOverlay';
-import { typedIpcMain, typedWebContents } from './ipc';
+import { MediaControlIpc, MediaState } from '../ipc';
+import { typedWebContents } from './ipc';
 import { AnalyticsManager } from './AnalyticsManager';
-
-let browsingView: WebContentsView;
-const padding = 12;
-const sidebarWidth = 256 + padding * 2;
+import { registerTabManagerIpc } from './TabManagerIpcHandlers';
 
 export class TabManager {
   private static instance: TabManager;
   private mainWindow: BrowserWindow;
   private currentTab: Tab | null = null;
-  private tabs: Set<Tab> = new Set();
+  private tabs: Tab[] = [];
   private mediaStates: Map<string, MediaState> = new Map();
 
-  public static getInstance() {
+  public static getInstance(): TabManager {
+    if (!TabManager.instance) {
+      throw new Error(
+        'TabManager has not been initialized. Call TabManager.initialize(mainWindow) first.',
+      );
+    }
     return TabManager.instance;
   }
 
-  public constructor(mainWindow: BrowserWindow) {
+  public static initialize(mainWindow: BrowserWindow): TabManager {
+    if (TabManager.instance) {
+      throw new Error('TabManager has already been initialized.');
+    }
+    TabManager.instance = new TabManager(mainWindow);
+    return TabManager.instance;
+  }
+
+  private constructor(mainWindow: BrowserWindow) {
     this.mainWindow = mainWindow;
     this.updateBrowsingView();
     this.updateDevtoolsView();
@@ -48,134 +45,10 @@ export class TabManager {
       await this.updateBrowsingView();
       await this.updateDevtoolsView();
     });
-    typedIpcMain.on('update-tab-meta', () => {
-      this.updateRenderProcess();
-    });
-    typedIpcMain.on('app-resize', (_event, size) => {
-      this.updateBrowsingView();
-      this.updateDevtoolsView();
-    });
-    typedIpcMain.on('update-tab-url', (_event, url) => {
-      this.currentTab?.view.webContents.loadURL(url.newUrl);
-    });
-    typedIpcMain.on('open-new-tab', (_event, url) => {
-      const tab = new Tab(url.newUrl);
-      AnalyticsManager.getInstance().capture('tab_opened');
-      this.focusTab(tab);
-    });
-    typedIpcMain.on('open-settings', () => {
-      const existing = this.getAllTabs().find(
-        (tab) => tab.getCurrentUrl() === 'palladium://settings',
-      );
-      if (existing) {
-        this.focusTab(existing);
-      } else {
-        this.focusTab(new Tab('palladium://settings'));
-      }
-    });
-    typedIpcMain.on('browser-layout-change', (_event, size: OverlayOptions) => {
-      this.updateBrowsingView({
-        x: size.position.x,
-        y: size.position.y,
-        width: size.position.width,
-        height: size.position.height,
-      });
-    });
-    typedIpcMain.on(
-      'devtools-layout-change',
-      (_event, size: OverlayOptions) => {
-        this.updateDevtoolsView({
-          x: size.position.x,
-          y: size.position.y,
-          width: size.position.width,
-          height: size.position.height,
-        });
-      },
-    );
-    typedIpcMain.on('update-active-tab', (_event, newTabMeta) => {
-      console.log('Switching to tab uuid', newTabMeta);
-      this.focusTabUuid(newTabMeta.activeTabUuid);
-    });
-    typedIpcMain.on('close-tab', (_event, tabMeta) => {
-      console.log('Closing tab uuid', tabMeta.uuid);
-      const selectedIndex = this.getTabIndex(tabMeta.uuid);
-      const selectedTab = this.getTabByUuid(tabMeta.uuid);
-      if (selectedIndex - 1 > 0) {
-        this.focusTabIndex(selectedIndex - 1);
-      }
-      if (selectedTab) {
-        AnalyticsManager.getInstance().capture('tab_closed');
-        if (this.currentTab && tabMeta.uuid === this.currentTab.uuid) {
-          this.mainWindow.contentView.removeChildView(this.currentTab.view);
-        }
-        selectedTab.view.webContents.close();
-        this.tabs.delete(selectedTab);
-      }
-    });
-    typedIpcMain.on('reorder-tab', (_event, data) => {
-      console.log('Reordering tab', data);
-      const tabArray = [...this.tabs];
-      const [removed] = tabArray.splice(data.startIndex, 1);
-      tabArray.splice(data.finishIndex, 0, removed);
-      this.tabs = new Set(tabArray);
-      this.updateRenderProcess();
-    });
-    typedIpcMain.on('tab-actions', (_event, actions: TabActionsIpc) => {
-      switch (actions.action) {
-        case 'back':
-          this.currentTab?.view.webContents.navigationHistory.goBack();
-          break;
-        case 'forward':
-          this.currentTab?.view.webContents.navigationHistory.goForward();
-          break;
-        case 'refresh':
-          this.currentTab?.view.webContents.reload();
-          break;
-        case 'hard-refresh':
-          this.currentTab?.view.webContents.reloadIgnoringCache();
-          break;
-        case 'mute':
-          this.currentTab?.setMuted(true);
-          break;
-        case 'unmute':
-          this.currentTab?.setMuted(false);
-          break;
-      }
-    });
-    typedIpcMain.on('tab-context-menu', (_event, newTabMeta) => {
-      const tab = this.getTabByUuid(newTabMeta.uuid);
-      console.log('Context menu on tab uuid', newTabMeta, tab?.getTitle());
-      if (tab) {
-        const menu = new Menu();
-        menu.append(
-          new MenuItem({
-            label: tab.getMuted() ? 'Unmute Tab' : 'Mute Tab',
-            click: () => tab.setMuted(!tab.getMuted()),
-          }),
-        );
-        menu.append(
-          new MenuItem({
-            label: 'Copy URL',
-            click: () => clipboard.writeText(tab.getCurrentUrl()),
-          }),
-        );
-        menu.append(
-          new MenuItem({
-            label: 'Copy Page Title',
-            click: () => clipboard.writeText(tab.getTitle()),
-          }),
-        );
-
-        menu.popup({});
-      }
-    });
-    typedIpcMain.on('media-control', (_event, data: MediaControlIpc) => {
-      this.handleMediaControl(data);
-    });
+    registerTabManagerIpc(this);
     setInterval(() => {
       this.updateRenderProcess();
     }, 500);
-    TabManager.instance = this;
   }
 
   public async updateBrowsingView(
@@ -188,7 +61,7 @@ export class TabManager {
   ) {
     if (!dimensions) {
       typedWebContents(this.mainWindow.webContents).send(
-        'browser-layout-change',
+        'request-browser-layout',
       );
       return;
     }
@@ -213,7 +86,7 @@ export class TabManager {
   ) {
     if (!dimensions) {
       typedWebContents(this.mainWindow.webContents).send(
-        'devtools-layout-change',
+        'request-devtools-layout',
       );
       return;
     }
@@ -232,7 +105,7 @@ export class TabManager {
   }
 
   public updateRenderProcess() {
-    const tabMeta = [...this.tabs]
+    const tabMeta = this.tabs
       .map((tab) => (tab.view ? tab.getTabIpcMeta() : undefined))
       .filter((meta) => !!meta);
     if (!this.mainWindow.isDestroyed()) {
@@ -244,13 +117,27 @@ export class TabManager {
   }
 
   public addTab(tab: Tab) {
-    if (!this.tabs.has(tab)) {
-      this.tabs.add(tab);
+    if (!this.tabs.includes(tab)) {
+      this.tabs.push(tab);
       tab.addEventListener('tab-updated', () => {
         this.updateRenderProcess();
       });
       tab.addEventListener('media-state-changed', () => {
         this.syncMediaStates();
+      });
+      tab.addEventListener('request-focus', () => {
+        if (this.currentTab === tab) {
+          this.focusTab(tab);
+        }
+      });
+      tab.addEventListener('new-window-requested', (event: Event) => {
+        const { url, disposition } = (event as CustomEvent).detail;
+        const newTab = new Tab(url);
+        if (disposition === 'background-tab') {
+          this.addTab(newTab);
+        } else {
+          this.focusTab(newTab);
+        }
       });
     }
   }
@@ -319,22 +206,21 @@ export class TabManager {
     this.updateRenderProcess();
   }
 
-  public focusTabIndex(tab: number) {
-    this.focusTab([...this.tabs][tab]);
+  public focusTabIndex(index: number) {
+    this.focusTab(this.tabs[index]);
   }
 
   public focusTabUuid(uuid: string) {
-    const nextTab = [...this.tabs].find((tab) => tab.uuid == uuid)!;
-    console.log('Switching to ', nextTab);
+    const nextTab = this.tabs.find((tab) => tab.uuid === uuid)!;
     this.focusTab(nextTab);
   }
 
   public getTabIndex(tabUuid: string) {
-    return [...this.tabs].findIndex((t) => t.uuid === tabUuid);
+    return this.tabs.findIndex((t) => t.uuid === tabUuid);
   }
 
   public getTabByUuid(tabUuid: string) {
-    return [...this.tabs].find((t) => t.uuid === tabUuid);
+    return this.tabs.find((t) => t.uuid === tabUuid);
   }
 
   public getCurrentTab() {
@@ -343,6 +229,99 @@ export class TabManager {
 
   public getAllTabs() {
     return [...this.tabs];
+  }
+
+  public loadUrlInCurrentTab(url: string) {
+    this.currentTab?.view.webContents.loadURL(url);
+  }
+
+  public openNewTab(url: string) {
+    const tab = new Tab(url);
+    AnalyticsManager.getInstance().capture('tab_opened');
+    this.focusTab(tab);
+  }
+
+  public openSettings() {
+    const existing = this.getAllTabs().find(
+      (tab) => tab.getCurrentUrl() === 'palladium://settings',
+    );
+    if (existing) {
+      this.focusTab(existing);
+    } else {
+      this.focusTab(new Tab('palladium://settings'));
+    }
+  }
+
+  public closeTab(uuid: string) {
+    const selectedIndex = this.getTabIndex(uuid);
+    const selectedTab = this.getTabByUuid(uuid);
+    if (selectedIndex > 0) {
+      this.focusTabIndex(selectedIndex - 1);
+    }
+    if (selectedTab) {
+      AnalyticsManager.getInstance().capture('tab_closed');
+      if (this.currentTab && uuid === this.currentTab.uuid) {
+        this.mainWindow.contentView.removeChildView(this.currentTab.view);
+      }
+      selectedTab.view.webContents.close();
+      const idx = this.tabs.indexOf(selectedTab);
+      if (idx !== -1) this.tabs.splice(idx, 1);
+    }
+  }
+
+  public reorderTab(startIndex: number, finishIndex: number) {
+    const [removed] = this.tabs.splice(startIndex, 1);
+    this.tabs.splice(finishIndex, 0, removed);
+    this.updateRenderProcess();
+  }
+
+  public performTabAction(action: string) {
+    switch (action) {
+      case 'back':
+        this.currentTab?.view.webContents.navigationHistory.goBack();
+        break;
+      case 'forward':
+        this.currentTab?.view.webContents.navigationHistory.goForward();
+        break;
+      case 'refresh':
+        this.currentTab?.view.webContents.reload();
+        break;
+      case 'hard-refresh':
+        this.currentTab?.view.webContents.reloadIgnoringCache();
+        break;
+      case 'mute':
+        this.currentTab?.setMuted(true);
+        break;
+      case 'unmute':
+        this.currentTab?.setMuted(false);
+        break;
+    }
+  }
+
+  public showTabContextMenu(uuid: string) {
+    const tab = this.getTabByUuid(uuid);
+    if (tab) {
+      const menu = new Menu();
+      menu.append(
+        new MenuItem({
+          label: tab.getMuted() ? 'Unmute Tab' : 'Mute Tab',
+          click: () => tab.setMuted(!tab.getMuted()),
+        }),
+      );
+      menu.append(
+        new MenuItem({
+          label: 'Copy URL',
+          click: () => clipboard.writeText(tab.getCurrentUrl()),
+        }),
+      );
+      menu.append(
+        new MenuItem({
+          label: 'Copy Page Title',
+          click: () => clipboard.writeText(tab.getTitle()),
+        }),
+      );
+      menu.popup({});
+    }
   }
 
   /**
@@ -362,7 +341,7 @@ export class TabManager {
    * that owns the given media state by injecting JavaScript into its
    * WebContents.
    */
-  private async handleMediaControl(data: MediaControlIpc) {
+  public async handleMediaControl(data: MediaControlIpc) {
     const tab = this.getTabByMediaId(data.mediaId);
     if (!tab || tab.view.webContents.isDestroyed()) return;
 

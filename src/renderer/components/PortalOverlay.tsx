@@ -2,9 +2,7 @@ import { cn } from '@/lib/utils';
 import {
   createContext,
   PropsWithChildren,
-  ReactElement,
   useCallback,
-  useContext,
   useEffect,
   useRef,
   useState,
@@ -60,8 +58,7 @@ export const OverlayPortal = (props: PropsWithChildren<OverlayPortalProps>) => {
     }
   }, [dummyRef]);
 
-  const destroyOverlay = () => {
-    console.log('Destroying overlay');
+  const destroyOverlay = useCallback(() => {
     if (portalDomWindow) {
       portalDomWindow.close();
     }
@@ -70,13 +67,13 @@ export const OverlayPortal = (props: PropsWithChildren<OverlayPortalProps>) => {
     }
     setPortalDomWindow(null);
     setPortalDomRoot(null);
-  };
+  }, [portalDomWindow, props.onBlur]);
 
   useEffect(() => {
     if (disablePortals && portalDomWindow) {
       destroyOverlay();
     }
-  }, [disablePortals, portalDomWindow]);
+  }, [disablePortals, portalDomWindow, destroyOverlay]);
 
   const dummyDiv = (
     <div
@@ -113,12 +110,8 @@ export const OverlayPortal = (props: PropsWithChildren<OverlayPortalProps>) => {
   }
 };
 
-interface PortalWrapperControllerContext {
-  closePortal: () => void;
-}
-
 export const PortalWrapperControllerContext =
-  createContext<PortalWrapperControllerContext>({ closePortal: () => {} });
+  createContext<{ closePortal: () => void }>({ closePortal: () => {} });
 
 interface PortalWrapperProps {
   onUnmount?: () => void;

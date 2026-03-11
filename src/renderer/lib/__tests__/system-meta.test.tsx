@@ -4,12 +4,14 @@ import { SystemMetaProvider, useSystemMeta } from '../system-meta';
 
 // Mock IPC
 const mockSendMessage = jest.fn();
+const mockInvoke = jest.fn();
 let ipcListeners: Record<string, (data: any) => void> = {};
 
 Object.defineProperty(window, 'electron', {
   value: {
     ipcRenderer: {
       sendMessage: mockSendMessage,
+      invoke: mockInvoke,
       on: jest.fn((channel: string, callback: (data: any) => void) => {
         ipcListeners[channel] = callback;
         return jest.fn();
@@ -21,6 +23,8 @@ Object.defineProperty(window, 'electron', {
 
 beforeEach(() => {
   mockSendMessage.mockClear();
+  mockInvoke.mockReset();
+  mockInvoke.mockResolvedValue(null);
   ipcListeners = {};
 });
 
@@ -40,7 +44,7 @@ describe('SystemMetaProvider', () => {
         <div />
       </SystemMetaProvider>,
     );
-    expect(mockSendMessage).toHaveBeenCalledWith('get-system-meta');
+    expect(mockInvoke).toHaveBeenCalledWith('get-system-meta');
   });
 
   it('starts with null (loading state)', () => {
@@ -52,30 +56,32 @@ describe('SystemMetaProvider', () => {
     expect(screen.getByTestId('meta')).toHaveTextContent('loading');
   });
 
-  it('provides system meta after IPC response', () => {
-    render(
-      <SystemMetaProvider>
-        <TestMetaConsumer />
-      </SystemMetaProvider>,
-    );
+  it('provides system meta after IPC response', async () => {
+    const metaData = {
+      platform: 'darwin',
+      arch: 'arm64',
+      osVersion: '14.0',
+      electronVersion: '35.0.0',
+      chromeVersion: '128.0',
+      nodeVersion: '20.0',
+      appVersion: '0.0.8',
+      appName: 'Palladium',
+      gitInfo: {
+        version: '0.0.8',
+        commitHash: 'abc123',
+        branch: 'main',
+        lastCommitDateTime: '2024-01-01',
+      },
+    };
 
-    act(() => {
-      ipcListeners['system-meta']?.({
-        platform: 'darwin',
-        arch: 'arm64',
-        osVersion: '14.0',
-        electronVersion: '35.0.0',
-        chromeVersion: '128.0',
-        nodeVersion: '20.0',
-        appVersion: '0.0.8',
-        appName: 'Palladium',
-        gitInfo: {
-          version: '0.0.8',
-          commitHash: 'abc123',
-          branch: 'main',
-          lastCommitDateTime: '2024-01-01',
-        },
-      });
+    mockInvoke.mockResolvedValue(metaData);
+
+    await act(async () => {
+      render(
+        <SystemMetaProvider>
+          <TestMetaConsumer />
+        </SystemMetaProvider>,
+      );
     });
 
     expect(screen.getByTestId('meta')).toHaveTextContent('darwin-0.0.8');

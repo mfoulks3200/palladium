@@ -1,4 +1,3 @@
-import { Dog } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { Card } from './ui/card';
 import {
@@ -12,17 +11,16 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
-  useState,
 } from 'react';
 import { OverlayOptions } from '../../ipc';
 import { InternalPageRouter } from './internal-pages/InternalPageRouter';
 
 import styles from './BrowserUI.module.css';
 import { cn } from '@/lib/utils';
-import { TabMetaContext } from '@/windows/main-ui/App';
+import { TabMetaContext } from '@/lib/tab-meta';
 import { ShaderBackground } from './ShaderBackground';
+import { ComponentErrorBoundary } from './ErrorBoundary';
 
 export const BrowserUI = () => {
   const tabMeta = useContext(TabMetaContext);
@@ -65,14 +63,14 @@ export const BrowserUI = () => {
 
   useEffect(() => {
     const removeBrowserListener = window.electron.ipcRenderer.on(
-      'browser-layout-change',
+      'request-browser-layout',
       () => {
         onBrowserResize();
       },
     );
 
     const removeDevtoolsListener = window.electron.ipcRenderer.on(
-      'devtools-layout-change',
+      'request-devtools-layout',
       () => {
         onDevtoolsResize();
       },
@@ -157,7 +155,9 @@ export const BrowserUI = () => {
           onLayoutChange={onBrowserResize}
         >
           <ResizablePanel defaultSize="250px" maxSize="400px" minSize="200px">
-            <Sidebar />
+            <ComponentErrorBoundary name="Sidebar">
+              <Sidebar />
+            </ComponentErrorBoundary>
           </ResizablePanel>
           <ResizableHandle className="mx-0.5 w-1 rounded-sm border-none bg-transparent transition-colors after:hidden after:border-none hover:bg-black/50" />
           <ResizablePanel minSize="30%">{browserPanel}</ResizablePanel>
@@ -183,7 +183,9 @@ const BrowserBackgroundPanel = ({
   return (
     <BrowserPanel ref={ref}>
       {internalPageUrl.trim().length > 0 && (
-        <InternalPageRouter path={internalPageUrl} />
+        <ComponentErrorBoundary name="InternalPage">
+          <InternalPageRouter path={internalPageUrl} />
+        </ComponentErrorBoundary>
       )}
     </BrowserPanel>
   );

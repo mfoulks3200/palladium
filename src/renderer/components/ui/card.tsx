@@ -10,7 +10,6 @@ interface CardProps {
 
 function Card({
   className,
-  apperance = 'Translucent',
   ...props
 }: React.ComponentProps<'div'> & CardProps) {
   return (

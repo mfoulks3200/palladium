@@ -35,11 +35,12 @@ describe('preload', () => {
 
     describe('sendMessage', () => {
       it('delegates to ipcRenderer.send with channel and args', () => {
-        handler.ipcRenderer.sendMessage('navigate', 'https://example.com');
-        expect(mockSend).toHaveBeenCalledWith(
-          'navigate',
-          'https://example.com',
-        );
+        handler.ipcRenderer.sendMessage('open-new-tab', {
+          newUrl: 'https://example.com',
+        });
+        expect(mockSend).toHaveBeenCalledWith('open-new-tab', {
+          newUrl: 'https://example.com',
+        });
       });
     });
 

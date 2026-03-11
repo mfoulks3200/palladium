@@ -1,10 +1,9 @@
 import {
   createContext,
   PropsWithChildren,
-  useCallback,
   useContext,
   useEffect,
-  useRef,
+  useMemo,
   useState,
 } from 'react';
 import { MediaState, MediaStateIpc } from 'src/ipc';
@@ -62,7 +61,7 @@ export const MediaStateProvider = ({ children }: PropsWithChildren) => {
 
 export const useMediaStates = (): MediaState[] => {
   const { mediaStates } = useContext(MediaStateContext);
-  return [...mediaStates.values()];
+  return useMemo(() => [...mediaStates.values()], [mediaStates]);
 };
 
 export const useMediaState = (id: string): MediaState | undefined => {

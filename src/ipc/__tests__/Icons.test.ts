@@ -1,4 +1,4 @@
-import { LucideIcons } from '../Icons';
+import { LucideIcons } from '../../renderer/lib/icons';
 
 describe('LucideIcons', () => {
   it('is a defined object', () => {

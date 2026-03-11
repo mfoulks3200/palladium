@@ -9,12 +9,14 @@ import {
 
 // Mock IPC
 const mockSendMessage = jest.fn();
+const mockInvoke = jest.fn().mockResolvedValue({ flags: {} });
 let ipcListeners: Record<string, (data: any) => void> = {};
 
 Object.defineProperty(window, 'electron', {
   value: {
     ipcRenderer: {
       sendMessage: mockSendMessage,
+      invoke: mockInvoke,
       on: jest.fn((channel: string, callback: (data: any) => void) => {
         ipcListeners[channel] = callback;
         return jest.fn(); // removeListener
@@ -26,6 +28,8 @@ Object.defineProperty(window, 'electron', {
 
 beforeEach(() => {
   mockSendMessage.mockClear();
+  mockInvoke.mockClear();
+  mockInvoke.mockResolvedValue({ flags: {} });
   ipcListeners = {};
 });
 
@@ -53,7 +57,7 @@ describe('FeatureFlagProvider', () => {
         <div />
       </FeatureFlagProvider>,
     );
-    expect(mockSendMessage).toHaveBeenCalledWith('feature-flags-sync');
+    expect(mockInvoke).toHaveBeenCalledWith('get-feature-flags');
   });
 
   it('provides flag values from IPC response', () => {

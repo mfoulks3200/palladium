@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { typedIpcMain, typedWebContents } from './ipc';
+import { typedIpcMain } from './ipc';
 import { HistoryItem } from '../ipc';
 
 export interface HistoryEvent {
@@ -39,9 +39,8 @@ export class HistoryManager extends EventTarget {
   }
 
   private registerIpc() {
-    typedIpcMain.on('get-history', (event) => {
-      const history = this.getHistory() as HistoryItem[];
-      typedWebContents(event.sender).send('history-data', history);
+    typedIpcMain.handle('get-history', () => {
+      return this.getHistory() as HistoryItem[];
     });
 
     typedIpcMain.on('clear-history', () => {

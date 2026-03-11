@@ -1,6 +1,6 @@
 import * as z from 'zod';
 import { GetPathType, NestedKeysOf } from './Utility';
-import { backgrounds } from '@/lib/backgrounds';
+import { backgrounds } from './backgrounds';
 
 const settingsRegistryItem = z.registry<{
   introducedIn: string;
@@ -44,6 +44,17 @@ export const settingsSchema = z.object({
         description:
           'Send anonymous usage analytics to help improve Palladium. No URLs or personal information are ever collected.',
       }),
+    })
+    .prefault({}),
+  shortcuts: z
+    .object({
+      commandBar: z
+        .string()
+        .default('CommandOrControl+Shift+T')
+        .register(settingsRegistryItem, {
+          introducedIn: '0.1.0',
+          description: 'Global shortcut to open the command bar.',
+        }),
     })
     .prefault({}),
   personalization: z

@@ -1,6 +1,10 @@
-import { TabManager } from 'src/main/TabManager';
-import type { CommandMetadata, CommandProvider } from '../CommandParser';
-import { Tab } from 'src/main/Tab';
+import type {
+  CommandMetadata,
+  CommandProvider,
+  CommandResult,
+  CommandSuggestion,
+} from '../CommandParser';
+import { navigateOrCreateTab } from './navigation';
 import { HistoryManager } from 'src/main/HistoryManager';
 
 const allowlistedQueryParams: { domains: string[]; params: string[] }[] = [
@@ -48,7 +52,7 @@ export class History implements CommandProvider {
           0,
         ) / factors.length
       );
-    } catch (e) {
+    } catch {
       return 0;
     }
   }
@@ -83,25 +87,16 @@ export class History implements CommandProvider {
           keywords: [item.url, item.metaDescription, item.metaKeywords].filter(
             Boolean,
           ),
-        }) as ReturnType<CommandProvider['getSuggestions']>[number],
+        }) as CommandSuggestion,
     );
   }
 
   public runCommand(
     command: string,
-    input: string,
+    _input: string,
     metadata?: CommandMetadata,
-  ) {
-    const url = command;
-    let tab: Tab | undefined;
-    if (metadata && metadata.tabUuid) {
-      tab = TabManager.getInstance().getTabByUuid(metadata.tabUuid);
-    }
-    if (!tab) {
-      tab = new Tab(url);
-      TabManager.getInstance().focusTab(tab);
-    } else {
-      tab.view.webContents.loadURL(url);
-    }
+  ): CommandResult {
+    navigateOrCreateTab(command, metadata);
+    return { success: true };
   }
 }

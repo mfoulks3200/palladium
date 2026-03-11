@@ -8,6 +8,7 @@ Object.defineProperty(window, 'electron', {
   value: {
     ipcRenderer: {
       sendMessage: mockSendMessage,
+      invoke: jest.fn().mockResolvedValue(null),
       on: jest.fn(() => jest.fn()),
     },
   },
@@ -26,7 +27,7 @@ jest.mock('@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge', () => ({
 }));
 
 jest.mock('@atlaskit/pragmatic-drag-and-drop/combine', () => ({
-  combine: jest.fn((...fns: Function[]) => jest.fn()),
+  combine: jest.fn(() => jest.fn()),
 }));
 
 jest.mock(
@@ -107,7 +108,7 @@ describe('BrowserTab', () => {
     const { container } = render(
       <BrowserTab {...defaultProps} isActive={true} />,
     );
-    const tabEl = container.querySelector('.bg-white\\/10');
+    const tabEl = container.querySelector('.bg-foreground\\/10');
     expect(tabEl).toBeInTheDocument();
   });
 

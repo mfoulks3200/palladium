@@ -9,34 +9,25 @@ import {
   CommandShortcut,
 } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
-import { ChevronRight } from 'lucide-react';
-import {
-  ReactElement,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import './CommandBar.css';
 import { CommandResponseIpc } from 'src/ipc';
-import { LucideIcons } from 'src/ipc/Icons';
-import { flushSync } from 'react-dom';
+import { LucideIcons } from '@/lib/icons';
 
 interface CommandBarProps {
   className?: string;
 }
 
-interface Lozenge {
-  name: string;
-  classes: string;
+interface GroupedSection {
+  sectionId: string;
+  sectionName: string;
+  commands: CommandResponseIpc['suggestions'][number]['commands'];
 }
 
 export const CommandBar = ({ className }: CommandBarProps) => {
   const [currentText, setCurrentText] = useState('');
   const [tabUuid, setTabUuid] = useState<string | undefined>(undefined);
-  const [shortcut, setShortcut] = useState<string | undefined>(undefined);
   const [commandResponse, setCommandResponse] =
     useState<CommandResponseIpc | null>();
   const [selectedCommand, setSelectedCommand] = useState<string | undefined>(
@@ -44,62 +35,103 @@ export const CommandBar = ({ className }: CommandBarProps) => {
   );
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // The command bar is a separate BrowserWindow that always needs focus when
+  // shown. win.focus() in the main process is async with the OS, so autoFocus
+  // fires before the window actually has keyboard focus and gets silently
+  // dropped. Listening to the window 'focus' event fires only after the OS
+  // grants focus, at which point the input focus call is guaranteed to land.
+  useEffect(() => {
+    const focusInput = () => inputRef.current?.focus();
+    window.addEventListener('focus', focusInput);
+    return () => window.removeEventListener('focus', focusInput);
+  }, []);
+
+  const handleSuggestionResponse = useCallback(
+    (response: CommandResponseIpc) => {
+      setCommandResponse(response);
+      setSelectedCommand((prev) => {
+        if (!prev && Object.keys(response.suggestions).length > 0) {
+          return Object.values(response.suggestions)[0].commands[0].value;
+        }
+        if (prev && Object.keys(response.suggestions).length === 0) {
+          return undefined;
+        }
+        return prev;
+      });
+    },
+    [],
+  );
+
   useEffect(() => {
     const removeListener = window.electron.ipcRenderer.on(
       'command-setup',
       (response) => {
+        const newText =
+          response.prefill.trim().length > 0 ? response.prefill : '';
         setTabUuid(
           response.tabUuid.length === 0 ? undefined : response.tabUuid,
         );
-        if (response.prefill.trim().length > 0) {
-          setCurrentText(response.prefill);
-          setTimeout(() => {
-            if (inputRef.current) {
-              inputRef.current.select();
-            }
-          }, 1);
-        }
+        setCurrentText(newText);
+        // Reset stale results from the previous session so the window
+        // doesn't flash old suggestions while the new fetch is in flight.
+        setCommandResponse(null);
+        setSelectedCommand(undefined);
+
+        // Fetch fresh suggestions for the new context.
+        window.electron.ipcRenderer
+          .invoke('command-input', {
+            mode: 'suggestions' as const,
+            input: newText,
+          })
+          .then((res) => {
+            if (res) handleSuggestionResponse(res);
+          })
+          .catch(console.error);
+
+        setTimeout(() => {
+          if (newText.length > 0) {
+            inputRef.current?.select();
+          } else {
+            inputRef.current?.focus();
+          }
+        }, 1);
       },
     );
 
     return () => {
       removeListener();
     };
-  }, []);
+  }, [handleSuggestionResponse]);
 
   useEffect(() => {
-    const removeListener = window.electron.ipcRenderer.on(
-      'command-response',
-      (response) => {
-        setCommandResponse(response);
-        setSelectedCommand((prev) => {
-          if (!prev && Object.keys(response.suggestions).length > 0) {
-            return Object.values(response.suggestions)[0].commands[0].value;
-          }
-          if (prev && Object.keys(response.suggestions).length === 0) {
-            return undefined;
-          }
-          return prev;
-        });
-      },
-    );
-    window.electron.ipcRenderer.sendMessage('command-input', {
-      mode: 'suggestions',
-      input: currentText,
-    });
-
-    return () => {
-      removeListener();
-    };
+    window.electron.ipcRenderer
+      .invoke('command-input', {
+        mode: 'suggestions' as const,
+        input: currentText,
+      })
+      .then((response) => {
+        if (response) handleSuggestionResponse(response);
+        return undefined;
+      })
+      .catch(console.error);
   }, []);
 
-  const onInput = useCallback((newInput: string) => {
-    setCurrentText(newInput);
-    window.electron.ipcRenderer.sendMessage('command-input', {
-      mode: 'suggestions',
-      input: newInput,
-    });
-  }, []);
+  const onInput = useCallback(
+    (newInput: string) => {
+      setCurrentText(newInput);
+      window.electron.ipcRenderer
+        .invoke('command-input', {
+          mode: 'suggestions' as const,
+          input: newInput,
+        })
+        .then((response) => {
+          if (response) handleSuggestionResponse(response);
+          return undefined;
+        })
+        .catch(console.error);
+    },
+    [handleSuggestionResponse],
+  );
 
   const closeCommandBar = useCallback(() => {
     window.electron.ipcRenderer.sendMessage('command-bar', {
@@ -116,8 +148,8 @@ export const CommandBar = ({ className }: CommandBarProps) => {
       } else if (event.key === 'Enter') {
         event.preventDefault();
         if (selectedCommand) {
-          window.electron.ipcRenderer.sendMessage('command-input', {
-            mode: 'execute',
+          window.electron.ipcRenderer.invoke('command-input', {
+            mode: 'execute' as const,
             input: currentText,
             command: selectedCommand,
             tabUuid: tabUuid,
@@ -129,114 +161,36 @@ export const CommandBar = ({ className }: CommandBarProps) => {
     [currentText, selectedCommand],
   );
 
-  const commandItems = useMemo(() => {
+  const groupedSections = useMemo((): GroupedSection[] => {
     if (!commandResponse) return [];
-    const orderedCommands: {
-      section: CommandResponseIpc['suggestions'][number]['section'];
-      command: CommandResponseIpc['suggestions'][number]['commands'][number];
-    }[] = [];
-    for (const section of Object.values(commandResponse.suggestions)) {
-      for (const command of section.commands) {
-        orderedCommands.push({
+
+    const allCommands = Object.values(commandResponse.suggestions).flatMap(
+      (section) =>
+        section.commands.map((cmd) => ({
           section: section.section,
-          command,
-        });
+          command: cmd,
+        })),
+    );
+
+    allCommands.sort((a, b) => (b.command.score ?? 0) - (a.command.score ?? 0));
+
+    const sections: GroupedSection[] = [];
+    let currentSection: GroupedSection | null = null;
+
+    for (const { section, command } of allCommands) {
+      if (!currentSection || currentSection.sectionId !== section.id) {
+        currentSection = {
+          sectionId: section.id,
+          sectionName: section.name,
+          commands: [],
+        };
+        sections.push(currentSection);
       }
+      currentSection.commands.push(command);
     }
 
-    const commandSections: ReactElement[] = [];
-    let lastSection:
-      | CommandResponseIpc['suggestions'][number]['section']
-      | null = null;
-    let lastSectionCommands: ReactElement[] = [];
-
-    const addSection = (sectionName: string) => {
-      if (lastSectionCommands.length > 0) {
-        commandSections.push(
-          <>
-            {commandSections.length > 0 && <CommandSeparator />}
-            <CommandGroup heading={sectionName}>
-              {lastSectionCommands}
-            </CommandGroup>
-          </>,
-        );
-        lastSectionCommands = [];
-      }
-    };
-
-    for (const command of orderedCommands.sort(
-      (a, b) => b.command.score! - a.command.score!,
-    )) {
-      if (
-        !lastSection ||
-        (command.section.id !== lastSection.id &&
-          lastSectionCommands.length > 0)
-      ) {
-        addSection(lastSection?.name ?? 'Undefined');
-      }
-
-      let icon = <></>;
-      if (command.command.icon) {
-        if (Object.hasOwn(LucideIcons, command.command.icon)) {
-          // @ts-expect-error
-          const CommandIcon = LucideIcons[command.command.icon];
-          icon = <CommandIcon />;
-        } else {
-          icon = (
-            <img src={command.command.icon} className="h-[18px] w-[18px]" />
-          );
-        }
-      }
-
-      lastSectionCommands.push(
-        <CommandItem
-          value={command.command.value}
-          keywords={[command.command.value, command.command.name]}
-        >
-          {!!command.command.icon && icon}
-          <div className="flex flex-col">
-            <span>{command.command.name}</span>
-            {command.command.subname && (
-              <span className="max-w-96 truncate opacity-50">
-                {command.command.subname}
-              </span>
-            )}
-          </div>
-
-          <CommandShortcut>
-            <div className="flex gap-0.5">
-              <span>
-                ({((command.command.weight ?? 0) * 100).toFixed(1)}%){' '}
-              </span>
-              <span>{((command.command.score ?? 0) * 100).toFixed(1)}%</span>
-            </div>
-          </CommandShortcut>
-
-          {/* {command.command.shortcut &&
-            (currentText.length === 0 ||
-              command.command.shortcut.shortcutStr.startsWith(currentText)) && (
-              <CommandShortcut>
-                <div className="flex gap-0.5">
-                  {command.command.shortcut.shortcutStr} <ChevronRight /> Tab
-                </div>
-              </CommandShortcut>
-            )} */}
-        </CommandItem>,
-      );
-
-      lastSection = command.section;
-    }
-
-    if (lastSection) {
-      addSection(lastSection.name);
-    }
-
-    return commandSections;
+    return sections;
   }, [commandResponse]);
-
-  if (!commandResponse) {
-    return <></>;
-  }
 
   return (
     <Command
@@ -247,10 +201,10 @@ export const CommandBar = ({ className }: CommandBarProps) => {
     >
       <CommandInput
         className="p-1 px-4 text-xl"
-        placeholder={commandResponse.provider.prompt}
-        showBeforeElement={!!commandResponse.provider.lozenge}
-        beforeElement={<>{commandResponse.provider.lozenge?.name ?? ''}</>}
-        beforeElementClass={commandResponse.provider.lozenge?.color ?? ''}
+        placeholder={commandResponse?.provider.prompt}
+        showBeforeElement={!!commandResponse?.provider.lozenge}
+        beforeElement={<>{commandResponse?.provider.lozenge?.name ?? ''}</>}
+        beforeElementClass={commandResponse?.provider.lozenge?.color ?? ''}
         autoFocus={true}
         onInput={(event) => {
           //@ts-expect-error
@@ -261,9 +215,78 @@ export const CommandBar = ({ className }: CommandBarProps) => {
         ref={inputRef}
       />
       <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
-        {commandItems.length > 0 && commandItems}
+        {commandResponse && <CommandEmpty>No results found.</CommandEmpty>}
+        {groupedSections.map((section, sectionIdx) => (
+          <div key={section.sectionId + '.' + sectionIdx}>
+            {sectionIdx > 0 && <CommandSeparator />}
+            <CommandGroup
+              heading={section.sectionName}
+              key={section.sectionName + '.' + sectionIdx}
+            >
+              {section.commands.map((command, commandIdx) => {
+                const key =
+                  section.sectionName +
+                  '.' +
+                  sectionIdx +
+                  '.' +
+                  command.value +
+                  '.' +
+                  commandIdx;
+                return (
+                  <CommandSuggestionItem
+                    key={key}
+                    keyValue={key}
+                    command={command}
+                  />
+                );
+              })}
+            </CommandGroup>
+          </div>
+        ))}
       </CommandList>
     </Command>
+  );
+};
+
+type CommandSuggestion =
+  CommandResponseIpc['suggestions'][number]['commands'][number];
+
+const CommandIcon = ({ icon }: { icon: string }) => {
+  if (Object.hasOwn(LucideIcons, icon)) {
+    const Icon = LucideIcons[icon];
+    return <Icon />;
+  }
+  return <img src={icon} className="h-[18px] w-[18px]" />;
+};
+
+const CommandSuggestionItem = ({
+  command,
+  keyValue,
+}: {
+  command: CommandSuggestion;
+  keyValue: string;
+}) => {
+  return (
+    <CommandItem
+      key={keyValue}
+      value={command.value}
+      keywords={[command.value, command.name]}
+    >
+      {command.icon && <CommandIcon icon={command.icon} />}
+      <div className="flex flex-col">
+        <span>{command.name}</span>
+        {command.subname && (
+          <span className="max-w-96 truncate opacity-50">
+            {command.subname}
+          </span>
+        )}
+      </div>
+      <CommandShortcut>
+        <div className="flex gap-0.5">
+          <span>({((command.weight ?? 0) * 100).toFixed(1)}%) </span>
+          <span>{((command.score ?? 0) * 100).toFixed(1)}%</span>
+        </div>
+      </CommandShortcut>
+    </CommandItem>
   );
 };

@@ -1,4 +1,4 @@
-import { Component, ErrorInfo, PropsWithChildren } from 'react';
+import { Component, ErrorInfo, PropsWithChildren, ReactNode } from 'react';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -46,6 +46,53 @@ export class ErrorBoundary extends Component<
           </div>
         </div>
       );
+    }
+
+    return this.props.children;
+  }
+}
+
+interface ComponentErrorBoundaryProps {
+  name?: string;
+  fallback?: ReactNode;
+}
+
+/**
+ * A granular error boundary for wrapping individual UI sections.
+ * Crashes are isolated — the rest of the browser UI stays functional.
+ */
+export class ComponentErrorBoundary extends Component<
+  PropsWithChildren<ComponentErrorBoundaryProps>,
+  ErrorBoundaryState
+> {
+  constructor(props: PropsWithChildren<ComponentErrorBoundaryProps>) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo): void {
+    window.electron.ipcRenderer.sendMessage('capture-exception', {
+      message: error.message,
+      stack: error.stack ?? '',
+      name: error.name,
+      source: `renderer-react:${this.props.name ?? 'unknown'}`,
+    });
+
+    console.error(
+      `[ErrorBoundary:${this.props.name ?? 'unknown'}] Caught render error:`,
+      error,
+      info,
+    );
+  }
+
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) return this.props.fallback;
+      return null;
     }
 
     return this.props.children;

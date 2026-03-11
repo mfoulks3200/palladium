@@ -6,7 +6,7 @@ import {
 } from '@/components/ui/resizable';
 import { EditorComponent } from './Editor';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Blocks, FishingHook, Settings } from 'lucide-react';
+import { ArrowLeft, FishingHook, Settings } from 'lucide-react';
 
 export const Workspace = () => {
   return <LegacyWorkspace />;

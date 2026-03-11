@@ -1,4 +1,4 @@
-import { backgrounds } from '../backgrounds';
+import { backgrounds } from '../../../ipc/backgrounds';
 
 describe('backgrounds', () => {
   const entries = Object.entries(backgrounds);

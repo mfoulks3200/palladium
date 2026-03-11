@@ -1,7 +1,6 @@
 import {
   app,
   Menu,
-  shell,
   BrowserWindow,
   MenuItemConstructorOptions,
 } from 'electron';

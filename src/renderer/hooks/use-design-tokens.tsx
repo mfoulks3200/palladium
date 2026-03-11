@@ -1,8 +1,6 @@
 import React, {
   createContext,
-  useCallback,
   useContext,
-  useState,
   useMemo,
   useEffect,
 } from 'react';
@@ -10,7 +8,7 @@ import {
   generatePalette,
   getAccessibleTextColor,
   adjustLightness,
-  hasSufficientContrast,
+
   ensureVisiblePrimary,
 } from '../lib/colors';
 import { useSettings } from '../lib/settings';
@@ -58,40 +56,7 @@ export interface DesignPreferences {
 interface DesignTokenContextValue {
   tokens: DesignTokens;
   preferences: DesignPreferences;
-  setPreferences: (prefs: DesignPreferences) => void;
-  updatePreference: <K extends keyof DesignPreferences>(
-    key: K,
-    value: DesignPreferences[K],
-  ) => void;
 }
-
-const defaultPreferences: DesignPreferences = {
-  primaryColor: '#3b82f6', // A pleasing blue default
-};
-
-// Initial fallback tokens before calculation
-const defaultTokens: DesignTokens = {
-  primary: '#3b82f6',
-  background: '#ffffff',
-  surface: '#f3f4f6',
-  surfaceRaised: '#e5e7eb',
-  surfaceOverlay: '#d1d5db',
-  text: '#111827',
-  border: '#e5e7eb',
-  success: '#10b981',
-  warning: '#f59e0b',
-  error: '#ef4444',
-  info: '#3b82f6',
-  primaryForeground: '#ffffff',
-  surfaceForeground: '#111827',
-  surfaceRaisedForeground: '#111827',
-  surfaceOverlayForeground: '#111827',
-  successForeground: '#ffffff',
-  warningForeground: '#ffffff',
-  errorForeground: '#ffffff',
-  infoForeground: '#ffffff',
-  primaryPalette: [],
-};
 
 const DesignTokenContext = createContext<DesignTokenContextValue | undefined>(
   undefined,
@@ -226,13 +191,7 @@ const generateTokens = (prefs: DesignPreferences): DesignTokens => {
 
 export const DesignTokenProvider: React.FC<{
   children: React.ReactNode;
-  initialPreferences?: Partial<DesignPreferences>;
-}> = ({ children, initialPreferences }) => {
-  const [preferences, setPreferencesState] = useState<DesignPreferences>({
-    ...defaultPreferences,
-    ...initialPreferences,
-  });
-
+}> = ({ children }) => {
   const [tintColor] = useSettings('personalization.userInterface.tintColor');
   const [opacity] = useSettings('personalization.userInterface.transparency');
   const [blur] = useSettings('personalization.userInterface.blur');
@@ -241,61 +200,34 @@ export const DesignTokenProvider: React.FC<{
   );
   const safeTintColor = tintColor.startsWith('#') ? tintColor : `#${tintColor}`;
 
-  // Recalculate tokens when preferences change
-  const tokens = useMemo(
-    () =>
-      generateTokens({
-        ...preferences,
-        primaryColor: safeTintColor,
-        opacity,
-      }),
-    [preferences, safeTintColor, opacity],
+  const preferences: DesignPreferences = useMemo(
+    () => ({ primaryColor: safeTintColor, opacity }),
+    [safeTintColor, opacity],
   );
+
+  // Recalculate tokens when preferences change
+  const tokens = useMemo(() => generateTokens(preferences), [preferences]);
 
   // Inject CSS variables into the root document so regular CSS/Tailwind can use them
   useEffect(() => {
     const root = document.documentElement;
-    // We convert hex to RGB values if using Tailwind to allow opacity adjustments,
-    // but for simplicity here we just inject the hex.
     Object.entries(tokens).forEach(([key, value]) => {
       if (typeof value === 'string') {
-        // Convert camelCase to kebab-case
         const cssVarKey = `--color-${key.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`;
         root.style.setProperty(cssVarKey, value);
       }
     });
 
-    // Inject palette
     tokens.primaryPalette.forEach((color, index) => {
       root.style.setProperty(`--color-primary-${(index + 1) * 100}`, color);
     });
 
-    // Inject glassmorphism effects
     root.style.setProperty('--ui-blur', `${blur}px`);
     root.style.setProperty('--ui-saturation', `${saturation}%`);
   }, [tokens, blur, saturation]);
 
-  const setPreferences = useCallback((newPrefs: DesignPreferences) => {
-    setPreferencesState(newPrefs);
-  }, []);
-
-  const updatePreference = useCallback(
-    <K extends keyof DesignPreferences>(
-      key: K,
-      value: DesignPreferences[K],
-    ) => {
-      setPreferencesState((prev) => ({ ...prev, [key]: value }));
-    },
-    [],
-  );
-
   const value = useMemo(
-    () => ({
-      tokens,
-      preferences,
-      setPreferences,
-      updatePreference,
-    }),
+    () => ({ tokens, preferences }),
     [tokens, preferences],
   );
 

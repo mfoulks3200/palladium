@@ -22,8 +22,12 @@ const mockIpcOn = jest.fn();
 const mockWebContentsSend = jest.fn();
 
 jest.mock('src/main/ipc', () => ({
-  typedIpcMain: { on: mockIpcOn },
+  typedIpcMain: { on: mockIpcOn, handle: jest.fn() },
   typedWebContents: () => ({ send: mockWebContentsSend }),
+}));
+
+jest.mock('src/main/GlobalShortcuts', () => ({
+  rebindCommandBarShortcut: jest.fn(),
 }));
 
 jest.mock('src/main/AnalyticsManager', () => ({
@@ -239,22 +243,23 @@ describe('SettingsManager', () => {
     expect(mockIpcOn).toHaveBeenCalledWith('settings-sync', expect.any(Function));
   });
 
-  it('sends current settings back when settings-sync receives no payload', () => {
+  it('returns current settings when get-settings is invoked', () => {
+    const mockIpcHandle = jest.fn();
+    jest.mock('src/main/ipc', () => ({
+      typedIpcMain: { on: mockIpcOn, handle: mockIpcHandle },
+      typedWebContents: () => ({ send: mockWebContentsSend }),
+    }));
+
     SettingsManager.getInstance();
 
-    // Grab the handler that was registered
-    const handler = mockIpcOn.mock.calls.find(
-      (c: any[]) => c[0] === 'settings-sync',
+    const handle = require('src/main/ipc').typedIpcMain.handle as jest.Mock;
+    const handler = handle.mock.calls.find(
+      (c: any[]) => c[0] === 'get-settings',
     )?.[1];
     expect(handler).toBeDefined();
 
-    const fakeEvent = { sender: {} };
-    handler(fakeEvent, undefined);
-
-    expect(mockWebContentsSend).toHaveBeenCalledWith(
-      'settings-sync',
-      expect.objectContaining({ analytics: expect.any(Object) }),
-    );
+    const result = handler();
+    expect(result).toMatchObject({ analytics: expect.any(Object) });
   });
 
   it('updates settings when settings-sync receives a new payload', () => {

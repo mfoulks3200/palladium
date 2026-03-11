@@ -36,7 +36,6 @@ export const SettingsCard = ({
 export const SettingsOption = ({
   name,
   description,
-  disabled,
   className,
   children,
 }: PropsWithChildren<{

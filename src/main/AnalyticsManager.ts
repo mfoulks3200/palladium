@@ -76,9 +76,8 @@ export class AnalyticsManager {
 
     // When a renderer window requests the current flags (e.g. on load),
     // respond with the cached state immediately.
-    typedIpcMain.on('feature-flags-sync', (event) => {
-      const payload: FeatureFlagsIpc = { flags: this.featureFlags };
-      typedWebContents(event.sender).send('feature-flags-sync', payload);
+    typedIpcMain.handle('get-feature-flags', () => {
+      return { flags: this.featureFlags } satisfies FeatureFlagsIpc;
     });
 
     // Allow any renderer to force a fresh fetch from PostHog.
