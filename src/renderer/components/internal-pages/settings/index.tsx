@@ -169,7 +169,7 @@ export const SettingsPage = () => {
         icon: <Info />,
       });
     }
-  }, [currentPage]);
+  }, [currentPage, internalTabMeta]);
 
   return (
     <div className="mt-8 h-full max-h-full w-full overflow-scroll">
