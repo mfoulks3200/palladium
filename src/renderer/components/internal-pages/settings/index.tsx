@@ -195,12 +195,12 @@ export const SettingsPage = () => {
           <div className="sticky top-20 flex flex-col gap-2">
             {Object.entries(settingsUi).map(([key, val]) => (
               <SettingsTab
+                key={key}
                 name={val.name}
                 disabled={val.disabled ?? false}
                 icon={val.icon}
                 isActive={key === currentPage}
                 onClick={() => {
-                  console.log('onClick: ' + key);
                   setCurrentPage(key);
                 }}
               />
@@ -209,8 +209,9 @@ export const SettingsPage = () => {
         </div>
         <div className="flex min-h-80 w-1/2 flex-col items-center py-4">
           <div className="flex w-full max-w-[750px] flex-col gap-4">
-            {Object.values(settingsUi[currentPage].cards).map((card) => (
+            {Object.entries(settingsUi[currentPage].cards).map(([cardKey, card]) => (
               <SettingsCard
+                key={cardKey}
                 title={card.name}
                 description={card.description}
                 customContents={card.customContents}
