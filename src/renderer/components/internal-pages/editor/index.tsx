@@ -1,9 +1,3 @@
-import { FileTree } from '@/components/ui/file-tree';
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from '@/components/ui/resizable';
 import { Workspace } from './Workspace';
 import { useContext, useEffect } from 'react';
 import { InternalTabMetaContext } from '@/lib/tab-meta';

@@ -21,14 +21,13 @@ import {
   Blocks,
   FishingHook,
   Info,
-  Keyboard,
   Search,
   Settings,
   Sparkles,
   History,
 } from 'lucide-react';
 
-interface SettingsCard {
+interface SettingsCardConfig {
   name?: string;
   description?: string;
   customContents?: ReactElement;
@@ -38,7 +37,7 @@ interface SettingsPages {
   name: string;
   disabled?: boolean;
   icon: ReactElement;
-  cards: Record<string, SettingsCard>;
+  cards: Record<string, SettingsCardConfig>;
 }
 
 const settingsUi: Record<string, SettingsPages> = {

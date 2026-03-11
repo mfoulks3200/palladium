@@ -8,7 +8,7 @@ import {
   generatePalette,
   getAccessibleTextColor,
   adjustLightness,
-  hasSufficientContrast,
+
   ensureVisiblePrimary,
 } from '../lib/colors';
 import { useSettings } from '../lib/settings';
@@ -57,34 +57,6 @@ interface DesignTokenContextValue {
   tokens: DesignTokens;
   preferences: DesignPreferences;
 }
-
-const defaultPreferences: DesignPreferences = {
-  primaryColor: '#3b82f6', // A pleasing blue default
-};
-
-// Initial fallback tokens before calculation
-const defaultTokens: DesignTokens = {
-  primary: '#3b82f6',
-  background: '#ffffff',
-  surface: '#f3f4f6',
-  surfaceRaised: '#e5e7eb',
-  surfaceOverlay: '#d1d5db',
-  text: '#111827',
-  border: '#e5e7eb',
-  success: '#10b981',
-  warning: '#f59e0b',
-  error: '#ef4444',
-  info: '#3b82f6',
-  primaryForeground: '#ffffff',
-  surfaceForeground: '#111827',
-  surfaceRaisedForeground: '#111827',
-  surfaceOverlayForeground: '#111827',
-  successForeground: '#ffffff',
-  warningForeground: '#ffffff',
-  errorForeground: '#ffffff',
-  infoForeground: '#ffffff',
-  primaryPalette: [],
-};
 
 const DesignTokenContext = createContext<DesignTokenContextValue | undefined>(
   undefined,

@@ -2,9 +2,7 @@ import { cn } from '@/lib/utils';
 import {
   createContext,
   PropsWithChildren,
-  ReactElement,
   useCallback,
-  useContext,
   useEffect,
   useRef,
   useState,
@@ -112,12 +110,8 @@ export const OverlayPortal = (props: PropsWithChildren<OverlayPortalProps>) => {
   }
 };
 
-interface PortalWrapperControllerContext {
-  closePortal: () => void;
-}
-
 export const PortalWrapperControllerContext =
-  createContext<PortalWrapperControllerContext>({ closePortal: () => {} });
+  createContext<{ closePortal: () => void }>({ closePortal: () => {} });
 
 interface PortalWrapperProps {
   onUnmount?: () => void;

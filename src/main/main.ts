@@ -67,7 +67,7 @@ const createWindow = async () => {
     await installExtensions();
   }
 
-  const mainBrowserWindow = new BrowserWindowUI(isDebug);
+  new BrowserWindowUI(isDebug);
 };
 
 /**

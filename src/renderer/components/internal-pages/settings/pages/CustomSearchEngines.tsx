@@ -2,7 +2,7 @@ import { useContext, useState } from 'react';
 import { SettingsContext } from '@/lib/settings';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
 export const CustomSearchEngines = () => {

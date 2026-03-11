@@ -52,7 +52,7 @@ export class History implements CommandProvider {
           0,
         ) / factors.length
       );
-    } catch (e) {
+    } catch {
       return 0;
     }
   }

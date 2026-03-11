@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, screen, BrowserView, Menu } from 'electron';
+import { app, BrowserWindow, screen, Menu } from 'electron';
 import os from 'node:os';
 import path from 'node:path';
 import MenuBuilder from './menu';
@@ -12,7 +12,6 @@ import { CommandParser } from './commands/CommandParser';
 import { commandBarSetup } from './commands/CommandBar';
 import { TabManager } from './TabManager';
 import { Tab } from './Tab';
-import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { resolveHtmlPath } from './util';
 import { AnalyticsManager } from './AnalyticsManager';
@@ -100,7 +99,7 @@ export class BrowserWindowUI {
       { role: 'cut' },
       { role: 'paste' },
     ]);
-    this.mainWindow.webContents.on('context-menu', (_event, _params) => {
+    this.mainWindow.webContents.on('context-menu', () => {
       menu.popup();
     });
 
@@ -222,6 +221,6 @@ export class BrowserWindowUI {
   }
 
   public createMenu() {
-    const menuBuilder = new MenuBuilder(this.mainWindow);
+    new MenuBuilder(this.mainWindow);
   }
 }

@@ -8,14 +8,13 @@ import {
   useState,
 } from 'react';
 import {
-  settingsSchema,
   SettingKeyType,
   SettingsKeys,
   SettingSchema,
   settingsDefaults,
 } from 'src/ipc/SettingsRegistry';
 import { getDeepProp, setDeepProp } from 'src/ipc/Utility';
-import * as z from 'zod';
+
 
 type SettingStateFunction = <T extends SettingsKeys>(
   settingKey: T,

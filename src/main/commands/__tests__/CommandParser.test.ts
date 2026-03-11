@@ -384,7 +384,7 @@ describe('CommandParser', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {});
 
-      const parser = CommandParser.getInstance();
+      CommandParser.getInstance();
 
       const ipcHandler = mockIpcHandle.mock.calls.find(
         (call: any[]) => call[0] === 'command-input',

@@ -2,7 +2,6 @@ import {
   Menu,
   MenuItem,
   Session,
-  WebContents,
   WebContentsView,
   session,
 } from 'electron';
@@ -242,7 +241,7 @@ export class Tab extends EventTarget {
       this.isPlayingAudio = event.audible;
       const mediaId = `audio-${this.uuid}`;
       try {
-        const session = await this.view.webContents.executeJavaScript(`
+        const sessionData = await this.view.webContents.executeJavaScript(`
           (() => {
             const players = [...document.querySelectorAll('video')];
             const player = players.length > 0
@@ -261,27 +260,27 @@ export class Tab extends EventTarget {
             };
           })()
         `);
-        if (session.metadata) {
+        if (sessionData.metadata) {
           if (this.activeMediaId && this.activeMediaId === mediaId) {
             this.updateMediaState({
               id: mediaId,
-              title: session.metadata.title,
+              title: sessionData.metadata.title,
               playing: event.audible,
-              progress: session.currentTime,
-              duration: session.duration,
+              progress: sessionData.currentTime,
+              duration: sessionData.duration,
             });
           } else {
             this.activeMediaId = mediaId;
             this.addMediaState({
               id: mediaId,
               type: 'audio',
-              title: session.metadata.title,
-              album: session.metadata.album,
-              artist: session.metadata.artist,
-              artworkUrl: session.metadata.artwork?.[0]?.src ?? '',
+              title: sessionData.metadata.title,
+              album: sessionData.metadata.album,
+              artist: sessionData.metadata.artist,
+              artworkUrl: sessionData.metadata.artwork?.[0]?.src ?? '',
               playing: event.audible,
-              progress: session.currentTime,
-              duration: session.duration,
+              progress: sessionData.currentTime,
+              duration: sessionData.duration,
             });
           }
         }

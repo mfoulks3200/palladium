@@ -2,7 +2,6 @@ import { cn } from '@/lib/utils';
 import { Cog, LoaderCircle, Volume2, VolumeOff, X } from 'lucide-react';
 import {
   memo,
-  ReactElement,
   useCallback,
   useEffect,
   useMemo,

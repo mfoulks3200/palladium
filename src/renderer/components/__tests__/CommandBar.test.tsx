@@ -5,10 +5,10 @@ import { render, screen, act } from '@testing-library/react';
 jest.mock('@/components/ui/command', () => {
   const React = require('react');
   return {
-    Command: ({ children, className, ...props }: any) => (
+    Command: ({ children, className }: any) => (
       <div data-testid="command-root" className={className}>{children}</div>
     ),
-    CommandInput: React.forwardRef(({ placeholder, onKeyDown, onInput, value, ...props }: any, ref: any) => (
+    CommandInput: React.forwardRef(({ placeholder, onKeyDown, onInput, value }: any, ref: any) => (
       <input
         ref={ref}
         placeholder={placeholder}
@@ -20,8 +20,8 @@ jest.mock('@/components/ui/command', () => {
     )),
     CommandList: ({ children }: any) => <div data-testid="command-list">{children}</div>,
     CommandEmpty: ({ children }: any) => <div>{children}</div>,
-    CommandGroup: ({ children, heading }: any) => <div data-testid="command-group">{children}</div>,
-    CommandItem: ({ children, value }: any) => <div data-testid="command-item">{children}</div>,
+    CommandGroup: ({ children }: any) => <div data-testid="command-group">{children}</div>,
+    CommandItem: ({ children }: any) => <div data-testid="command-item">{children}</div>,
     CommandSeparator: () => <hr />,
     CommandShortcut: ({ children }: any) => <span>{children}</span>,
   };

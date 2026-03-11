@@ -4,13 +4,11 @@ import { ExternalLink, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
 
-import img from '../../../assets/images/kalen-emsley-Bkci_8qcdvQ-unsplash.jpg';
 import { useMediaStates } from '@/lib/media-state';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MediaState } from 'src/ipc';
 
 export const MediaWidget = () => {
-  const [selectedMediaState, setSelectedMediaState] = useState(0);
+  const [selectedMediaState] = useState(0);
   const [currentProgress, setCurrentProgress] = useState(0);
   const mediaStates = useMediaStates();
 

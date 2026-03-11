@@ -13,8 +13,6 @@ import { getDeepProp, setDeepProp } from 'src/ipc/Utility';
 import { AnalyticsManager } from './AnalyticsManager';
 import { rebindCommandBarShortcut } from './GlobalShortcuts';
 
-import * as z from 'zod';
-
 const dataPath = path.join(os.homedir(), '.palladium', 'settings.json');
 const dataDir = path.dirname(dataPath);
 
@@ -85,7 +83,6 @@ export class SettingsManager {
   }
 
   public persist() {
-    const dataPath = path.join(os.homedir(), '.palladium', 'settings.json');
     fs.writeFileSync(dataPath, JSON.stringify(this.currentSettings, null, 2));
   }
 

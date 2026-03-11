@@ -27,7 +27,7 @@ jest.mock('@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge', () => ({
 }));
 
 jest.mock('@atlaskit/pragmatic-drag-and-drop/combine', () => ({
-  combine: jest.fn((...fns: Function[]) => jest.fn()),
+  combine: jest.fn(() => jest.fn()),
 }));
 
 jest.mock(

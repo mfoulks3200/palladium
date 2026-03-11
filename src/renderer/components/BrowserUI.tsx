@@ -1,4 +1,3 @@
-import { Dog } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { Card } from './ui/card';
 import {
@@ -12,9 +11,7 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
-  useState,
 } from 'react';
 import { OverlayOptions } from '../../ipc';
 import { InternalPageRouter } from './internal-pages/InternalPageRouter';

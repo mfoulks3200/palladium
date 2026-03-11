@@ -10,7 +10,7 @@ export class Tabs implements CommandProvider {
     return { name: 'Tabs', id: 'builtins.tabs' };
   }
 
-  public getSuggestions(input: string) {
+  public getSuggestions(_input: string) {
     return TabManager.getInstance()
       .getAllTabs()
       .filter((tab) => !tab.getCurrentUrl().startsWith('palladium://'))

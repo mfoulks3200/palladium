@@ -1,13 +1,4 @@
 import { useSettings } from '@/lib/settings';
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from '@/components/ui/combobox';
-import { useState } from 'react';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { SettingsOption } from '../SettingComponents';
 import { Slider } from '@/components/ui/slider';

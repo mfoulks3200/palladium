@@ -1,11 +1,9 @@
 import {
   createContext,
   PropsWithChildren,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 import { MediaState, MediaStateIpc } from 'src/ipc';
