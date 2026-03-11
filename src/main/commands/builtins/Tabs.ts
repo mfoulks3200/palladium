@@ -1,5 +1,9 @@
 import { TabManager } from 'src/main/TabManager';
-import type { CommandMetadata, CommandProvider } from '../CommandParser';
+import type {
+  CommandProvider,
+  CommandResult,
+  CommandSuggestion,
+} from '../CommandParser';
 
 export class Tabs implements CommandProvider {
   public getProviderMetadata() {
@@ -16,15 +20,12 @@ export class Tabs implements CommandProvider {
             name: tab.getTitle(),
             value: tab.uuid,
             icon: tab.getFavicon() ?? 'StickyNote',
-          }) as ReturnType<CommandProvider['getSuggestions']>[number],
+          }) as CommandSuggestion,
       );
   }
 
-  public runCommand(
-    command: string,
-    input: string,
-    metadata?: CommandMetadata,
-  ) {
+  public runCommand(command: string): CommandResult {
     TabManager.getInstance().focusTabUuid(command);
+    return { success: true };
   }
 }

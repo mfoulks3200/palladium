@@ -3,7 +3,7 @@ import { MediaControlIpc, TabActionsIpc, OverlayOptions } from '../ipc';
 import { typedIpcMain } from './ipc';
 
 export function registerTabManagerIpc(tabManager: TabManager) {
-  typedIpcMain.on('update-tab-meta', () => {
+  typedIpcMain.on('request-tab-meta', () => {
     tabManager.updateRenderProcess();
   });
 
