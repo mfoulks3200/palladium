@@ -38,19 +38,19 @@ export const CustomSearchEngines = () => {
         {customEngines.map((engine, index) => (
           <div
             key={index}
-            className="flex items-center gap-2 rounded-md bg-white/5 p-2"
+            className="flex items-center gap-2 rounded-md bg-accent p-2"
           >
             <div className="flex-1">
               <div className="text-sm font-medium">{engine.name}</div>
-              <div className="text-xs text-white/40">{engine.urlPattern}</div>
+              <div className="text-xs text-muted-foreground">{engine.urlPattern}</div>
             </div>
-            <div className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-xs text-white/60">
+            <div className="rounded bg-secondary px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
               {engine.shortcut}
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-white/40 hover:text-red-400"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
               onClick={() => removeEngine(index)}
             >
               <Trash2 className="h-4 w-4" />
@@ -61,7 +61,7 @@ export const CustomSearchEngines = () => {
 
       <Card
         apperance="Hero"
-        className="mt-2 flex flex-col gap-3 rounded-lg border border-white/10 bg-white/5 p-4"
+        className="mt-2 flex flex-col gap-3 rounded-lg border border-border bg-accent p-4"
       >
         <div className="mb-1 text-sm font-medium">Add Search Engine</div>
         <div className="grid grid-cols-2 gap-2">
