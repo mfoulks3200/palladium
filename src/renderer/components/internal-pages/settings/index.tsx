@@ -14,12 +14,14 @@ import { AnalyticsSettings } from './pages/GeneralSettings';
 import { InternalTabMetaContext } from '@/lib/tab-meta';
 import { Background } from './pages/Background';
 import { UserInterface } from './pages/UserInterface';
+import { ShortcutsSettings } from './pages/ShortcutsSettings';
 import { SettingsCard, SettingsTab } from './SettingComponents';
 import { Card } from '@/components/ui/card';
 import {
   Blocks,
   FishingHook,
   Info,
+  Keyboard,
   Search,
   Settings,
   Sparkles,
@@ -44,6 +46,16 @@ const settingsUi: Record<string, SettingsPages> = {
     name: 'General',
     icon: <Settings />,
     cards: {
+      globalShortcuts: {
+        name: 'Global Shortcuts',
+        description:
+          'Keyboard shortcuts that work system-wide, even when the browser is in the background.',
+        customContents: (
+          <div className="flex flex-col gap-4 pt-8">
+            <ShortcutsSettings />
+          </div>
+        ),
+      },
       analytics: {
         name: 'Analytics',
         description: 'Control how Palladium collects anonymous usage data.',
@@ -161,15 +173,18 @@ export const SettingsPage = () => {
   const [currentPage, setCurrentPage] = useState(Object.keys(settingsUi)[0]);
 
   const internalTabMeta = useContext(InternalTabMetaContext);
+  // Extract the stable setter so the effect doesn't re-fire every time tabs
+  // state changes (the whole context object is a new reference on each update).
+  const setTabMeta = internalTabMeta?.setTabMeta;
 
   useEffect(() => {
-    if (internalTabMeta) {
-      internalTabMeta.setTabMeta({
+    if (setTabMeta) {
+      setTabMeta({
         title: `${settingsUi[currentPage].name} - Settings`,
         icon: <Info />,
       });
     }
-  }, [currentPage, internalTabMeta]);
+  }, [currentPage, setTabMeta]);
 
   return (
     <div className="mt-8 h-full max-h-full w-full overflow-scroll">
@@ -209,18 +224,20 @@ export const SettingsPage = () => {
         </div>
         <div className="flex min-h-80 w-1/2 flex-col items-center py-4">
           <div className="flex w-full max-w-[750px] flex-col gap-4">
-            {Object.entries(settingsUi[currentPage].cards).map(([cardKey, card]) => (
-              <SettingsCard
-                key={cardKey}
-                title={card.name}
-                description={card.description}
-                customContents={card.customContents}
-              >
-                {/* <SettingsOption name={'Enable Timeline'} type={'checkbox'} />
+            {Object.entries(settingsUi[currentPage].cards).map(
+              ([cardKey, card]) => (
+                <SettingsCard
+                  key={cardKey}
+                  title={card.name}
+                  description={card.description}
+                  customContents={card.customContents}
+                >
+                  {/* <SettingsOption name={'Enable Timeline'} type={'checkbox'} />
               <SettingsOption name={'Timeline Retention'} type={'checkbox'} />
               <SettingsOption name={'Example Field'} type={'text'} /> */}
-              </SettingsCard>
-            ))}
+                </SettingsCard>
+              ),
+            )}
           </div>
         </div>
       </div>

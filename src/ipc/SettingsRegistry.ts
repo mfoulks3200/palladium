@@ -46,6 +46,17 @@ export const settingsSchema = z.object({
       }),
     })
     .prefault({}),
+  shortcuts: z
+    .object({
+      commandBar: z
+        .string()
+        .default('CommandOrControl+Shift+T')
+        .register(settingsRegistryItem, {
+          introducedIn: '0.1.0',
+          description: 'Global shortcut to open the command bar.',
+        }),
+    })
+    .prefault({}),
   personalization: z
     .object({
       userInterface: z

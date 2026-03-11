@@ -146,7 +146,9 @@ export class BrowserWindowUI {
     });
 
     initSubsystem('GlobalShortcuts', () => {
-      registerGlobalShortcuts();
+      const savedShortcut =
+        SettingsManager.getInstance().getItem('shortcuts.commandBar');
+      registerGlobalShortcuts(savedShortcut);
     });
 
     initSubsystem('SystemMetaIpc', () => {
