@@ -9,9 +9,7 @@ import {
   CommandShortcut,
 } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
-import { ChevronRight } from 'lucide-react';
 import {
-  ReactElement,
   useCallback,
   useEffect,
   useMemo,
@@ -22,21 +20,20 @@ import {
 import './CommandBar.css';
 import { CommandResponseIpc } from 'src/ipc';
 import { LucideIcons } from '@/lib/icons';
-import { flushSync } from 'react-dom';
 
 interface CommandBarProps {
   className?: string;
 }
 
-interface Lozenge {
-  name: string;
-  classes: string;
+interface GroupedSection {
+  sectionId: string;
+  sectionName: string;
+  commands: CommandResponseIpc['suggestions'][number]['commands'];
 }
 
 export const CommandBar = ({ className }: CommandBarProps) => {
   const [currentText, setCurrentText] = useState('');
   const [tabUuid, setTabUuid] = useState<string | undefined>(undefined);
-  const [shortcut, setShortcut] = useState<string | undefined>(undefined);
   const [commandResponse, setCommandResponse] =
     useState<CommandResponseIpc | null>();
   const [selectedCommand, setSelectedCommand] = useState<string | undefined>(
@@ -141,106 +138,32 @@ export const CommandBar = ({ className }: CommandBarProps) => {
     [currentText, selectedCommand],
   );
 
-  const commandItems = useMemo(() => {
+  const groupedSections = useMemo((): GroupedSection[] => {
     if (!commandResponse) return [];
-    const orderedCommands: {
-      section: CommandResponseIpc['suggestions'][number]['section'];
-      command: CommandResponseIpc['suggestions'][number]['commands'][number];
-    }[] = [];
-    for (const section of Object.values(commandResponse.suggestions)) {
-      for (const command of section.commands) {
-        orderedCommands.push({
-          section: section.section,
-          command,
-        });
+
+    const allCommands = Object.values(commandResponse.suggestions).flatMap(
+      (section) =>
+        section.commands.map((cmd) => ({ section: section.section, command: cmd })),
+    );
+
+    allCommands.sort((a, b) => (b.command.score ?? 0) - (a.command.score ?? 0));
+
+    const sections: GroupedSection[] = [];
+    let currentSection: GroupedSection | null = null;
+
+    for (const { section, command } of allCommands) {
+      if (!currentSection || currentSection.sectionId !== section.id) {
+        currentSection = {
+          sectionId: section.id,
+          sectionName: section.name,
+          commands: [],
+        };
+        sections.push(currentSection);
       }
+      currentSection.commands.push(command);
     }
 
-    const commandSections: ReactElement[] = [];
-    let lastSection:
-      | CommandResponseIpc['suggestions'][number]['section']
-      | null = null;
-    let lastSectionCommands: ReactElement[] = [];
-
-    const addSection = (sectionName: string) => {
-      if (lastSectionCommands.length > 0) {
-        commandSections.push(
-          <>
-            {commandSections.length > 0 && <CommandSeparator />}
-            <CommandGroup heading={sectionName}>
-              {lastSectionCommands}
-            </CommandGroup>
-          </>,
-        );
-        lastSectionCommands = [];
-      }
-    };
-
-    for (const command of orderedCommands.sort(
-      (a, b) => b.command.score! - a.command.score!,
-    )) {
-      if (
-        !lastSection ||
-        (command.section.id !== lastSection.id &&
-          lastSectionCommands.length > 0)
-      ) {
-        addSection(lastSection?.name ?? 'Undefined');
-      }
-
-      let icon = <></>;
-      if (command.command.icon) {
-        if (Object.hasOwn(LucideIcons, command.command.icon)) {
-          const CommandIcon = LucideIcons[command.command.icon];
-          icon = <CommandIcon />;
-        } else {
-          icon = (
-            <img src={command.command.icon} className="h-[18px] w-[18px]" />
-          );
-        }
-      }
-
-      lastSectionCommands.push(
-        <CommandItem
-          value={command.command.value}
-          keywords={[command.command.value, command.command.name]}
-        >
-          {!!command.command.icon && icon}
-          <div className="flex flex-col">
-            <span>{command.command.name}</span>
-            {command.command.subname && (
-              <span className="max-w-96 truncate opacity-50">
-                {command.command.subname}
-              </span>
-            )}
-          </div>
-
-          <CommandShortcut>
-            <div className="flex gap-0.5">
-              <span>
-                ({((command.command.weight ?? 0) * 100).toFixed(1)}%){' '}
-              </span>
-              <span>{((command.command.score ?? 0) * 100).toFixed(1)}%</span>
-            </div>
-          </CommandShortcut>
-
-          {/* {command.command.shortcut &&
-            (currentText.length === 0 ||
-              command.command.shortcut.shortcutStr.startsWith(currentText)) && (
-              <CommandShortcut>
-                <div className="flex gap-0.5">
-                  {command.command.shortcut.shortcutStr} <ChevronRight /> Tab
-                </div>
-              </CommandShortcut>
-            )} */}
-        </CommandItem>,
-      );
-
-      lastSection = command.section;
-    }
-
-    addSection(lastSection!.name);
-
-    return commandSections;
+    return sections;
   }, [commandResponse]);
 
   if (!commandResponse) {
@@ -271,8 +194,55 @@ export const CommandBar = ({ className }: CommandBarProps) => {
       />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
-        {commandItems.length > 0 && commandItems}
+        {groupedSections.map((section, idx) => (
+          <div key={section.sectionId}>
+            {idx > 0 && <CommandSeparator />}
+            <CommandGroup heading={section.sectionName}>
+              {section.commands.map((command) => (
+                <CommandSuggestionItem key={command.value} command={command} />
+              ))}
+            </CommandGroup>
+          </div>
+        ))}
       </CommandList>
     </Command>
+  );
+};
+
+type CommandSuggestion =
+  CommandResponseIpc['suggestions'][number]['commands'][number];
+
+const CommandIcon = ({ icon }: { icon: string }) => {
+  if (Object.hasOwn(LucideIcons, icon)) {
+    const Icon = LucideIcons[icon];
+    return <Icon />;
+  }
+  return <img src={icon} className="h-[18px] w-[18px]" />;
+};
+
+const CommandSuggestionItem = ({ command }: { command: CommandSuggestion }) => {
+  return (
+    <CommandItem
+      value={command.value}
+      keywords={[command.value, command.name]}
+    >
+      {command.icon && <CommandIcon icon={command.icon} />}
+      <div className="flex flex-col">
+        <span>{command.name}</span>
+        {command.subname && (
+          <span className="max-w-96 truncate opacity-50">
+            {command.subname}
+          </span>
+        )}
+      </div>
+      <CommandShortcut>
+        <div className="flex gap-0.5">
+          <span>
+            ({((command.weight ?? 0) * 100).toFixed(1)}%){' '}
+          </span>
+          <span>{((command.score ?? 0) * 100).toFixed(1)}%</span>
+        </div>
+      </CommandShortcut>
+    </CommandItem>
   );
 };
