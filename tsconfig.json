@@ -18,7 +18,7 @@
     "paths": {
       "@/*": ["./src/renderer/*"]
     },
-    "types": ["node", "./src/globals.d.ts"],
+    "types": ["node", "jest", "./src/globals.d.ts"],
     "plugins": [
       {
         "name": "typescript-plugin-css-modules",
