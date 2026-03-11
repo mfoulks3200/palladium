@@ -5,7 +5,7 @@ import {
   SettingsKeys,
   settingsDefaults,
 } from 'src/ipc/SettingsRegistry';
-import { typedIpcMain, typedWebContents } from './ipc';
+import { typedIpcMain } from './ipc';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
@@ -29,23 +29,20 @@ export class SettingsManager {
   }
 
   private constructor() {
-    typedIpcMain.on('settings-sync', (_event, newSettings) => {
-      if (!newSettings) {
-        typedWebContents(_event.sender).send(
-          'settings-sync',
-          settingsSchema.parse(this.currentSettings),
-        );
-      } else {
-        const prevAnalytics = this.getItem('analytics.enabled');
-        this.currentSettings = settingsSchema.parse(newSettings);
-        this.persist();
+    typedIpcMain.handle('get-settings', () => {
+      return settingsSchema.parse(this.currentSettings);
+    });
 
-        // Reflect analytics opt-in/out changes immediately so toggling the
-        // setting in the UI takes effect without an app restart.
-        const nextAnalytics = this.getItem('analytics.enabled');
-        if (prevAnalytics !== nextAnalytics) {
-          AnalyticsManager.getInstance().setEnabled(nextAnalytics);
-        }
+    typedIpcMain.on('settings-sync', (_event, newSettings) => {
+      const prevAnalytics = this.getItem('analytics.enabled');
+      this.currentSettings = settingsSchema.parse(newSettings);
+      this.persist();
+
+      // Reflect analytics opt-in/out changes immediately so toggling the
+      // setting in the UI takes effect without an app restart.
+      const nextAnalytics = this.getItem('analytics.enabled');
+      if (prevAnalytics !== nextAnalytics) {
+        AnalyticsManager.getInstance().setEnabled(nextAnalytics);
       }
     });
 

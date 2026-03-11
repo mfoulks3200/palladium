@@ -1,7 +1,11 @@
 // Disable no-unused-vars, broken for spread args
 /* eslint no-unused-vars: off */
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
-import { MainToRendererEvents, RendererToMainEvents } from '../ipc';
+import {
+  MainToRendererEvents,
+  RendererToMainEvents,
+  RendererToMainInvocations,
+} from '../ipc';
 
 const electronHandler = {
   ipcRenderer: {
@@ -10,6 +14,12 @@ const electronHandler = {
       ...args: RendererToMainEvents[T]
     ) {
       ipcRenderer.send(channel, ...args);
+    },
+    invoke<T extends keyof RendererToMainInvocations>(
+      channel: T,
+      ...args: RendererToMainInvocations[T]['args']
+    ): Promise<RendererToMainInvocations[T]['result']> {
+      return ipcRenderer.invoke(channel, ...args);
     },
     on<T extends keyof MainToRendererEvents>(
       channel: T,

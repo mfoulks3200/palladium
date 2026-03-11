@@ -1,6 +1,6 @@
 import fuzzysort from 'fuzzysort';
 import { CommandResponseIpc } from 'src/ipc';
-import { typedIpcMain, typedWebContents } from '../ipc';
+import { typedIpcMain } from '../ipc';
 
 import * as BuiltInProviders from './builtins';
 
@@ -35,13 +35,11 @@ export class CommandParser {
   }
 
   private constructor() {
-    typedIpcMain.on('command-input', (_event, commandInput) => {
+    typedIpcMain.handle('command-input', (_event, commandInput) => {
       if (commandInput.mode === 'suggestions') {
-        typedWebContents(_event.sender).send(
-          'command-response',
-          this.generateSuggestions(commandInput.input),
-        );
-      } else if (commandInput.mode === 'execute' && commandInput.command) {
+        return this.generateSuggestions(commandInput.input);
+      }
+      if (commandInput.mode === 'execute' && commandInput.command) {
         console.log('Executing command: ', commandInput);
         for (const provider of Object.keys(this.providers)) {
           if (commandInput.command!.startsWith(provider)) {
@@ -52,13 +50,14 @@ export class CommandParser {
                 tabUuid: commandInput.tabUuid,
               },
             );
-            return;
+            return undefined;
           }
         }
         console.log(
           'Error: Could not find provider for ' + commandInput.command,
         );
       }
+      return undefined;
     });
     for (const BuiltInProvider of Object.values(BuiltInProviders)) {
       this.addProvider(new BuiltInProvider());

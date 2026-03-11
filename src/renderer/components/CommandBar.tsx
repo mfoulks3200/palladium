@@ -67,39 +67,51 @@ export const CommandBar = ({ className }: CommandBarProps) => {
     };
   }, []);
 
+  const handleSuggestionResponse = useCallback(
+    (response: CommandResponseIpc) => {
+      setCommandResponse(response);
+      setSelectedCommand((prev) => {
+        if (!prev && Object.keys(response.suggestions).length > 0) {
+          return Object.values(response.suggestions)[0].commands[0].value;
+        }
+        if (prev && Object.keys(response.suggestions).length === 0) {
+          return undefined;
+        }
+        return prev;
+      });
+    },
+    [],
+  );
+
   useEffect(() => {
-    const removeListener = window.electron.ipcRenderer.on(
-      'command-response',
-      (response) => {
-        setCommandResponse(response);
-        setSelectedCommand((prev) => {
-          if (!prev && Object.keys(response.suggestions).length > 0) {
-            return Object.values(response.suggestions)[0].commands[0].value;
-          }
-          if (prev && Object.keys(response.suggestions).length === 0) {
-            return undefined;
-          }
-          return prev;
-        });
-      },
-    );
-    window.electron.ipcRenderer.sendMessage('command-input', {
-      mode: 'suggestions',
-      input: currentText,
-    });
-
-    return () => {
-      removeListener();
-    };
+    window.electron.ipcRenderer
+      .invoke('command-input', {
+        mode: 'suggestions' as const,
+        input: currentText,
+      })
+      .then((response) => {
+        if (response) handleSuggestionResponse(response);
+        return undefined;
+      })
+      .catch(console.error);
   }, []);
 
-  const onInput = useCallback((newInput: string) => {
-    setCurrentText(newInput);
-    window.electron.ipcRenderer.sendMessage('command-input', {
-      mode: 'suggestions',
-      input: newInput,
-    });
-  }, []);
+  const onInput = useCallback(
+    (newInput: string) => {
+      setCurrentText(newInput);
+      window.electron.ipcRenderer
+        .invoke('command-input', {
+          mode: 'suggestions' as const,
+          input: newInput,
+        })
+        .then((response) => {
+          if (response) handleSuggestionResponse(response);
+          return undefined;
+        })
+        .catch(console.error);
+    },
+    [handleSuggestionResponse],
+  );
 
   const closeCommandBar = useCallback(() => {
     window.electron.ipcRenderer.sendMessage('command-bar', {
@@ -116,8 +128,8 @@ export const CommandBar = ({ className }: CommandBarProps) => {
       } else if (event.key === 'Enter') {
         event.preventDefault();
         if (selectedCommand) {
-          window.electron.ipcRenderer.sendMessage('command-input', {
-            mode: 'execute',
+          window.electron.ipcRenderer.invoke('command-input', {
+            mode: 'execute' as const,
             input: currentText,
             command: selectedCommand,
             tabUuid: tabUuid,

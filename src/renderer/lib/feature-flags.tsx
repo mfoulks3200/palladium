@@ -50,15 +50,18 @@ export const FeatureFlagProvider = ({ children }: PropsWithChildren) => {
   }, []);
 
   useEffect(() => {
+    // Fetch initial flags via invoke, then subscribe to push updates.
+    window.electron.ipcRenderer
+      .invoke('get-feature-flags')
+      .then((data) => setFlags(data.flags))
+      .catch(console.error);
+
     const removeListener = window.electron.ipcRenderer.on(
       'feature-flags-sync',
       (data) => {
         setFlags(data.flags);
       },
     );
-
-    // Request the current flags from the main process.
-    window.electron.ipcRenderer.sendMessage('feature-flags-sync');
 
     return () => {
       removeListener();

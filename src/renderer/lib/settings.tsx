@@ -35,18 +35,10 @@ export const SettingsProvider = ({ children }: PropsWithChildren) => {
   settingsRef.current = settingsValues;
 
   useEffect(() => {
-    const removeListener = window.electron.ipcRenderer.on(
-      'settings-sync',
-      (response) => {
-        setSettingsValues(response as SettingSchema);
-      },
-    );
-
-    window.electron.ipcRenderer.sendMessage('settings-sync', null as any);
-
-    return () => {
-      removeListener();
-    };
+    window.electron.ipcRenderer
+      .invoke('get-settings')
+      .then(setSettingsValues)
+      .catch(console.error);
   }, []);
 
   const setNewSettingItemValue = useCallback(
