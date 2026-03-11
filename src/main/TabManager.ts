@@ -12,11 +12,24 @@ export class TabManager {
   private tabs: Tab[] = [];
   private mediaStates: Map<string, MediaState> = new Map();
 
-  public static getInstance() {
+  public static getInstance(): TabManager {
+    if (!TabManager.instance) {
+      throw new Error(
+        'TabManager has not been initialized. Call TabManager.initialize(mainWindow) first.',
+      );
+    }
     return TabManager.instance;
   }
 
-  public constructor(mainWindow: BrowserWindow) {
+  public static initialize(mainWindow: BrowserWindow): TabManager {
+    if (TabManager.instance) {
+      throw new Error('TabManager has already been initialized.');
+    }
+    TabManager.instance = new TabManager(mainWindow);
+    return TabManager.instance;
+  }
+
+  private constructor(mainWindow: BrowserWindow) {
     this.mainWindow = mainWindow;
     this.updateBrowsingView();
     this.updateDevtoolsView();
@@ -36,7 +49,6 @@ export class TabManager {
     setInterval(() => {
       this.updateRenderProcess();
     }, 500);
-    TabManager.instance = this;
   }
 
   public async updateBrowsingView(

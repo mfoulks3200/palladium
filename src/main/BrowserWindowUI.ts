@@ -184,7 +184,7 @@ export class BrowserWindowUI {
 
     commandBarSetup();
 
-    const tabManager = new TabManager(this.mainWindow);
+    const tabManager = TabManager.initialize(this.mainWindow);
     if (this.debugMode) {
       tabManager.addTab(new Tab('https://www.electronjs.org'));
       tabManager.addTab(new Tab('https://www.google.com'));
