@@ -10,15 +10,7 @@ import '@fontsource/inter/800';
 import './App.css';
 import '../globals.css';
 import { ThemeProvider } from '../../components/ThemeProvider';
-import {
-  createContext,
-  ReactElement,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserUI } from '../../components/BrowserUI';
 import { TabManagerIpc } from '../../../ipc';
 import { SettingsProvider } from '@/lib/settings';
@@ -27,21 +19,11 @@ import { SystemMetaProvider } from '@/lib/system-meta';
 import { DesignTokenProvider } from '../../hooks/use-design-tokens';
 import { MediaStateProvider } from '@/lib/media-state';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
-
-interface InternalTabMetaItem {
-  title: string;
-  icon: ReactElement;
-}
-
-interface InternalTabMeta {
-  tabs: Record<string, InternalTabMetaItem>;
-  setTabMeta: (meta: InternalTabMetaItem, tabId?: string) => void;
-}
-
-export const TabMetaContext = createContext<TabManagerIpc | null>(null);
-export const InternalTabMetaContext = createContext<InternalTabMeta | null>(
-  null,
-);
+import {
+  InternalTabMetaContext,
+  InternalTabMetaItem,
+  TabMetaContext,
+} from '@/lib/tab-meta';
 
 function Main() {
   const [tabMeta, setTabMeta] = useState<TabManagerIpc | null>(null);
