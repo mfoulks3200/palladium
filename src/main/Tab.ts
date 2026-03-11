@@ -2,7 +2,6 @@ import {
   Menu,
   MenuItem,
   Session,
-  WebContents,
   WebContentsView,
   session,
 } from 'electron';
@@ -10,7 +9,6 @@ import { MediaState, TabIpcPacket } from '../ipc';
 import { HistoryEvent, HistoryManager } from './HistoryManager';
 import path from 'node:path';
 import os from 'node:os';
-import { TabManager } from './TabManager';
 import { AnalyticsManager } from './AnalyticsManager';
 
 const devToolsCSS = `
@@ -107,10 +105,7 @@ export class Tab extends EventTarget {
       if (!this.view.webContents.isDestroyed()) {
         this.setDevMode(false);
         this.setupDevtoolsWindow();
-        const tabMan = TabManager.getInstance();
-        if (tabMan && tabMan.getCurrentTab() === this) {
-          tabMan.focusTab(this);
-        }
+        this.dispatchEvent(new CustomEvent('request-focus'));
       }
     });
   }
@@ -246,7 +241,7 @@ export class Tab extends EventTarget {
       this.isPlayingAudio = event.audible;
       const mediaId = `audio-${this.uuid}`;
       try {
-        const session = await this.view.webContents.executeJavaScript(`
+        const sessionData = await this.view.webContents.executeJavaScript(`
           (() => {
             const players = [...document.querySelectorAll('video')];
             const player = players.length > 0
@@ -265,27 +260,27 @@ export class Tab extends EventTarget {
             };
           })()
         `);
-        if (session.metadata) {
+        if (sessionData.metadata) {
           if (this.activeMediaId && this.activeMediaId === mediaId) {
             this.updateMediaState({
               id: mediaId,
-              title: session.metadata.title,
+              title: sessionData.metadata.title,
               playing: event.audible,
-              progress: session.currentTime,
-              duration: session.duration,
+              progress: sessionData.currentTime,
+              duration: sessionData.duration,
             });
           } else {
             this.activeMediaId = mediaId;
             this.addMediaState({
               id: mediaId,
               type: 'audio',
-              title: session.metadata.title,
-              album: session.metadata.album,
-              artist: session.metadata.artist,
-              artworkUrl: session.metadata.artwork?.[0]?.src ?? '',
+              title: sessionData.metadata.title,
+              album: sessionData.metadata.album,
+              artist: sessionData.metadata.artist,
+              artworkUrl: sessionData.metadata.artwork?.[0]?.src ?? '',
               playing: event.audible,
-              progress: session.currentTime,
-              duration: session.duration,
+              progress: sessionData.currentTime,
+              duration: sessionData.duration,
             });
           }
         }
@@ -340,16 +335,16 @@ export class Tab extends EventTarget {
       this.publishMetadataUpdateEvent();
     });
 
-    this.view.webContents.on('did-start-loading', async () => {
+    this.view.webContents.on('did-stop-loading', async () => {
       this.publishMetadataUpdateEvent();
     });
 
     this.view.webContents.setWindowOpenHandler((edata) => {
-      if (edata.disposition === 'background-tab') {
-        TabManager.getInstance().addTab(new Tab(edata.url));
-      } else {
-        TabManager.getInstance().focusTab(new Tab(edata.url));
-      }
+      this.dispatchEvent(
+        new CustomEvent('new-window-requested', {
+          detail: { url: edata.url, disposition: edata.disposition },
+        }),
+      );
       return { action: 'deny' };
     });
   }

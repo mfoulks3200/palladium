@@ -46,10 +46,11 @@ jest.mock('node:crypto', () => ({
 }));
 
 const mockIpcOn = jest.fn();
+const mockIpcHandle = jest.fn();
 const mockWebContentsSend = jest.fn();
 
 jest.mock('src/main/ipc', () => ({
-  typedIpcMain: { on: mockIpcOn },
+  typedIpcMain: { on: mockIpcOn, handle: mockIpcHandle },
   typedWebContents: jest.fn(() => ({ send: mockWebContentsSend })),
 }));
 
@@ -284,37 +285,37 @@ describe('AnalyticsManager', () => {
   // 12. IPC handlers registered on construction
   // -----------------------------------------------------------------------
 
-  it('registers feature-flags-sync, feature-flags-refresh, and capture-exception IPC handlers', () => {
+  it('registers get-feature-flags, feature-flags-refresh, and capture-exception IPC handlers', () => {
     AnalyticsManager.getInstance();
 
-    const registeredChannels = mockIpcOn.mock.calls.map(
+    const registeredOnChannels = mockIpcOn.mock.calls.map(
       (call: any[]) => call[0],
     );
-    expect(registeredChannels).toContain('feature-flags-sync');
-    expect(registeredChannels).toContain('feature-flags-refresh');
-    expect(registeredChannels).toContain('capture-exception');
+    expect(registeredOnChannels).toContain('feature-flags-refresh');
+    expect(registeredOnChannels).toContain('capture-exception');
+
+    const registeredHandleChannels = mockIpcHandle.mock.calls.map(
+      (call: any[]) => call[0],
+    );
+    expect(registeredHandleChannels).toContain('get-feature-flags');
   });
 
   // -----------------------------------------------------------------------
   // 13. feature-flags-sync IPC handler responds with cached flags
   // -----------------------------------------------------------------------
 
-  it('responds with cached flags when feature-flags-sync is called', async () => {
+  it('responds with cached flags when get-feature-flags is invoked', async () => {
     const mgr = AnalyticsManager.getInstance();
     await mgr.refreshFeatureFlags();
 
-    const handler = mockIpcOn.mock.calls.find(
-      (c: any[]) => c[0] === 'feature-flags-sync',
+    const handler = mockIpcHandle.mock.calls.find(
+      (c: any[]) => c[0] === 'get-feature-flags',
     )?.[1];
     expect(handler).toBeDefined();
 
-    const fakeEvent = { sender: {} };
-    handler(fakeEvent);
+    const result = await handler();
 
-    expect(typedWebContents).toHaveBeenCalledWith(fakeEvent.sender);
-    expect(mockWebContentsSend).toHaveBeenCalledWith('feature-flags-sync', {
-      flags: { 'test-flag': true },
-    });
+    expect(result).toEqual({ flags: { 'test-flag': true } });
   });
 
   // -----------------------------------------------------------------------

@@ -152,10 +152,6 @@ const uniformTypeToGLSLType = (t: string) => {
 const LinearFilter = 9729;
 const NearestFilter = 9728;
 const LinearMipMapLinearFilter = 9987;
-const NearestMipMapLinearFilter = 9986;
-const LinearMipMapNearestFilter = 9985;
-const NearestMipMapNearestFilter = 9984;
-const MirroredRepeatWrapping = 33648;
 const ClampToEdgeWrapping = 33071;
 const RepeatWrapping = 10497;
 
@@ -872,10 +868,10 @@ export function ReactShaderToy({
       ? ((timestamp - lastTimeRef.current) / 1000) * currentTimeMultiplier
       : 0;
     lastTimeRef.current = timestamp;
-    const propUniforms = propsUniformsRef.current;
-    if (propUniforms) {
-      for (const name of Object.keys(propUniforms)) {
-        const currentUniform = propUniforms[name];
+    const innerPropUniforms = propsUniformsRef.current;
+    if (innerPropUniforms) {
+      for (const name of Object.keys(innerPropUniforms)) {
+        const currentUniform = innerPropUniforms[name];
         if (!currentUniform) continue;
         if (uniformsRef.current[name]?.isNeeded) {
           if (!shaderProgramRef.current) return;
@@ -1157,7 +1153,7 @@ export function ReactShaderToy({
 
   // Main effect for initialization and cleanup
   useEffect(() => {
-    const textures = texturesArrRef.current;
+    const innerTextures = texturesArrRef.current;
 
     function init() {
       initWebGL();
@@ -1188,8 +1184,8 @@ export function ReactShaderToy({
         gl.getExtension('WEBGL_lose_context')?.loseContext();
         gl.useProgram(null);
         gl.deleteProgram(shaderProgramRef.current ?? null);
-        if (textures.length > 0) {
-          for (const texture of textures as Texture[]) {
+        if (innerTextures.length > 0) {
+          for (const texture of innerTextures as Texture[]) {
             gl.deleteTexture(texture._webglTexture);
           }
         }

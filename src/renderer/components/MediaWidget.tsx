@@ -4,61 +4,58 @@ import { ExternalLink, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
 
-import img from '../../../assets/images/kalen-emsley-Bkci_8qcdvQ-unsplash.jpg';
 import { useMediaStates } from '@/lib/media-state';
-import { useCallback, useEffect, useState } from 'react';
-import { MediaState } from 'src/ipc';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export const MediaWidget = () => {
-  const [selectedMediaState, setSelectedMediaState] = useState(0);
+  const [selectedMediaState] = useState(0);
   const [currentProgress, setCurrentProgress] = useState(0);
-  const [allMediaStates, setAllMediaStates] = useState<MediaState[]>([]);
-  const [currentMediaState, setCurrentMediaState] =
-    useState<MediaState | null>();
-  const mediaState = useMediaStates();
+  const mediaStates = useMediaStates();
+
+  const currentMediaState = mediaStates[selectedMediaState] ?? null;
+  const currentMediaStateRef = useRef(currentMediaState);
+  currentMediaStateRef.current = currentMediaState;
+
+  // Sync progress when media state updates from IPC
+  useEffect(() => {
+    if (currentMediaState) {
+      setCurrentProgress(currentMediaState.progress ?? 0);
+    }
+  }, [currentMediaState?.progress, currentMediaState?.id]);
 
   const sendMediaControl = useCallback(
     (action: 'play' | 'pause' | 'next' | 'previous') => {
-      if (currentMediaState) {
+      const state = currentMediaStateRef.current;
+      if (state) {
         window.electron.ipcRenderer.sendMessage('media-control', {
-          mediaId: currentMediaState.id,
+          mediaId: state.id,
           action,
         });
       }
     },
-    [currentMediaState],
+    [],
   );
 
-  if (JSON.stringify(allMediaStates) !== JSON.stringify(mediaState)) {
-    console.log('Media state updated: ', mediaState);
-    setAllMediaStates(mediaState);
-    setCurrentMediaState(mediaState[selectedMediaState]);
-    if (mediaState.length > 0) {
-      setCurrentProgress(mediaState[selectedMediaState].progress ?? 0);
-    }
-  }
-
+  // Smooth progress interpolation — uses a ref so the interval is stable
   useEffect(() => {
-    const interval = 500;
+    const intervalMs = 500;
 
-    let update;
-    update = setInterval(() => {
-      if (currentMediaState && currentMediaState.playing) {
-        const seconds = interval / 1000;
+    const update = setInterval(() => {
+      const state = currentMediaStateRef.current;
+      if (state && state.playing) {
+        const seconds = intervalMs / 1000;
         setCurrentProgress((current) =>
-          Math.min(current + seconds, currentMediaState?.duration ?? 0),
+          Math.min(current + seconds, state.duration ?? 0),
         );
       }
-    }, interval);
+    }, intervalMs);
 
     return () => {
-      if (update) {
-        clearInterval(update);
-      }
+      clearInterval(update);
     };
-  }, [currentMediaState, currentProgress]);
+  }, []);
 
-  if (mediaState.length === 0 || !currentMediaState) {
+  if (mediaStates.length === 0 || !currentMediaState) {
     return <></>;
   }
 

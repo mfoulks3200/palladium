@@ -1,3 +1,69 @@
+## [0.0.10] — 2026-03-11
+
+### Added
+
+- **Global Shortcut Customization** — UI to configure the system-wide keyboard shortcut for opening the command bar
+- **Granular Error Boundaries** — React error boundaries wrapping each major UI section (sidebar, tabs, command bar) to prevent full-app crashes from isolated failures
+
+### Changed
+
+- **Command Bar Performance** — Refactored sprawling `useMemo` chains in the command bar into declarative components, significantly reducing unnecessary re-computation
+- **Tab Manager Refactor** — Overhauled `TabManager` as a proper singleton with clean lifecycle management; moved background state to the shared IPC layer
+- **Electron Invoke/Handle Pattern** — Migrated IPC calls to use `ipcMain.handle` / `ipcRenderer.invoke` for request-response channels instead of fire-and-forget events
+- **Sidebar Decomposition** — Broke the monolithic `Sidebar` component into focused sub-components for maintainability
+- **Context Module Extraction** — Moved `TabMetaContext` and `InternalTabMetaContext` into their own module to reduce circular dependency risk
+- **Design Token Coverage** — Replaced all remaining hardcoded Tailwind color classes with design token equivalents
+
+### Fixed
+
+- Tab and sidebar backgrounds rendering as solid black instead of using design tokens
+- `MediaWidget` referencing a stale variable name after a prior refactor
+- `MediaWidget` interval being torn down and recreated every 500 ms due to unstable deps
+- `useMediaStates` producing a new array reference every render, causing unnecessary re-renders downstream
+- `PortalOverlay` `destroyOverlay` callback instability causing stale closures and missed cleanups
+- Inconsistent provider nesting order between `main-ui` and `command-bar` windows
+- Dead state management code in `DesignTokenProvider` removed
+- Missing `internalTabMeta` dependency in settings `useEffect`
+- Missing `key` props on settings page list renders
+- `useForwardedRef` missing `useEffect` dependency array
+
+### Tests & Tooling
+
+- **CI Lint Workflow** — New GitHub Actions workflow running ESLint on every push and pull request
+- **Jest Test Suite** — Co-located test files added across main process, renderer, and IPC layers with comprehensive coverage for settings, providers, and command providers
+- **PR Test Workflow** — Automated test run on every pull request via CI
+
+---
+
+## [0.0.9] — 2026-03-07
+
+### Added
+
+- **Media Widget** — Now-playing media widget with album artwork, playback controls, and progress scrubber
+  - Media state synchronization between tabs and the browser chrome via IPC
+  - Play/pause, skip forward, and skip backward controls that execute on the originating tab's `WebContents`
+  - Focus-tab button to quickly navigate to the tab playing media
+- **History Command Parser** — Command bar can now search and navigate browsing history
+- **AGENTS.md** — Architecture & agent guide documentation for contributors and AI agents
+
+### Changed
+
+- **Command Bar Search** — Improved search relevance and result ranking
+- **React Performance Improvements** — Comprehensive re-render audit across the renderer process
+  - Wrapped `BrowserTab` in `React.memo` and replaced `useEffect` derived state with `useMemo`
+  - Stabilized context values with `useMemo` and callback refs to prevent cascading re-renders
+  - Fixed IPC listener leaks in settings and command bar components
+
+### Fixed
+
+- Settings tab content not rendering until clicking the tab a second time
+- Internal pages incorrectly appearing in command bar search results
+- Command bar regression causing empty content on respawn
+- Open command not executing correctly
+- Sidebar scroll position resetting unexpectedly
+
+---
+
 ## [0.0.8] — 2026-03-06
 
 ### Added

@@ -1,6 +1,10 @@
-import { TabManager } from 'src/main/TabManager';
-import type { CommandMetadata, CommandProvider } from '../CommandParser';
-import { Tab } from 'src/main/Tab';
+import type {
+  CommandMetadata,
+  CommandProvider,
+  CommandResult,
+  CommandSuggestion,
+} from '../CommandParser';
+import { navigateOrCreateTab } from './navigation';
 import { SettingsKeys } from 'src/ipc/SettingsRegistry';
 import { SettingsManager } from 'src/main/SettingsManager';
 
@@ -20,8 +24,8 @@ const searchEngines: SearchEngine[] = [
     shortcutCode: 'go',
     getSearchUrl: (query: string) => {
       const params = new URLSearchParams();
-      params.append('q', encodeURIComponent(query));
-      params.append('oq', encodeURIComponent(query));
+      params.append('q', query);
+      params.append('oq', query);
       params.append('sourceid', 'chrome');
       params.append('ie', 'utf8');
       params.append('hl', 'en');
@@ -82,7 +86,7 @@ export class SearchEngines implements CommandProvider {
 
   public getSuggestions(input: string) {
     return this.getActiveEngines().map((engine) => {
-      let suggestion: ReturnType<CommandProvider['getSuggestions']>[number] = {
+      let suggestion: CommandSuggestion = {
         name:
           input.length > 0
             ? `Search ${input} with ${engine.name}...`
@@ -108,25 +112,14 @@ export class SearchEngines implements CommandProvider {
     command: string,
     input: string,
     metadata?: CommandMetadata,
-  ) {
+  ): CommandResult {
     const engine = this.getActiveEngines().find((e) => e.id === command);
-
-    let searchUrl = '';
-    if (engine) {
-      searchUrl = engine.getSearchUrl(input);
-    } else {
-      return;
+    if (!engine) {
+      return { success: false, error: `Unknown search engine: ${command}` };
     }
 
-    let tab: Tab | undefined;
-    if (metadata && metadata.tabUuid) {
-      tab = TabManager.getInstance().getTabByUuid(metadata.tabUuid);
-    }
-    if (!tab) {
-      tab = new Tab(searchUrl);
-      TabManager.getInstance().focusTab(tab);
-    } else {
-      tab.view.webContents.loadURL(searchUrl);
-    }
+    const searchUrl = engine.getSearchUrl(input);
+    navigateOrCreateTab(searchUrl, metadata);
+    return { success: true };
   }
 }

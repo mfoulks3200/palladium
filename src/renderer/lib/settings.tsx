@@ -8,14 +8,13 @@ import {
   useState,
 } from 'react';
 import {
-  settingsSchema,
   SettingKeyType,
   SettingsKeys,
   SettingSchema,
   settingsDefaults,
 } from 'src/ipc/SettingsRegistry';
 import { getDeepProp, setDeepProp } from 'src/ipc/Utility';
-import * as z from 'zod';
+
 
 type SettingStateFunction = <T extends SettingsKeys>(
   settingKey: T,
@@ -35,18 +34,10 @@ export const SettingsProvider = ({ children }: PropsWithChildren) => {
   settingsRef.current = settingsValues;
 
   useEffect(() => {
-    const removeListener = window.electron.ipcRenderer.on(
-      'settings-sync',
-      (response) => {
-        setSettingsValues(response as SettingSchema);
-      },
-    );
-
-    window.electron.ipcRenderer.sendMessage('settings-sync', null as any);
-
-    return () => {
-      removeListener();
-    };
+    window.electron.ipcRenderer
+      .invoke('get-settings')
+      .then(setSettingsValues)
+      .catch(console.error);
   }, []);
 
   const setNewSettingItemValue = useCallback(
@@ -70,7 +61,7 @@ export const SettingsProvider = ({ children }: PropsWithChildren) => {
     <T extends SettingsKeys>(
       settingKey: T,
     ): [SettingKeyType<T>, (newValue: SettingKeyType<T>) => void] => {
-      const value = getDeepProp(settingsRef.current, settingKey)!;
+      const value = getDeepProp(settingsValues, settingKey)!;
 
       return [
         value,
@@ -78,7 +69,7 @@ export const SettingsProvider = ({ children }: PropsWithChildren) => {
           setNewSettingItemValue(settingKey, newValue),
       ];
     },
-    [setNewSettingItemValue],
+    [settingsValues, setNewSettingItemValue],
   );
 
   return (

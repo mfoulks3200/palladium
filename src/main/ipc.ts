@@ -1,5 +1,14 @@
-import { ipcMain, IpcMainEvent, WebContents } from 'electron';
-import { MainToRendererEvents, RendererToMainEvents } from '../ipc';
+import {
+  ipcMain,
+  IpcMainEvent,
+  IpcMainInvokeEvent,
+  WebContents,
+} from 'electron';
+import {
+  MainToRendererEvents,
+  RendererToMainEvents,
+  RendererToMainInvocations,
+} from '../ipc';
 
 export const typedIpcMain = {
   on<T extends keyof RendererToMainEvents>(
@@ -23,6 +32,19 @@ export const typedIpcMain = {
     listener: (event: IpcMainEvent, ...args: RendererToMainEvents[T]) => void,
   ) {
     ipcMain.removeListener(channel, listener as any);
+  },
+  handle<T extends keyof RendererToMainInvocations>(
+    channel: T,
+    listener: (
+      event: IpcMainInvokeEvent,
+      ...args: RendererToMainInvocations[T]['args']
+    ) =>
+      | RendererToMainInvocations[T]['result']
+      | Promise<RendererToMainInvocations[T]['result']>,
+  ) {
+    ipcMain.handle(channel, (event, ...args) =>
+      listener(event, ...(args as RendererToMainInvocations[T]['args'])),
+    );
   },
 };
 

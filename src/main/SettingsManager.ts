@@ -5,14 +5,13 @@ import {
   SettingsKeys,
   settingsDefaults,
 } from 'src/ipc/SettingsRegistry';
-import { typedIpcMain, typedWebContents } from './ipc';
+import { typedIpcMain } from './ipc';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
 import { getDeepProp, setDeepProp } from 'src/ipc/Utility';
 import { AnalyticsManager } from './AnalyticsManager';
-
-import * as z from 'zod';
+import { rebindCommandBarShortcut } from './GlobalShortcuts';
 
 const dataPath = path.join(os.homedir(), '.palladium', 'settings.json');
 const dataDir = path.dirname(dataPath);
@@ -29,23 +28,27 @@ export class SettingsManager {
   }
 
   private constructor() {
-    typedIpcMain.on('settings-sync', (_event, newSettings) => {
-      if (!newSettings) {
-        typedWebContents(_event.sender).send(
-          'settings-sync',
-          settingsSchema.parse(this.currentSettings),
-        );
-      } else {
-        const prevAnalytics = this.getItem('analytics.enabled');
-        this.currentSettings = settingsSchema.parse(newSettings);
-        this.persist();
+    typedIpcMain.handle('get-settings', () => {
+      return settingsSchema.parse(this.currentSettings);
+    });
 
-        // Reflect analytics opt-in/out changes immediately so toggling the
-        // setting in the UI takes effect without an app restart.
-        const nextAnalytics = this.getItem('analytics.enabled');
-        if (prevAnalytics !== nextAnalytics) {
-          AnalyticsManager.getInstance().setEnabled(nextAnalytics);
-        }
+    typedIpcMain.on('settings-sync', (_event, newSettings) => {
+      const prevAnalytics = this.getItem('analytics.enabled');
+      const prevShortcut = this.getItem('shortcuts.commandBar');
+      this.currentSettings = settingsSchema.parse(newSettings);
+      this.persist();
+
+      // Reflect analytics opt-in/out changes immediately so toggling the
+      // setting in the UI takes effect without an app restart.
+      const nextAnalytics = this.getItem('analytics.enabled');
+      if (prevAnalytics !== nextAnalytics) {
+        AnalyticsManager.getInstance().setEnabled(nextAnalytics);
+      }
+
+      // Rebind the global shortcut if it changed.
+      const nextShortcut = this.getItem('shortcuts.commandBar');
+      if (prevShortcut !== nextShortcut) {
+        rebindCommandBarShortcut(nextShortcut);
       }
     });
 
@@ -80,7 +83,6 @@ export class SettingsManager {
   }
 
   public persist() {
-    const dataPath = path.join(os.homedir(), '.palladium', 'settings.json');
     fs.writeFileSync(dataPath, JSON.stringify(this.currentSettings, null, 2));
   }
 

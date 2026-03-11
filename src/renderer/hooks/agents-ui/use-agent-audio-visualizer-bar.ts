@@ -30,8 +30,8 @@ export function useAgentAudioVisualizerBarAnimator(
     if (state === 'thinking') {
       setSequence(generateListeningSequenceBar(columns));
     } else if (state === 'connecting' || state === 'initializing') {
-      const sequence = [...generateConnectingSequenceBar(columns)];
-      setSequence(sequence);
+      const connectingSequence = [...generateConnectingSequenceBar(columns)];
+      setSequence(connectingSequence);
     } else if (state === 'listening') {
       setSequence(generateListeningSequenceBar(columns));
     } else if (state === undefined || state === 'speaking') {

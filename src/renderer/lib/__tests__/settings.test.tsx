@@ -1,15 +1,18 @@
 import '@testing-library/jest-dom';
 import { render, screen, act } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '../settings';
+import { settingsDefaults } from 'src/ipc/SettingsRegistry';
 
 // Mock IPC
 const mockSendMessage = jest.fn();
+const mockInvoke = jest.fn();
 let ipcListeners: Record<string, (data: any) => void> = {};
 
 Object.defineProperty(window, 'electron', {
   value: {
     ipcRenderer: {
       sendMessage: mockSendMessage,
+      invoke: mockInvoke,
       on: jest.fn((channel: string, callback: (data: any) => void) => {
         ipcListeners[channel] = callback;
         return jest.fn();
@@ -21,6 +24,8 @@ Object.defineProperty(window, 'electron', {
 
 beforeEach(() => {
   mockSendMessage.mockClear();
+  mockInvoke.mockReset();
+  mockInvoke.mockResolvedValue(settingsDefaults);
   ipcListeners = {};
 });
 
@@ -46,10 +51,13 @@ describe('SettingsProvider', () => {
         <div />
       </SettingsProvider>,
     );
-    expect(mockSendMessage).toHaveBeenCalledWith('settings-sync', null);
+    expect(mockInvoke).toHaveBeenCalledWith('get-settings');
   });
 
   it('provides default values before IPC response', () => {
+    // Use a never-resolving promise so the invoke doesn't update state
+    mockInvoke.mockReturnValue(new Promise(() => {}));
+
     render(
       <SettingsProvider>
         <TestSettingConsumer />
@@ -59,30 +67,31 @@ describe('SettingsProvider', () => {
     expect(screen.getByTestId('setting-value')).toHaveTextContent('true');
   });
 
-  it('updates values from IPC sync', () => {
-    // Need to import settingsSchema to produce a valid full settings object
+  it('updates values when invoke resolves with settings', async () => {
     const { settingsSchema } = require('src/ipc/SettingsRegistry');
     const settings = settingsSchema.parse({ analytics: { enabled: false } });
 
-    render(
-      <SettingsProvider>
-        <TestSettingConsumer />
-      </SettingsProvider>,
-    );
+    mockInvoke.mockResolvedValue(settings);
 
-    act(() => {
-      ipcListeners['settings-sync']?.(settings);
+    await act(async () => {
+      render(
+        <SettingsProvider>
+          <TestSettingConsumer />
+        </SettingsProvider>,
+      );
     });
 
     expect(screen.getByTestId('setting-value')).toHaveTextContent('false');
   });
 
-  it('sends updated settings via IPC when setter is called', () => {
-    render(
-      <SettingsProvider>
-        <TestSettingConsumer />
-      </SettingsProvider>,
-    );
+  it('sends updated settings via IPC when setter is called', async () => {
+    await act(async () => {
+      render(
+        <SettingsProvider>
+          <TestSettingConsumer />
+        </SettingsProvider>,
+      );
+    });
 
     mockSendMessage.mockClear();
 

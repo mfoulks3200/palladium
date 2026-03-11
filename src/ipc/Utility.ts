@@ -45,7 +45,6 @@ export const setDeepProp = <O extends object, T extends NestedKeysOf<O>>(
   const nextProp = properties.shift();
   if (nextProp) {
     if (properties.length === 0) {
-      (obj as Record<string, any>)[nextProp] = value;
       return { ...obj, [nextProp]: value } as any;
     } else {
       return {
@@ -62,24 +61,60 @@ export const setDeepProp = <O extends object, T extends NestedKeysOf<O>>(
   }
 };
 
+const deepEqual = (a: unknown, b: unknown): boolean => {
+  if (a === b) return true;
+  if (a == null || b == null) return a === b;
+  if (typeof a !== typeof b) return false;
+
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) return false;
+    return a.every((val, i) => deepEqual(val, b[i]));
+  }
+
+  if (typeof a === 'object') {
+    const aObj = a as Record<string, unknown>;
+    const bObj = b as Record<string, unknown>;
+    const allKeys = new Set([
+      ...Object.keys(aObj),
+      ...Object.keys(bObj),
+    ]);
+    return [...allKeys].every((key) => deepEqual(aObj[key], bObj[key]));
+  }
+
+  return false;
+};
+
 export const diffObjects = (
   o1: Record<string, any>,
   o2: Record<string, any>,
 ) => {
-  var diff: Record<string, any> = {};
-  if (JSON.stringify(o1) === JSON.stringify(o2)) return {};
+  const diff: Record<string, any> = {};
+  if (deepEqual(o1, o2)) return {};
 
-  for (var k in o1) {
-    if (Array.isArray(o1[k]) && Array.isArray(o2[k]) && o2[k].length > 0) {
-      diff[k] = o2[k];
-    } else if (typeof o1[k] === 'object' && typeof o2[k] === 'object') {
-      const newObj = diffObjects(o1[k], o2[k]);
-      if (Object.keys(newObj).length > 0) {
-        diff[k] = newObj;
+  const allKeys = new Set([...Object.keys(o1), ...Object.keys(o2)]);
+
+  for (const k of allKeys) {
+    const v1 = o1[k];
+    const v2 = o2[k];
+
+    if (deepEqual(v1, v2)) continue;
+
+    if (Array.isArray(v1) || Array.isArray(v2)) {
+      diff[k] = v2;
+    } else if (
+      v1 !== null &&
+      v2 !== null &&
+      typeof v1 === 'object' &&
+      typeof v2 === 'object'
+    ) {
+      const nested = diffObjects(v1, v2);
+      if (Object.keys(nested).length > 0) {
+        diff[k] = nested;
       }
-    } else if (o1[k] !== o2[k]) {
-      diff[k] = o2[k];
+    } else {
+      diff[k] = v2;
     }
   }
+
   return diff;
 };

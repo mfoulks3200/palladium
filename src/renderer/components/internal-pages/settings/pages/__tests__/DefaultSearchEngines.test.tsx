@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
-import { createContext } from 'react';
+
 import { DefaultSearchEngines } from '../DefaultSearchEngines';
 import { SettingsContext } from '@/lib/settings';
 

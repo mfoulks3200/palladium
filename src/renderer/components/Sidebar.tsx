@@ -12,42 +12,146 @@ import { BrowserTab } from './BrowserTab';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 
-import { useCallback, useContext, useEffect, useState } from 'react';
-import { TabActionsIpc, TabManagerIpc } from '../../ipc';
-import { OverlayPortal } from './PortalOverlay';
-import { InternalTabMetaContext, TabMetaContext } from '@/windows/main-ui/App';
+import { useCallback, useContext, useEffect } from 'react';
+import { TabActionsIpc } from '../../ipc';
+import { InternalTabMetaContext, TabMetaContext } from '@/lib/tab-meta';
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index';
 
-import styles from './Sidebar.module.css';
 import { cn } from '@/lib/utils';
 import { useSystemMeta } from '@/lib/system-meta';
 import { MediaWidget } from './MediaWidget';
+import { ComponentErrorBoundary } from './ErrorBoundary';
+
+const openCommandBar = (uuid?: string) => {
+  window.electron.ipcRenderer.sendMessage('command-bar', {
+    action: 'open',
+    tabUuid: uuid,
+  });
+};
 
 export const Sidebar = () => {
   const tabMeta = useContext(TabMetaContext);
-  const internalTabMeta = useContext(InternalTabMetaContext);
+
+  const currentTab =
+    tabMeta?.tabs.find((t) => t.uuid === tabMeta.currentTabUuid) ?? null;
+
+  return (
+    <div className="flex h-full max-h-full flex-col gap-2">
+      <NavigationBar />
+      <AddressBar currentTabUrl={currentTab?.url} currentTabUuid={currentTab?.uuid} />
+      <Card className="max-h-full min-h-0 w-full grow p-2 drop-shadow-md">
+        <div className="flex h-full max-h-full w-full flex-col gap-2">
+          <TabList />
+          <ComponentErrorBoundary name="MediaWidget">
+            <MediaWidget />
+          </ComponentErrorBoundary>
+          <SidebarActions />
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+const NavigationBar = () => {
   const meta = useSystemMeta();
+
+  const sendTabAction = useCallback((action: TabActionsIpc['action']) => {
+    window.electron.ipcRenderer.sendMessage('tab-actions', {
+      action,
+    } as TabActionsIpc);
+  }, []);
+
+  return (
+    <Card className="p-0">
+      <div className={cn('z-10 flex h-8 w-full items-center gap-0')}>
+        {meta?.platform !== 'darwin' && <NonNativeWindowControls />}
+        <div className="windowDragRegion h-full grow"></div>
+        <div className={cn('flex items-center gap-2 pr-1')}>
+          <Button
+            variant="ghost"
+            className={cn(
+              'max-h-6 max-w-6',
+              'hover:dark:bg-surface-raised hover:dark:text-surface-overlay-foreground',
+            )}
+            size="icon-sm"
+            onClick={() => sendTabAction('back')}
+          >
+            <ChevronLeft />
+          </Button>
+          <Button
+            variant="ghost"
+            className={cn(
+              'max-h-6 max-w-6',
+              'hover:dark:bg-surface-raised hover:dark:text-surface-overlay-foreground',
+            )}
+            size="icon-sm"
+            onClick={() => sendTabAction('forward')}
+          >
+            <ChevronRight />
+          </Button>
+          <Button
+            variant="ghost"
+            className={cn(
+              'max-h-6 max-w-6',
+              'hover:dark:bg-surface-raised hover:dark:text-surface-overlay-foreground',
+            )}
+            size="icon-sm"
+            onClick={() => sendTabAction('refresh')}
+          >
+            <RotateCw />
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+const AddressBar = ({
+  currentTabUrl,
+  currentTabUuid,
+}: {
+  currentTabUrl?: string;
+  currentTabUuid?: string;
+}) => {
+  let displayUrl = currentTabUrl ?? '';
+  if (currentTabUrl && !currentTabUrl.startsWith('palladium')) {
+    try {
+      displayUrl = new URL(currentTabUrl).hostname.replaceAll(/^www./g, '');
+    } catch {
+      displayUrl = currentTabUrl;
+    }
+  }
+
+  return (
+    <Card
+      className="h-10 w-full cursor-pointer p-2 drop-shadow-md"
+      onClick={() => openCommandBar(currentTabUuid)}
+    >
+      <div className="overflow-hidden px-1 text-sm text-ellipsis opacity-75 select-none focus:outline-none active:outline-none">
+        {displayUrl}
+      </div>
+    </Card>
+  );
+};
+
+const TabList = () => {
+  const tabMeta = useContext(TabMetaContext);
+  const internalTabMeta = useContext(InternalTabMetaContext);
 
   useEffect(() => {
     return monitorForElements({
       onDrop({ location, source }) {
         const target = location.current.dropTargets[0];
-        if (!target) {
-          return;
-        }
+        if (!target) return;
 
         const sourceData = source.data;
         const targetData = target.data;
-
-        if (sourceData.type !== 'tab' || targetData.type !== 'tab') {
-          return;
-        }
+        if (sourceData.type !== 'tab' || targetData.type !== 'tab') return;
 
         const startIndex = sourceData.index as number;
         const targetIndex = targetData.index as number;
-
         const edge = extractClosestEdge(targetData);
         const finishIndex = getReorderDestinationIndex({
           closestEdgeOfTarget: edge,
@@ -56,14 +160,12 @@ export const Sidebar = () => {
           axis: 'vertical',
         });
 
-        if (startIndex === finishIndex) {
-          return;
+        if (startIndex !== finishIndex) {
+          window.electron.ipcRenderer.sendMessage('reorder-tab', {
+            startIndex,
+            finishIndex,
+          });
         }
-
-        window.electron.ipcRenderer.sendMessage('reorder-tab', {
-          startIndex,
-          finishIndex,
-        });
       },
     });
   }, []);
@@ -74,164 +176,61 @@ export const Sidebar = () => {
     });
   }, []);
 
-  const sendTabAction = useCallback((action: TabActionsIpc['action']) => {
-    window.electron.ipcRenderer.sendMessage('tab-actions', {
-      action,
-    } as TabActionsIpc);
-  }, []);
-
-  const currentTab =
-    tabMeta?.tabs.find((t) => t.uuid === tabMeta.currentTabUuid) ?? null;
-
-  let currentTabDisplayUrl = currentTab?.url ?? '';
-  if (currentTab && !currentTab.url.startsWith('palladium')) {
-    try {
-      currentTabDisplayUrl = new URL(currentTab.url).hostname.replaceAll(
-        /^www./g,
-        '',
-      );
-    } catch (e) {
-      currentTabDisplayUrl = currentTab.url;
-    }
-  }
-
-  const openCommandBar = useCallback((uuid?: string) => {
-    window.electron.ipcRenderer.sendMessage('command-bar', {
-      action: 'open',
-      tabUuid: uuid,
-    });
-  }, []);
-
   return (
-    <div className="flex h-full max-h-full flex-col gap-2">
-      <Card className="p-0">
-        <div className={cn('z-10 flex h-8 w-full items-center gap-0')}>
-          {meta?.platform !== 'darwin' && <NonNativeWindowControls />}
-          <div className="windowDragRegion h-full grow"></div>
-          <div className={cn('flex items-center gap-2 pr-1')}>
-            <Button
-              variant="ghost"
-              className={cn(
-                'max-h-6 max-w-6',
-                'hover:dark:bg-surface-raised hover:dark:text-surface-overlay-foreground',
-              )}
-              size="icon-sm"
-              onClick={() => sendTabAction('back')}
-            >
-              <ChevronLeft />
-            </Button>
-            <Button
-              variant="ghost"
-              className={cn(
-                'max-h-6 max-w-6',
-                'hover:dark:bg-surface-raised hover:dark:text-surface-overlay-foreground',
-              )}
-              size="icon-sm"
-              onClick={() => sendTabAction('forward')}
-            >
-              <ChevronRight />
-            </Button>
-            <Button
-              variant="ghost"
-              className={cn(
-                'max-h-6 max-w-6',
-                'hover:dark:bg-surface-raised hover:dark:text-surface-overlay-foreground',
-              )}
-              size="icon-sm"
-              onClick={() => sendTabAction('refresh')}
-            >
-              <RotateCw />
-            </Button>
-          </div>
-        </div>
-      </Card>
-      <Card
-        className="h-10 w-full cursor-pointer p-2 drop-shadow-md"
-        onClick={() => {
-          openCommandBar(currentTab?.uuid);
-        }}
-      >
-        <div className="overflow-hidden px-1 text-sm text-ellipsis opacity-75 select-none focus:outline-none active:outline-none">
-          {currentTabDisplayUrl}
-        </div>
-      </Card>
-      <Card className="max-h-full min-h-0 w-full grow p-2 drop-shadow-md">
-        <div className="flex h-full max-h-full w-full flex-col gap-2">
-          <div
-            className={cn(
-              'scrollbar-gutter-stable mac-scrollbar -pr-[8px] flex h-full max-h-full w-full flex-col gap-2 overflow-scroll',
-              // 'rounded-md border border-red-600',
-            )}
-            style={{
-              width: 'calc( 100% + 8px )',
-              clipPath: 'rect(0px calc( 100% - 7px) 100% 0px round 6px)',
-            }}
-          >
-            {tabMeta &&
-              tabMeta.tabs &&
-              tabMeta.tabs.map((singleTabMeta, index) => (
-                <BrowserTab
-                  key={singleTabMeta.uuid}
-                  uuid={singleTabMeta.uuid}
-                  url={singleTabMeta.url}
-                  index={index}
-                  data-tabUuid={singleTabMeta.uuid}
-                  isActive={tabMeta.currentTabUuid === singleTabMeta.uuid}
-                  isPlayingAudio={singleTabMeta.isPlayingAudio}
-                  title={
-                    singleTabMeta.isInternal
-                      ? (internalTabMeta?.tabs[singleTabMeta.uuid]?.title ?? '')
-                      : singleTabMeta.title
-                  }
-                  favicon={singleTabMeta.faviconB64 ?? undefined}
-                  onClick={() => {
-                    console.log('Switching to tab ', singleTabMeta.uuid);
-                    switchToTab(singleTabMeta.uuid);
-                  }}
-                  isDevMode={singleTabMeta.isDevMode}
-                  isMuted={singleTabMeta.isMuted}
-                  isLoading={singleTabMeta.isLoading}
-                />
-              ))}
+    <div
+      className={cn(
+        'scrollbar-gutter-stable mac-scrollbar -pr-[8px] flex h-full max-h-full w-full flex-col gap-2 overflow-scroll',
+      )}
+      style={{
+        width: 'calc( 100% + 8px )',
+        clipPath: 'rect(0px calc( 100% - 7px) 100% 0px round 6px)',
+      }}
+    >
+      {tabMeta?.tabs?.map((singleTabMeta, index) => (
+        <BrowserTab
+          key={singleTabMeta.uuid}
+          uuid={singleTabMeta.uuid}
+          url={singleTabMeta.url}
+          index={index}
+          data-tabUuid={singleTabMeta.uuid}
+          isActive={tabMeta.currentTabUuid === singleTabMeta.uuid}
+          isPlayingAudio={singleTabMeta.isPlayingAudio}
+          title={
+            singleTabMeta.isInternal
+              ? (internalTabMeta?.tabs[singleTabMeta.uuid]?.title ?? '')
+              : singleTabMeta.title
+          }
+          favicon={singleTabMeta.faviconB64 ?? undefined}
+          onClick={() => switchToTab(singleTabMeta.uuid)}
+          isDevMode={singleTabMeta.isDevMode}
+          isMuted={singleTabMeta.isMuted}
+          isLoading={singleTabMeta.isLoading}
+        />
+      ))}
+    </div>
+  );
+};
 
-            {/* <BrowserTab isActive={true} title={'Electron JS'} />
-          <BrowserTab
-            isActive={false}
-            title={'Example Tab'}
-            subtitle="Subtitle Text"
-          />
-          <BrowserTab isActive={false} title={'Example Tab'} isDevMode={true} />
-          <BrowserTab isActive={false} title={'Example Tab'} /> */}
-          </div>
-          {/* <div className="grow" /> */}
-          <MediaWidget />
-          <div className="flex w-full gap-2">
-            <div
-              className={
-                'flex h-10 grow cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-white/5'
-              }
-              onClick={() => {
-                openCommandBar();
-              }}
-            >
-              <Plus size="18px" className="max-w-[18px] min-w-[18px]" />
-              <div className="flex flex-col justify-center overflow-hidden text-ellipsis">
-                <div className="truncate text-sm">New Tab</div>
-              </div>
-            </div>
-            <div
-              className={
-                'flex h-10 w-10 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-white/5'
-              }
-              onClick={() => {
-                window.electron.ipcRenderer.sendMessage('open-settings');
-              }}
-            >
-              <Cog size="18px" className="max-w-[18px] min-w-[18px]" />
-            </div>
-          </div>
+const SidebarActions = () => {
+  return (
+    <div className="flex w-full gap-2">
+      <div
+        className="flex h-10 grow cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-foreground/5"
+        onClick={() => openCommandBar()}
+      >
+        <Plus size="18px" className="max-w-[18px] min-w-[18px]" />
+        <div className="flex flex-col justify-center overflow-hidden text-ellipsis">
+          <div className="truncate text-sm">New Tab</div>
         </div>
-      </Card>
+      </div>
+      <div
+        className="flex h-10 w-10 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-foreground/5"
+        onClick={() =>
+          window.electron.ipcRenderer.sendMessage('open-settings')
+        }
+      >
+        <Cog size="18px" className="max-w-[18px] min-w-[18px]" />
+      </div>
     </div>
   );
 };

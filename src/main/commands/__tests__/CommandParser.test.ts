@@ -1,13 +1,9 @@
-const mockIpcOn = jest.fn();
-const mockWebContentsSend = jest.fn();
+const mockIpcHandle = jest.fn();
 
 jest.mock('../../ipc', () => ({
   typedIpcMain: {
-    on: mockIpcOn,
+    handle: mockIpcHandle,
   },
-  typedWebContents: jest.fn(() => ({
-    send: mockWebContentsSend,
-  })),
 }));
 
 // Mock builtins to prevent real providers from loading.
@@ -25,9 +21,21 @@ jest.mock('fuzzysort', () => ({
   },
 }));
 
+jest.mock('../../TabManager', () => ({
+  TabManager: {
+    getInstance: jest.fn(() => ({
+      getTabByUuid: jest.fn(() => undefined),
+      focusTab: jest.fn(),
+    })),
+  },
+}));
+
+jest.mock('../../Tab', () => ({
+  Tab: jest.fn().mockImplementation((url: string) => ({ url })),
+}));
+
 import fuzzysort from 'fuzzysort';
 import { CommandParser, CommandProvider } from '../CommandParser';
-import { typedWebContents } from '../../ipc';
 
 function createMockProvider(
   id: string,
@@ -37,7 +45,7 @@ function createMockProvider(
   return {
     getProviderMetadata: jest.fn(() => ({ id, name })),
     getSuggestions: jest.fn(() => commands),
-    runCommand: jest.fn(),
+    runCommand: jest.fn().mockReturnValue({ success: true }),
   };
 }
 
@@ -57,7 +65,7 @@ describe('CommandParser', () => {
 
     it('registers the command-input IPC handler on construction', () => {
       CommandParser.getInstance();
-      expect(mockIpcOn).toHaveBeenCalledWith(
+      expect(mockIpcHandle).toHaveBeenCalledWith(
         'command-input',
         expect.any(Function),
       );
@@ -65,24 +73,24 @@ describe('CommandParser', () => {
   });
 
   describe('addProvider', () => {
-    it('registers a provider by its metadata id', () => {
+    it('registers a provider by its metadata id', async () => {
       const parser = CommandParser.getInstance();
       const provider = createMockProvider('test.provider', 'Test');
       parser.addProvider(provider);
 
       // Verify the provider is used during suggestion generation
       // by triggering the IPC handler with a suggestion request
-      const ipcHandler = mockIpcOn.mock.calls.find(
+      const ipcHandler = mockIpcHandle.mock.calls.find(
         (call: any[]) => call[0] === 'command-input',
       )![1];
 
       const fakeEvent = { sender: {} };
-      ipcHandler(fakeEvent, { mode: 'suggestions', input: '' });
+      await ipcHandler(fakeEvent, { mode: 'suggestions', input: '' });
 
       expect(provider.getSuggestions).toHaveBeenCalledWith('');
     });
 
-    it('registers multiple providers independently', () => {
+    it('registers multiple providers independently', async () => {
       const parser = CommandParser.getInstance();
       const providerA = createMockProvider('provider.a', 'Provider A');
       const providerB = createMockProvider('provider.b', 'Provider B');
@@ -90,12 +98,12 @@ describe('CommandParser', () => {
       parser.addProvider(providerA);
       parser.addProvider(providerB);
 
-      const ipcHandler = mockIpcOn.mock.calls.find(
+      const ipcHandler = mockIpcHandle.mock.calls.find(
         (call: any[]) => call[0] === 'command-input',
       )![1];
 
       const fakeEvent = { sender: {} };
-      ipcHandler(fakeEvent, { mode: 'suggestions', input: '' });
+      await ipcHandler(fakeEvent, { mode: 'suggestions', input: '' });
 
       expect(providerA.getSuggestions).toHaveBeenCalled();
       expect(providerB.getSuggestions).toHaveBeenCalled();
@@ -103,14 +111,14 @@ describe('CommandParser', () => {
   });
 
   describe('removeProvider', () => {
-    it('removes a previously registered provider', () => {
+    it('removes a previously registered provider', async () => {
       const parser = CommandParser.getInstance();
       const provider = createMockProvider('test.provider', 'Test');
 
       parser.addProvider(provider);
       parser.removeProvider(provider);
 
-      const ipcHandler = mockIpcOn.mock.calls.find(
+      const ipcHandler = mockIpcHandle.mock.calls.find(
         (call: any[]) => call[0] === 'command-input',
       )![1];
 
@@ -118,14 +126,14 @@ describe('CommandParser', () => {
       (provider.getSuggestions as jest.Mock).mockClear();
 
       const fakeEvent = { sender: {} };
-      ipcHandler(fakeEvent, { mode: 'suggestions', input: '' });
+      await ipcHandler(fakeEvent, { mode: 'suggestions', input: '' });
 
       expect(provider.getSuggestions).not.toHaveBeenCalled();
     });
   });
 
   describe('generateSuggestions', () => {
-    it('returns all commands without fuzzy search when input is empty', () => {
+    it('returns all commands without fuzzy search when input is empty', async () => {
       const parser = CommandParser.getInstance();
       const commands = [
         { name: 'New Tab', value: 'new-tab', keywords: ['tab'] },
@@ -134,16 +142,18 @@ describe('CommandParser', () => {
       const provider = createMockProvider('tabs', 'Tabs', commands);
       parser.addProvider(provider);
 
-      const ipcHandler = mockIpcOn.mock.calls.find(
+      const ipcHandler = mockIpcHandle.mock.calls.find(
         (call: any[]) => call[0] === 'command-input',
       )![1];
 
       const fakeEvent = { sender: {} };
-      ipcHandler(fakeEvent, { mode: 'suggestions', input: '' });
+      const result = await ipcHandler(fakeEvent, {
+        mode: 'suggestions',
+        input: '',
+      });
 
       expect(fuzzysort.go).not.toHaveBeenCalled();
-      expect(mockWebContentsSend).toHaveBeenCalledWith(
-        'command-response',
+      expect(result).toEqual(
         expect.objectContaining({
           provider: { prompt: 'Type a command or search...' },
           suggestions: {
@@ -165,7 +175,7 @@ describe('CommandParser', () => {
       );
     });
 
-    it('uses fuzzysort when input is provided', () => {
+    it('uses fuzzysort when input is provided', async () => {
       const parser = CommandParser.getInstance();
       const commands = [
         {
@@ -190,20 +200,22 @@ describe('CommandParser', () => {
         },
       ]);
 
-      const ipcHandler = mockIpcOn.mock.calls.find(
+      const ipcHandler = mockIpcHandle.mock.calls.find(
         (call: any[]) => call[0] === 'command-input',
       )![1];
 
       const fakeEvent = { sender: {} };
-      ipcHandler(fakeEvent, { mode: 'suggestions', input: 'new' });
+      const result = await ipcHandler(fakeEvent, {
+        mode: 'suggestions',
+        input: 'new',
+      });
 
       expect(fuzzysort.go).toHaveBeenCalledWith('new', commands, {
         keys: ['name', 'keywords'],
         threshold: -1000,
       });
 
-      expect(mockWebContentsSend).toHaveBeenCalledWith(
-        'command-response',
+      expect(result).toEqual(
         expect.objectContaining({
           suggestions: {
             tabs: expect.objectContaining({
@@ -220,7 +232,7 @@ describe('CommandParser', () => {
       );
     });
 
-    it('applies weight influence to fuzzy scores', () => {
+    it('applies weight influence to fuzzy scores', async () => {
       const parser = CommandParser.getInstance();
       const commands = [
         {
@@ -244,15 +256,17 @@ describe('CommandParser', () => {
         },
       ]);
 
-      const ipcHandler = mockIpcOn.mock.calls.find(
+      const ipcHandler = mockIpcHandle.mock.calls.find(
         (call: any[]) => call[0] === 'command-input',
       )![1];
 
       const fakeEvent = { sender: {} };
-      ipcHandler(fakeEvent, { mode: 'suggestions', input: 'weight' });
+      const result = await ipcHandler(fakeEvent, {
+        mode: 'suggestions',
+        input: 'weight',
+      });
 
-      expect(mockWebContentsSend).toHaveBeenCalledWith(
-        'command-response',
+      expect(result).toEqual(
         expect.objectContaining({
           suggestions: {
             test: expect.objectContaining({
@@ -267,7 +281,7 @@ describe('CommandParser', () => {
       );
     });
 
-    it('omits providers that return zero matching commands', () => {
+    it('omits providers that return zero matching commands', async () => {
       const parser = CommandParser.getInstance();
 
       const emptyProvider = createMockProvider('empty', 'Empty', []);
@@ -278,42 +292,44 @@ describe('CommandParser', () => {
       parser.addProvider(emptyProvider);
       parser.addProvider(fullProvider);
 
-      const ipcHandler = mockIpcOn.mock.calls.find(
+      const ipcHandler = mockIpcHandle.mock.calls.find(
         (call: any[]) => call[0] === 'command-input',
       )![1];
 
       const fakeEvent = { sender: {} };
-      ipcHandler(fakeEvent, { mode: 'suggestions', input: '' });
+      const result = await ipcHandler(fakeEvent, {
+        mode: 'suggestions',
+        input: '',
+      });
 
-      const responseCall = mockWebContentsSend.mock.calls[0];
-      const suggestions = responseCall[1].suggestions;
-
-      expect(suggestions).not.toHaveProperty('empty');
-      expect(suggestions).toHaveProperty('full');
+      expect(result.suggestions).not.toHaveProperty('empty');
+      expect(result.suggestions).toHaveProperty('full');
     });
 
-    it('prefixes command values with the provider id', () => {
+    it('prefixes command values with the provider id', async () => {
       const parser = CommandParser.getInstance();
       const provider = createMockProvider('my.provider', 'My Provider', [
         { name: 'Do Thing', value: 'do-thing', keywords: [] },
       ]);
       parser.addProvider(provider);
 
-      const ipcHandler = mockIpcOn.mock.calls.find(
+      const ipcHandler = mockIpcHandle.mock.calls.find(
         (call: any[]) => call[0] === 'command-input',
       )![1];
 
       const fakeEvent = { sender: {} };
-      ipcHandler(fakeEvent, { mode: 'suggestions', input: '' });
+      const result = await ipcHandler(fakeEvent, {
+        mode: 'suggestions',
+        input: '',
+      });
 
-      const responseCall = mockWebContentsSend.mock.calls[0];
-      const commands = responseCall[1].suggestions['my.provider'].commands;
+      const commands = result.suggestions['my.provider'].commands;
       expect(commands[0].value).toBe('my.provider.do-thing');
     });
   });
 
   describe('command execution', () => {
-    it('routes execute to the correct provider based on command prefix', () => {
+    it('routes execute to the correct provider based on command prefix', async () => {
       const parser = CommandParser.getInstance();
       const providerA = createMockProvider('alpha', 'Alpha');
       const providerB = createMockProvider('beta', 'Beta');
@@ -321,12 +337,12 @@ describe('CommandParser', () => {
       parser.addProvider(providerA);
       parser.addProvider(providerB);
 
-      const ipcHandler = mockIpcOn.mock.calls.find(
+      const ipcHandler = mockIpcHandle.mock.calls.find(
         (call: any[]) => call[0] === 'command-input',
       )![1];
 
       const fakeEvent = { sender: {} };
-      ipcHandler(fakeEvent, {
+      await ipcHandler(fakeEvent, {
         mode: 'execute',
         input: 'some input',
         command: 'beta.do-something',
@@ -336,22 +352,22 @@ describe('CommandParser', () => {
       expect(providerB.runCommand).toHaveBeenCalledWith(
         'do-something',
         'some input',
-        { tabUuid: 'tab-123' },
+        expect.objectContaining({ tabUuid: 'tab-123' }),
       );
       expect(providerA.runCommand).not.toHaveBeenCalled();
     });
 
-    it('strips provider prefix and dot from the command id', () => {
+    it('strips provider prefix and dot from the command id', async () => {
       const parser = CommandParser.getInstance();
       const provider = createMockProvider('nav', 'Navigation');
       parser.addProvider(provider);
 
-      const ipcHandler = mockIpcOn.mock.calls.find(
+      const ipcHandler = mockIpcHandle.mock.calls.find(
         (call: any[]) => call[0] === 'command-input',
       )![1];
 
       const fakeEvent = { sender: {} };
-      ipcHandler(fakeEvent, {
+      await ipcHandler(fakeEvent, {
         mode: 'execute',
         input: '',
         command: 'nav.go-back',
@@ -363,19 +379,19 @@ describe('CommandParser', () => {
       });
     });
 
-    it('logs an error when no provider matches the command', () => {
+    it('logs an error when no provider matches the command', async () => {
       const consoleSpy = jest
-        .spyOn(console, 'log')
+        .spyOn(console, 'error')
         .mockImplementation(() => {});
 
-      const parser = CommandParser.getInstance();
+      CommandParser.getInstance();
 
-      const ipcHandler = mockIpcOn.mock.calls.find(
+      const ipcHandler = mockIpcHandle.mock.calls.find(
         (call: any[]) => call[0] === 'command-input',
       )![1];
 
       const fakeEvent = { sender: {} };
-      ipcHandler(fakeEvent, {
+      await ipcHandler(fakeEvent, {
         mode: 'execute',
         input: '',
         command: 'nonexistent.command',
@@ -383,24 +399,24 @@ describe('CommandParser', () => {
 
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining(
-          'Error: Could not find provider for nonexistent.command',
+          'Could not find provider for nonexistent.command',
         ),
       );
 
       consoleSpy.mockRestore();
     });
 
-    it('does not execute when mode is execute but command is missing', () => {
+    it('does not execute when mode is execute but command is missing', async () => {
       const parser = CommandParser.getInstance();
       const provider = createMockProvider('test', 'Test');
       parser.addProvider(provider);
 
-      const ipcHandler = mockIpcOn.mock.calls.find(
+      const ipcHandler = mockIpcHandle.mock.calls.find(
         (call: any[]) => call[0] === 'command-input',
       )![1];
 
       const fakeEvent = { sender: {} };
-      ipcHandler(fakeEvent, {
+      await ipcHandler(fakeEvent, {
         mode: 'execute',
         input: '',
         // no command field

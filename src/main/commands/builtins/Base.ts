@@ -1,6 +1,10 @@
-import { TabManager } from 'src/main/TabManager';
-import type { CommandMetadata, CommandProvider } from '../CommandParser';
-import { Tab } from 'src/main/Tab';
+import type {
+  CommandMetadata,
+  CommandProvider,
+  CommandResult,
+  CommandSuggestions,
+} from '../CommandParser';
+import { navigateOrCreateTab } from './navigation';
 
 function ensureProtocol(url: string): string {
   if (/^https?:\/\//i.test(url)) return url;
@@ -13,14 +17,14 @@ export class Base implements CommandProvider {
   }
 
   private isUrl(input: string) {
-    const hasProtocolStr = /^[a-zA-Z]*:\/\/[0-9a-zA-Z]{3,}/gm;
+    const hasProtocolStr = /^[a-zA-Z]*:\/\/[0-9a-zA-Z]{3,}/;
     const followsUrlFormat =
-      /\b(?:(?:[A-Za-z][A-Za-z0-9+.\-]*):(?:\/\/))?(?:www\.)?[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}(?:\/\S*)?(?=\s|$)/gm;
+      /\b(?:(?:[A-Za-z][A-Za-z0-9+.-]*):(?:\/\/))?(?:www\.)?[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}(?:\/\S*)?(?=\s|$)/;
     return hasProtocolStr.test(input) || followsUrlFormat.test(input);
   }
 
   public getSuggestions(input: string) {
-    const suggestions: ReturnType<CommandProvider['getSuggestions']> = [];
+    const suggestions: CommandSuggestions = [];
     if (this.isUrl(input)) {
       suggestions.push({
         name: `Open ${input}`,
@@ -35,19 +39,12 @@ export class Base implements CommandProvider {
     command: string,
     input: string,
     metadata?: CommandMetadata,
-  ) {
+  ): CommandResult {
     if (command === 'open') {
       const url = ensureProtocol(input);
-      let tab: Tab | undefined;
-      if (metadata && metadata.tabUuid) {
-        tab = TabManager.getInstance().getTabByUuid(metadata.tabUuid);
-      }
-      if (!tab) {
-        tab = new Tab(url);
-        TabManager.getInstance().focusTab(tab);
-      } else {
-        tab.view.webContents.loadURL(url);
-      }
+      navigateOrCreateTab(url, metadata);
+      return { success: true };
     }
+    return { success: false, error: `Unknown command: ${command}` };
   }
 }

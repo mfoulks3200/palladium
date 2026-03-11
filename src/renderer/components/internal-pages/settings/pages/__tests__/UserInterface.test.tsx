@@ -16,12 +16,12 @@ Object.defineProperty(window, 'electron', {
 
 // Mock ColorPicker
 jest.mock('@/components/ui/color-picker', () => ({
-  ColorPicker: (props: any) => <div data-testid="color-picker" />,
+  ColorPicker: () => <div data-testid="color-picker" />,
 }));
 
 // Mock Slider
 jest.mock('@/components/ui/slider', () => ({
-  Slider: (props: any) => <div data-testid="slider" />,
+  Slider: () => <div data-testid="slider" />,
 }));
 
 // Mock SettingsOption
@@ -43,12 +43,12 @@ jest.mock('../../SettingComponents', () => ({
 
 // Mock Combobox (imported but not rendered)
 jest.mock('@/components/ui/combobox', () => ({
-  Combobox: (props: any) => <div />,
-  ComboboxContent: (props: any) => <div />,
-  ComboboxEmpty: (props: any) => <div />,
-  ComboboxInput: (props: any) => <div />,
-  ComboboxItem: (props: any) => <div />,
-  ComboboxList: (props: any) => <div />,
+  Combobox: () => <div />,
+  ComboboxContent: () => <div />,
+  ComboboxEmpty: () => <div />,
+  ComboboxInput: () => <div />,
+  ComboboxItem: () => <div />,
+  ComboboxList: () => <div />,
 }));
 
 const renderWithSettings = () => {
