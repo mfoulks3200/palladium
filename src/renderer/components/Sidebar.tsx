@@ -215,7 +215,7 @@ const SidebarActions = () => {
   return (
     <div className="flex w-full gap-2">
       <div
-        className="flex h-10 grow cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-accent"
+        className="flex h-10 grow cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-foreground/5"
         onClick={() => openCommandBar()}
       >
         <Plus size="18px" className="max-w-[18px] min-w-[18px]" />
@@ -224,7 +224,7 @@ const SidebarActions = () => {
         </div>
       </div>
       <div
-        className="flex h-10 w-10 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-accent"
+        className="flex h-10 w-10 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-foreground/5"
         onClick={() =>
           window.electron.ipcRenderer.sendMessage('open-settings')
         }
