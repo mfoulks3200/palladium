@@ -57,7 +57,7 @@ export const LinksPanel = () => {
       </div>
       <a href="https://github.com/mfoulks3200/palladium" className="flex gap-1">
         <Github />
-        <span className="text-blue-700 underline">GitHub Repository</span>
+        <span className="text-primary underline">GitHub Repository</span>
       </a>
     </div>
   );
@@ -81,7 +81,7 @@ export const ChangelogPanel = () => {
             ),
             //@ts-expect-error
             a: (props: PropsWithChildren<{ href: string }>) => (
-              <a href={props.href} className="text-blue-700 underline">
+              <a href={props.href} className="text-primary underline">
                 {props.children}
               </a>
             ),

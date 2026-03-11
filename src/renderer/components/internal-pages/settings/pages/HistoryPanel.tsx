@@ -42,7 +42,7 @@ export const HistoryPanel = () => {
 
       <div className="flex flex-col gap-2 px-4 pb-4">
         {history.length === 0 ? (
-          <div className="py-8 text-center text-white/50">No history found</div>
+          <div className="py-8 text-center text-muted-foreground">No history found</div>
         ) : (
           history.map((item) => (
             <Card key={item.id} className="group flex flex-col gap-1 p-3">

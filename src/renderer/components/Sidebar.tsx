@@ -207,7 +207,7 @@ export const Sidebar = () => {
           <div className="flex w-full gap-2">
             <div
               className={
-                'flex h-10 grow cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-white/5'
+                'flex h-10 grow cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-accent'
               }
               onClick={() => {
                 openCommandBar();
@@ -220,7 +220,7 @@ export const Sidebar = () => {
             </div>
             <div
               className={
-                'flex h-10 w-10 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-white/5'
+                'flex h-10 w-10 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none hover:bg-accent'
               }
               onClick={() => {
                 window.electron.ipcRenderer.sendMessage('open-settings');

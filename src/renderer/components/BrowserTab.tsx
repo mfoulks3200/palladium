@@ -153,8 +153,8 @@ export const BrowserTab = memo(function BrowserTab(props: BrowserTabProps) {
         className={cn(
           'group flex h-10 cursor-pointer items-center gap-2 overflow-hidden rounded-sm px-2 py-1 select-none',
           {
-            ['hover:bg-white/5']: !props.isActive,
-            ['bg-white/10 shadow-md']: props.isActive,
+            ['hover:bg-accent']: !props.isActive,
+            ['bg-accent shadow-md']: props.isActive,
             ['border-2 border-dashed border-amber-500/25']: props.isDevMode,
             ['opacity-50']: isDragging,
           },
