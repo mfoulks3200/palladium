@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
-import { ThemeProvider } from '../ThemeProvider';
+import { ThemeProvider } from '../../hooks/ThemeProvider';
 
 // Mock next-themes — the ThemeProvider is a simple div that renders children
 // and passes through props as data attributes to avoid React DOM warnings

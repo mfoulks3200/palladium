@@ -14,13 +14,13 @@ import { Card } from './ui/card';
 
 import { useCallback, useContext, useEffect } from 'react';
 import { TabActionsIpc } from '../../ipc';
-import { InternalTabMetaContext, TabMetaContext } from '@/lib/tab-meta';
+import { InternalTabMetaContext, TabMetaContext } from '@/hooks/tab-meta';
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import { getReorderDestinationIndex } from '@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index';
 
 import { cn } from '@/lib/utils';
-import { useSystemMeta } from '@/lib/system-meta';
+import { useSystemMeta } from '@/hooks/system-meta';
 import { MediaWidget } from './MediaWidget';
 import { ComponentErrorBoundary } from './ErrorBoundary';
 

@@ -19,7 +19,7 @@ Object.defineProperty(window, 'electron', {
 });
 
 // Mock system-meta for VersionsPanel
-jest.mock('@/lib/system-meta', () => ({
+jest.mock('@/hooks/system-meta', () => ({
   useSystemMeta: jest.fn(() => ({
     platform: 'darwin',
     arch: 'arm64',

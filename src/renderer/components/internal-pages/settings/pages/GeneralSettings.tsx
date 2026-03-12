@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { SettingsContext } from '@/lib/settings';
+import { SettingsContext } from '@/hooks/settings';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SettingsOption } from '../SettingComponents';
 

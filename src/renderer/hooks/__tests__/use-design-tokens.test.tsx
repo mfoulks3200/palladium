@@ -7,7 +7,7 @@ import {
 } from '../use-design-tokens';
 
 // Mock @/lib/settings so we don't need IPC or window.electron
-jest.mock('@/lib/settings', () => ({
+jest.mock('@/hooks/settings', () => ({
   useSettings: jest.fn((key: string) => {
     const values: Record<string, unknown> = {
       'personalization.userInterface.tintColor': '3b82f6',

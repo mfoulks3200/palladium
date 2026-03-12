@@ -11,7 +11,7 @@ import {
 
   ensureVisiblePrimary,
 } from '../lib/colors';
-import { useSettings } from '../lib/settings';
+import { useSettings } from './settings';
 import chroma from 'chroma-js';
 
 // Define the shape of our tokens

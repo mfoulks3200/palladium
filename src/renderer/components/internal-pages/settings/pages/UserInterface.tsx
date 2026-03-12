@@ -1,4 +1,4 @@
-import { useSettings } from '@/lib/settings';
+import { useSettings } from '@/hooks/settings';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { SettingsOption } from '../SettingComponents';
 import { Slider } from '@/components/ui/slider';

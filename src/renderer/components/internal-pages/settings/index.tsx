@@ -11,7 +11,7 @@ import { HistoryPanel } from './pages/HistoryPanel';
 import { DefaultSearchEngines } from './pages/DefaultSearchEngines';
 import { CustomSearchEngines } from './pages/CustomSearchEngines';
 import { AnalyticsSettings } from './pages/GeneralSettings';
-import { InternalTabMetaContext } from '@/lib/tab-meta';
+import { InternalTabMetaContext } from '@/hooks/tab-meta';
 import { Background } from './pages/Background';
 import { UserInterface } from './pages/UserInterface';
 import { ShortcutsSettings } from './pages/ShortcutsSettings';

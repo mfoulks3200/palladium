@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import { AnalyticsSettings } from '../GeneralSettings';
-import { SettingsContext } from '@/lib/settings';
+import { SettingsContext } from '@/hooks/settings';
 
 // Mock IPC
 Object.defineProperty(window, 'electron', {

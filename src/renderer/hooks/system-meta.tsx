@@ -5,7 +5,7 @@ import {
   useEffect,
   useState,
 } from 'react';
-import { SystemMetaIpc } from '../../ipc';
+import { SystemMetaIpc } from 'src/ipc';
 
 // ---------------------------------------------------------------------------
 // Context

@@ -9,7 +9,7 @@ const Markdown = lazy(() => import('react-markdown'));
 
 import styles from './AboutPanel.module.css';
 import { Github, Heart } from 'lucide-react';
-import { useSystemMeta } from '@/lib/system-meta';
+import { useSystemMeta } from '@/hooks/system-meta';
 
 export const AboutPanel = () => {
   const [iconLoaded, setIconLoaded] = useState(false);

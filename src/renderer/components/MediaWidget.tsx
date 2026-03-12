@@ -4,7 +4,7 @@ import { ExternalLink, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
 
-import { useMediaStates } from '@/lib/media-state';
+import { useMediaStates } from '@/hooks/media-state';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export const MediaWidget = () => {

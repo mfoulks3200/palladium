@@ -7,7 +7,7 @@ import { TabManagerIpc } from 'src/ipc';
 const TabMetaContext = createContext<TabManagerIpc | null>(null);
 const InternalTabMetaContext = createContext<any>(null);
 
-jest.mock('@/lib/tab-meta', () => ({
+jest.mock('@/hooks/tab-meta', () => ({
   TabMetaContext,
   InternalTabMetaContext,
 }));
@@ -64,7 +64,7 @@ jest.mock('../MediaWidget', () => ({
 }));
 
 // Mock system-meta hook
-jest.mock('@/lib/system-meta', () => ({
+jest.mock('@/hooks/system-meta', () => ({
   useSystemMeta: jest.fn(() => ({ platform: 'darwin' })),
 }));
 

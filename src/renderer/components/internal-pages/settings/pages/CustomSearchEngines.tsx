@@ -1,5 +1,5 @@
 import { useContext, useState } from 'react';
-import { SettingsContext } from '@/lib/settings';
+import { SettingsContext } from '@/hooks/settings';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2 } from 'lucide-react';

@@ -1,4 +1,4 @@
-import { useSettings } from '@/lib/settings';
+import { useSettings } from '@/hooks/settings';
 import {
   Combobox,
   ComboboxContent,

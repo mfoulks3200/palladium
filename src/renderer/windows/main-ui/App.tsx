@@ -9,21 +9,21 @@ import '@fontsource/inter/700';
 import '@fontsource/inter/800';
 import './App.css';
 import '../globals.css';
-import { ThemeProvider } from '../../components/ThemeProvider';
+import { ThemeProvider } from '../../hooks/ThemeProvider';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserUI } from '../../components/BrowserUI';
 import { TabManagerIpc } from '../../../ipc';
-import { SettingsProvider } from '@/lib/settings';
-import { FeatureFlagProvider } from '@/lib/feature-flags';
-import { SystemMetaProvider } from '@/lib/system-meta';
+import { SettingsProvider } from '@/hooks/settings';
+import { FeatureFlagProvider } from '@/hooks/feature-flags';
+import { SystemMetaProvider } from '@/hooks/system-meta';
 import { DesignTokenProvider } from '../../hooks/use-design-tokens';
-import { MediaStateProvider } from '@/lib/media-state';
+import { MediaStateProvider } from '@/hooks/media-state';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import {
   InternalTabMetaContext,
   InternalTabMetaItem,
   TabMetaContext,
-} from '@/lib/tab-meta';
+} from '@/hooks/tab-meta';
 
 function Main() {
   const [tabMeta, setTabMeta] = useState<TabManagerIpc | null>(null);

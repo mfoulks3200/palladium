@@ -18,7 +18,7 @@ import { InternalPageRouter } from './internal-pages/InternalPageRouter';
 
 import styles from './BrowserUI.module.css';
 import { cn } from '@/lib/utils';
-import { TabMetaContext } from '@/lib/tab-meta';
+import { TabMetaContext } from '@/hooks/tab-meta';
 import { ShaderBackground } from './ShaderBackground';
 import { ComponentErrorBoundary } from './ErrorBoundary';
 

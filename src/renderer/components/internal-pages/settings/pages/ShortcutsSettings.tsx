@@ -1,5 +1,5 @@
 import { useContext, useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
-import { SettingsContext } from '@/lib/settings';
+import { SettingsContext } from '@/hooks/settings';
 import { SettingsOption } from '../SettingComponents';
 import { cn } from '@/lib/utils';
 

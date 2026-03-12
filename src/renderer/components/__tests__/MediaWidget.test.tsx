@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import { MediaWidget } from '../MediaWidget';
-import { MediaStateProvider } from '@/lib/media-state';
+import { MediaStateProvider } from '@/hooks/media-state';
 import { act } from '@testing-library/react';
 
 // Mock IPC

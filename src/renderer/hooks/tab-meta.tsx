@@ -1,5 +1,5 @@
 import { createContext, ReactElement } from 'react';
-import { TabManagerIpc } from '../../ipc';
+import { TabManagerIpc } from 'src/ipc';
 
 export interface InternalTabMetaItem {
   title: string;

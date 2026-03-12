@@ -1,6 +1,6 @@
 import { Workspace } from './Workspace';
 import { useContext, useEffect } from 'react';
-import { InternalTabMetaContext } from '@/lib/tab-meta';
+import { InternalTabMetaContext } from '@/hooks/tab-meta';
 import { Info } from 'lucide-react';
 
 export const EditorPage = () => {

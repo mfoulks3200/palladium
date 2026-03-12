@@ -1,6 +1,6 @@
 import { backgrounds, type ShaderBackground as ShaderBackgroundType } from '../../ipc/backgrounds';
 import { ReactShaderToy } from './agents-ui/react-shader-toy';
-import { useSettings } from '@/lib/settings';
+import { useSettings } from '@/hooks/settings';
 import { useEffect, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 
