@@ -10,7 +10,7 @@ import {
 import { HistoryPanel } from './pages/HistoryPanel';
 import { DefaultSearchEngines } from './pages/DefaultSearchEngines';
 import { CustomSearchEngines } from './pages/CustomSearchEngines';
-import { AnalyticsSettings } from './pages/GeneralSettings';
+import { AdBlockingSettings, AnalyticsSettings } from './pages/GeneralSettings';
 import { InternalTabMetaContext } from '@/hooks/tab-meta';
 import { Background } from './pages/Background';
 import { UserInterface } from './pages/UserInterface';
@@ -52,6 +52,16 @@ const settingsUi: Record<string, SettingsPages> = {
         customContents: (
           <div className="flex flex-col gap-4 pt-8">
             <ShortcutsSettings />
+          </div>
+        ),
+      },
+      adBlocking: {
+        name: 'Ad Blocking',
+        description:
+          'Control how Palladium blocks ads on the websites you visit.',
+        customContents: (
+          <div className="flex flex-col gap-4 pt-8">
+            <AdBlockingSettings />
           </div>
         ),
       },

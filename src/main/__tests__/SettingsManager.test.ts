@@ -282,4 +282,96 @@ describe('SettingsManager', () => {
     // Should have persisted after updating
     expect(writeFileSync).toHaveBeenCalled();
   });
+
+  // -----------------------------------------------------------------------
+  // settings-sync — listener notification (the bug fix)
+  // -----------------------------------------------------------------------
+
+  it('notifies a registered listener when its key changes via settings-sync', () => {
+    const defaults = settingsSchema.parse({});
+    existsSync.mockReturnValue(true);
+    readFileSync.mockReturnValue(JSON.stringify(defaults));
+
+    const mgr = SettingsManager.getInstance();
+    const listener = jest.fn();
+    mgr.addListener('adBlocking.enabled', listener);
+    listener.mockClear(); // ignore the immediate call on registration
+
+    const handler = mockIpcOn.mock.calls.find(
+      (c: any[]) => c[0] === 'settings-sync',
+    )?.[1];
+
+    const newSettings = settingsSchema.parse({
+      adBlocking: { enabled: false },
+    });
+    handler({ sender: {} }, newSettings);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith(false);
+  });
+
+  it('notifies all registered listeners when settings-sync fires', () => {
+    const defaults = settingsSchema.parse({});
+    existsSync.mockReturnValue(true);
+    readFileSync.mockReturnValue(JSON.stringify(defaults));
+
+    const mgr = SettingsManager.getInstance();
+    const adBlockListener = jest.fn();
+    const analyticsListener = jest.fn();
+    mgr.addListener('adBlocking.enabled', adBlockListener);
+    mgr.addListener('analytics.enabled', analyticsListener);
+    adBlockListener.mockClear();
+    analyticsListener.mockClear();
+
+    const handler = mockIpcOn.mock.calls.find(
+      (c: any[]) => c[0] === 'settings-sync',
+    )?.[1];
+
+    handler({ sender: {} }, settingsSchema.parse({}));
+
+    expect(adBlockListener).toHaveBeenCalledTimes(1);
+    expect(analyticsListener).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call a removed listener when settings-sync fires', () => {
+    const defaults = settingsSchema.parse({});
+    existsSync.mockReturnValue(true);
+    readFileSync.mockReturnValue(JSON.stringify(defaults));
+
+    const mgr = SettingsManager.getInstance();
+    const listener = jest.fn();
+    mgr.addListener('adBlocking.enabled', listener);
+    mgr.removeListener('adBlocking.enabled', listener);
+    listener.mockClear();
+
+    const handler = mockIpcOn.mock.calls.find(
+      (c: any[]) => c[0] === 'settings-sync',
+    )?.[1];
+
+    handler({ sender: {} }, settingsSchema.parse({ adBlocking: { enabled: false } }));
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('passes the correct updated value to each listener after settings-sync', () => {
+    const defaults = settingsSchema.parse({});
+    existsSync.mockReturnValue(true);
+    readFileSync.mockReturnValue(JSON.stringify(defaults));
+
+    const mgr = SettingsManager.getInstance();
+    const listener = jest.fn();
+    mgr.addListener('adBlocking.enabled', listener);
+    listener.mockClear();
+
+    const handler = mockIpcOn.mock.calls.find(
+      (c: any[]) => c[0] === 'settings-sync',
+    )?.[1];
+
+    // Toggle off, then back on
+    handler({ sender: {} }, settingsSchema.parse({ adBlocking: { enabled: false } }));
+    handler({ sender: {} }, settingsSchema.parse({ adBlocking: { enabled: true } }));
+
+    expect(listener).toHaveBeenNthCalledWith(1, false);
+    expect(listener).toHaveBeenNthCalledWith(2, true);
+  });
 });

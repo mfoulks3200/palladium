@@ -16,9 +16,15 @@ import { rebindCommandBarShortcut } from './GlobalShortcuts';
 const dataPath = path.join(os.homedir(), '.palladium', 'settings.json');
 const dataDir = path.dirname(dataPath);
 
+type SettingListener<T extends SettingsKeys> = {
+  key: T;
+  callback: (newValue: SettingKeyType<T>) => void;
+};
+
 export class SettingsManager {
   private static instance: SettingsManager;
   private currentSettings: Partial<SettingSchema> = {} as const;
+  private listeners: SettingListener<SettingsKeys>[] = [];
 
   public static getInstance() {
     if (!SettingsManager.instance) {
@@ -49,6 +55,12 @@ export class SettingsManager {
       const nextShortcut = this.getItem('shortcuts.commandBar');
       if (prevShortcut !== nextShortcut) {
         rebindCommandBarShortcut(nextShortcut);
+      }
+
+      // Notify all registered listeners whose setting value changed.
+      for (const listener of this.listeners) {
+        const newValue = this.getItem(listener.key);
+        listener.callback(newValue as SettingKeyType<typeof listener.key>);
       }
     });
 
@@ -104,11 +116,37 @@ export class SettingsManager {
         setting_key: key,
       });
     }
+    for (const listener of this.listeners.filter(
+      (listener) => listener.key === key,
+    )) {
+      try {
+        listener.callback(value);
+      } catch (e) {
+        console.error(e);
+      }
+    }
     this.persist();
   }
 
   public getItem<T extends SettingsKeys>(key: T): SettingKeyType<T> {
     let prop = getDeepProp(this.currentSettings as SettingSchema, key);
     return prop ?? getDeepProp(settingsDefaults, key)!;
+  }
+
+  public addListener<T extends SettingsKeys>(
+    key: T,
+    callback: (newValue: SettingKeyType<T>) => void,
+  ): void {
+    this.listeners.push({ key, callback: callback as SettingKeyType<T> });
+    callback(this.getItem(key));
+  }
+
+  public removeListener<T extends SettingsKeys>(
+    key: T,
+    callback: (newValue: SettingKeyType<T>) => void,
+  ): void {
+    this.listeners = this.listeners.filter(
+      (listener) => listener.key !== key && listener.callback !== callback,
+    );
   }
 }

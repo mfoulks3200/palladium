@@ -4,12 +4,16 @@ import { MediaControlIpc, MediaState } from '../ipc';
 import { typedWebContents } from './ipc';
 import { AnalyticsManager } from './AnalyticsManager';
 import { registerTabManagerIpc } from './TabManagerIpcHandlers';
+import { ElectronBlocker } from '@ghostery/adblocker-electron';
+import fetch from 'cross-fetch'; // required 'fetch'
+import { SettingsManager } from './SettingsManager';
 
 export class TabManager {
   private static instance: TabManager;
   private mainWindow: BrowserWindow;
   private currentTab: Tab | null = null;
   private tabs: Tab[] = [];
+  public blocker: ElectronBlocker = null as any;
   private mediaStates: Map<string, MediaState> = new Map();
 
   public static getInstance(): TabManager {
@@ -21,11 +25,15 @@ export class TabManager {
     return TabManager.instance;
   }
 
-  public static initialize(mainWindow: BrowserWindow): TabManager {
+  public static async initialize(
+    mainWindow: BrowserWindow,
+  ): Promise<TabManager> {
     if (TabManager.instance) {
       throw new Error('TabManager has already been initialized.');
     }
     TabManager.instance = new TabManager(mainWindow);
+    TabManager.instance.blocker =
+      await ElectronBlocker.fromPrebuiltAdsOnly(fetch);
     return TabManager.instance;
   }
 

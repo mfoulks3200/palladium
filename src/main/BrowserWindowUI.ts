@@ -145,8 +145,9 @@ export class BrowserWindowUI {
     });
 
     initSubsystem('GlobalShortcuts', () => {
-      const savedShortcut =
-        SettingsManager.getInstance().getItem('shortcuts.commandBar');
+      const savedShortcut = SettingsManager.getInstance().getItem(
+        'shortcuts.commandBar',
+      );
       registerGlobalShortcuts(savedShortcut);
     });
 
@@ -204,8 +205,8 @@ export class BrowserWindowUI {
       commandBarSetup();
     });
 
-    initSubsystem('TabManager', () => {
-      const tabManager = TabManager.initialize(this.mainWindow);
+    initSubsystem('TabManager', async () => {
+      const tabManager = await TabManager.initialize(this.mainWindow);
       if (this.debugMode) {
         tabManager.addTab(new Tab('https://www.electronjs.org'));
         tabManager.addTab(new Tab('https://www.google.com'));

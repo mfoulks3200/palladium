@@ -25,3 +25,26 @@ export const AnalyticsSettings = () => {
     </>
   );
 };
+
+export const AdBlockingSettings = () => {
+  const { useSetting } = useContext(SettingsContext);
+
+  const [adBlockingEnabled, setAdBlockingEnabled] =
+    useSetting('adBlocking.enabled');
+
+  const optionClassNames = 'justify-end';
+  return (
+    <>
+      <SettingsOption
+        name="Ad Blocking"
+        description="Enable built-in Ghostery ad blocking."
+        className={optionClassNames}
+      >
+        <Checkbox
+          defaultChecked={adBlockingEnabled}
+          onCheckedChange={(checked) => setAdBlockingEnabled(!!checked)}
+        />
+      </SettingsOption>
+    </>
+  );
+};

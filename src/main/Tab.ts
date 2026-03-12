@@ -1,15 +1,12 @@
-import {
-  Menu,
-  MenuItem,
-  Session,
-  WebContentsView,
-  session,
-} from 'electron';
+import { Menu, MenuItem, Session, WebContentsView, session } from 'electron';
 import { MediaState, TabIpcPacket } from '../ipc';
 import { HistoryEvent, HistoryManager } from './HistoryManager';
 import path from 'node:path';
 import os from 'node:os';
 import { AnalyticsManager } from './AnalyticsManager';
+import { ElectronBlocker } from '@ghostery/adblocker-electron';
+import { SettingsManager } from './SettingsManager';
+import { TabManager } from './TabManager';
 
 const devToolsCSS = `
 body > .widget.vbox.root-view {
@@ -42,6 +39,8 @@ export class Tab extends EventTarget {
   private activeMediaId: string | null = null;
   public view: WebContentsView;
   public devToolsView: WebContentsView = null as any;
+
+  private blocker: ElectronBlocker = null as any;
   private static session: Session;
 
   constructor(currentUrl: string) {
@@ -55,6 +54,20 @@ export class Tab extends EventTarget {
         'main',
       );
       Tab.session = session.fromPath(sessionPath);
+      SettingsManager.getInstance().addListener(
+        'adBlocking.enabled',
+        (adBlockingEnabled) => {
+          if (adBlockingEnabled) {
+            TabManager.getInstance().blocker.enableBlockingInSession(
+              Tab.session,
+            );
+          } else {
+            TabManager.getInstance().blocker.disableBlockingInSession(
+              Tab.session,
+            );
+          }
+        },
+      );
     }
     this.view = new WebContentsView({
       webPreferences: {

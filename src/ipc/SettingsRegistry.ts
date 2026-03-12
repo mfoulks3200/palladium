@@ -46,6 +46,14 @@ export const settingsSchema = z.object({
       }),
     })
     .prefault({}),
+  adBlocking: z
+    .object({
+      enabled: z.boolean().default(true).register(settingsRegistryItem, {
+        introducedIn: '0.0.10',
+        description: 'Enable Ghostery ad blocking.',
+      }),
+    })
+    .prefault({}),
   shortcuts: z
     .object({
       commandBar: z
