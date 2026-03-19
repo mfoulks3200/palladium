@@ -10,6 +10,7 @@ import { HistoryEvent, HistoryManager } from './HistoryManager';
 import path from 'node:path';
 import os from 'node:os';
 import { AnalyticsManager } from './AnalyticsManager';
+import { MediaStateTracker } from './MediaStateTracker';
 
 const devToolsCSS = `
 body > .widget.vbox.root-view {
@@ -38,8 +39,7 @@ export class Tab extends EventTarget {
   private currentUrl: string = '';
   private faviconB64: string | null = null;
   private isPlayingAudio: boolean = false;
-  private mediaStates: Map<string, MediaState> = new Map();
-  private activeMediaId: string | null = null;
+  public readonly mediaTracker = new MediaStateTracker();
   public view: WebContentsView;
   public devToolsView: WebContentsView = null as any;
   private static session: Session;
@@ -47,6 +47,9 @@ export class Tab extends EventTarget {
   constructor(currentUrl: string) {
     super();
     this.currentUrl = currentUrl;
+    this.mediaTracker.addEventListener('media-state-changed', () => {
+      this.dispatchEvent(new CustomEvent('media-state-changed'));
+    });
     if (!Tab.session) {
       const sessionPath = path.join(
         os.homedir(),
@@ -184,30 +187,19 @@ export class Tab extends EventTarget {
   }
 
   public addMediaState(state: MediaState) {
-    this.mediaStates.set(state.id, state);
-    this.publishMediaStateEvent();
+    this.mediaTracker.addMediaState(state);
   }
 
   public updateMediaState(state: Partial<MediaState> & { id: string }) {
-    const existing = this.mediaStates.get(state.id);
-    if (existing) {
-      this.mediaStates.set(state.id, { ...existing, ...state });
-      this.publishMediaStateEvent();
-    }
+    this.mediaTracker.updateMediaState(state);
   }
 
   public removeMediaState(id: string) {
-    if (this.mediaStates.delete(id)) {
-      this.publishMediaStateEvent();
-    }
+    this.mediaTracker.removeMediaState(id);
   }
 
   public getMediaStates(): MediaState[] {
-    return [...this.mediaStates.values()];
-  }
-
-  private publishMediaStateEvent() {
-    this.dispatchEvent(new CustomEvent('media-state-changed'));
+    return this.mediaTracker.getMediaStates();
   }
 
   public getTabIpcMeta(): TabIpcPacket {
@@ -261,7 +253,7 @@ export class Tab extends EventTarget {
           })()
         `);
         if (sessionData.metadata) {
-          if (this.activeMediaId && this.activeMediaId === mediaId) {
+          if (this.mediaTracker.activeMediaId && this.mediaTracker.activeMediaId === mediaId) {
             this.updateMediaState({
               id: mediaId,
               title: sessionData.metadata.title,
@@ -270,7 +262,7 @@ export class Tab extends EventTarget {
               duration: sessionData.duration,
             });
           } else {
-            this.activeMediaId = mediaId;
+            this.mediaTracker.activeMediaId = mediaId;
             this.addMediaState({
               id: mediaId,
               type: 'audio',
@@ -302,9 +294,9 @@ export class Tab extends EventTarget {
     });
 
     this.view.webContents.on('did-navigate', async () => {
-      if (this.activeMediaId) {
-        this.removeMediaState(this.activeMediaId);
-        this.activeMediaId = null;
+      if (this.mediaTracker.activeMediaId) {
+        this.removeMediaState(this.mediaTracker.activeMediaId);
+        this.mediaTracker.activeMediaId = null;
       }
       AnalyticsManager.getInstance().capture('page_navigated');
       const historyEvent: HistoryEvent = {

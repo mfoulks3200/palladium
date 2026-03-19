@@ -257,12 +257,24 @@ export function createMockBrowserWindow(
 // Tab (mock matching the public interface of src/main/Tab.ts)
 // ---------------------------------------------------------------------------
 
+export interface MockMediaStateTracker {
+  activeMediaId: string | null;
+  addMediaState: jest.Mock;
+  updateMediaState: jest.Mock;
+  removeMediaState: jest.Mock;
+  getMediaStates: jest.Mock;
+  addEventListener: jest.Mock;
+  removeEventListener: jest.Mock;
+  dispatchEvent: jest.Mock;
+}
+
 export interface MockTab {
   uuid: string;
   isInternalPage: boolean;
   devMode: boolean;
   view: MockWebContentsView;
   devToolsView: MockWebContentsView;
+  mediaTracker: MockMediaStateTracker;
   getCurrentUrl: jest.Mock;
   getTitle: jest.Mock;
   isDevMode: jest.Mock;
@@ -320,12 +332,24 @@ export function createMockTab(
     isInternal: isInternalPage,
   };
 
+  const mediaTracker: MockMediaStateTracker = {
+    activeMediaId: null,
+    addMediaState: jest.fn(),
+    updateMediaState: jest.fn(),
+    removeMediaState: jest.fn(),
+    getMediaStates: jest.fn().mockReturnValue([]),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  };
+
   return {
     uuid,
     isInternalPage,
     devMode,
     view,
     devToolsView,
+    mediaTracker,
     getCurrentUrl: jest.fn().mockReturnValue(url),
     getTitle: jest.fn().mockReturnValue(title),
     isDevMode: jest.fn().mockReturnValue(devMode),
