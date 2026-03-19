@@ -91,6 +91,26 @@
     ],
     "transform": {
       "\\.(ts|tsx|js|jsx)$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "src/**/*.{ts,tsx}",
+      "!src/**/*.d.ts",
+      "!src/**/__tests__/**",
+      "!src/__test-utils__/**"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 40,
+        "functions": 40,
+        "lines": 50,
+        "statements": 50
+      },
+      "./src/ipc/": {
+        "branches": 70,
+        "functions": 70,
+        "lines": 80,
+        "statements": 80
+      }
     }
   },
   "lint-staged": {

@@ -1,14 +1,8 @@
-import React, {
-  createContext,
-  useContext,
-  useMemo,
-  useEffect,
-} from 'react';
+import React, { createContext, useContext, useMemo, useEffect } from 'react';
 import {
   generatePalette,
   getAccessibleTextColor,
   adjustLightness,
-
   ensureVisiblePrimary,
 } from '../lib/colors';
 import { useSettings } from '../lib/settings';
@@ -224,12 +218,32 @@ export const DesignTokenProvider: React.FC<{
 
     root.style.setProperty('--ui-blur', `${blur}px`);
     root.style.setProperty('--ui-saturation', `${saturation}%`);
+
+    // DEV-only: validate all expected CSS variables are set
+    if (process.env.NODE_ENV === 'development') {
+      const expectedVars = [
+        '--color-primary',
+        '--color-background',
+        '--color-surface',
+        '--color-surface-raised',
+        '--color-surface-overlay',
+        '--color-text',
+        '--color-border',
+        '--color-primary-foreground',
+        '--ui-blur',
+        '--ui-saturation',
+      ];
+      const style = getComputedStyle(root);
+      const missing = expectedVars.filter((v) => !style.getPropertyValue(v));
+      if (missing.length > 0) {
+        console.warn(
+          `[DesignTokenProvider] Missing CSS variables: ${missing.join(', ')}`,
+        );
+      }
+    }
   }, [tokens, blur, saturation]);
 
-  const value = useMemo(
-    () => ({ tokens, preferences }),
-    [tokens, preferences],
-  );
+  const value = useMemo(() => ({ tokens, preferences }), [tokens, preferences]);
 
   return (
     <DesignTokenContext.Provider value={value}>

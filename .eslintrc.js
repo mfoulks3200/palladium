@@ -13,7 +13,10 @@ module.exports = {
     'no-shadow': 'off',
     '@typescript-eslint/no-shadow': 'error',
     'no-unused-vars': 'off',
-    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+    ],
     'lines-between-class-members': 'off',
     'no-restricted-globals': 'off',
     'react/jsx-no-useless-fragment': 'off',
@@ -40,6 +43,24 @@ module.exports = {
       files: ['src/ipc/Utility.ts'],
       rules: {
         '@typescript-eslint/no-unused-vars': 'off',
+      },
+    },
+    {
+      // Renderer files should use @/ alias instead of bare src/renderer/ paths
+      files: ['src/renderer/**/*.{ts,tsx}'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: ['src/renderer/*'],
+                message:
+                  'Use @/ alias instead of src/renderer/ for renderer imports.',
+              },
+            ],
+          },
+        ],
       },
     },
   ],
