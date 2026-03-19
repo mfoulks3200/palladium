@@ -44,14 +44,15 @@
     "start:main": "concurrently -k -P \"cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --watch --config ./.erb/configs/webpack.config.main.dev.ts\" \"electronmon . -- {@}\" --",
     "start:preload": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
     "start:renderer": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts",
-    "test": "jest",
+    "test": "npx jest",
     "test:coverage": "jest --coverage",
     "test:main": "jest --testPathPattern=src/main/",
     "test:renderer": "jest --testPathPattern=src/renderer/",
     "test:e2e": "npm run test:e2e:setup && npx playwright test",
     "test:e2e:headed": "cross-env PALLADIUM_HEADLESS=0 npm run test:e2e:setup && cross-env PALLADIUM_HEADLESS=0 npx playwright test --headed",
     "test:e2e:setup": "mkdir -p release/app/.erb/dll && cp release/app/dist/main/preload.js release/app/.erb/dll/preload.js",
-    "start:headless": "cross-env PALLADIUM_HEADLESS=1 npm start"
+    "start:headless": "cross-env PALLADIUM_HEADLESS=1 npm start",
+    "prepare": "husky"
   },
   "browserslist": [
     "extends browserslist-config-erb"
@@ -91,6 +92,15 @@
     "transform": {
       "\\.(ts|tsx|js|jsx)$": "ts-jest"
     }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,scss,md}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@atlaskit/pragmatic-drag-and-drop": "^1.7.7",
@@ -176,9 +186,11 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.6.3",
+    "husky": "^9.1.7",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "lint-staged": "^16.4.0",
     "mini-css-extract-plugin": "^2.9.2",
     "monaco-editor": "^0.25.2",
     "monaco-editor-webpack-plugin": "^4.0.0",
@@ -277,7 +289,7 @@
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": ">=14.x",
+      "version": ">=22.x",
       "onFail": "error"
     },
     "packageManager": {
