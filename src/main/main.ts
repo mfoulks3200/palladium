@@ -43,11 +43,22 @@ if (process.env.NODE_ENV === 'production') {
 const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
+const isHeadless = process.env.PALLADIUM_HEADLESS === '1';
+
 if (isDebug) {
   require('electron-debug').default();
 }
 
 app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal');
+
+// Headless mode: disable GPU and enable offscreen rendering for environments
+// without a display server (CI, agent-driven testing).
+if (isHeadless) {
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch('disable-gpu');
+  app.commandLine.appendSwitch('disable-software-rasterizer');
+  app.commandLine.appendSwitch('no-sandbox');
+}
 
 const installExtensions = async () => {
   const installer = require('electron-devtools-installer');
@@ -67,7 +78,7 @@ const createWindow = async () => {
     await installExtensions();
   }
 
-  new BrowserWindowUI(isDebug);
+  new BrowserWindowUI(isDebug, isHeadless);
 };
 
 /**

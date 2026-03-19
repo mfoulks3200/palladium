@@ -29,9 +29,11 @@ class AppUpdater {
 export class BrowserWindowUI {
   public mainWindow: BrowserWindow = null as any;
   public debugMode: boolean = false;
+  public headless: boolean = false;
 
-  constructor(debugMode?: boolean) {
+  constructor(debugMode?: boolean, headless?: boolean) {
     this.debugMode = !!debugMode;
+    this.headless = !!headless;
     this.createWindow();
     this.createMenu();
     this.initializeSubsystems();
@@ -54,6 +56,10 @@ export class BrowserWindowUI {
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width, height } = primaryDisplay.workAreaSize;
 
+    // Headless mode disables transparency (requires GPU compositing) and
+    // uses an opaque background so the renderer can paint without a display.
+    const useTransparency = !this.headless;
+
     this.mainWindow = new BrowserWindow({
       show: false,
       width,
@@ -64,16 +70,16 @@ export class BrowserWindowUI {
       ...(process.platform !== 'darwin'
         ? { titleBarOverlay: true }
         : { trafficLightPosition: { x: 17, y: 17 } }),
-      transparent: true,
+      transparent: useTransparency,
       frame: false,
-      backgroundColor: '#FFFFFF00',
+      backgroundColor: useTransparency ? '#FFFFFF00' : '#FFFFFF',
       icon: getAssetPath('icon.png'),
       webPreferences: {
         preload: app.isPackaged
           ? path.join(__dirname, 'preload.js')
           : path.join(__dirname, '../../.erb/dll/preload.js'),
-        transparent: true,
-        // devTools: false,
+        transparent: useTransparency,
+        offscreen: this.headless,
       },
     });
 
@@ -82,6 +88,10 @@ export class BrowserWindowUI {
     this.mainWindow.on('ready-to-show', () => {
       if (!this.mainWindow) {
         throw new Error('"mainWindow" is not defined');
+      }
+      // In headless mode, never show the window — keep it offscreen.
+      if (this.headless) {
+        return;
       }
       if (process.env.START_MINIMIZED) {
         this.mainWindow.minimize();
