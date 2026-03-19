@@ -5,6 +5,7 @@ import {
   AboutPanel,
   ChangelogPanel,
   LinksPanel,
+  UpdatePanel,
   VersionsPanel,
 } from './pages/AboutPanel';
 import { HistoryPanel } from './pages/HistoryPanel';
@@ -152,6 +153,10 @@ const settingsUi: Record<string, SettingsPages> = {
     cards: {
       about: {
         customContents: <AboutPanel />,
+      },
+      update: {
+        name: 'Software Update',
+        customContents: <UpdatePanel />,
       },
       links: {
         customContents: <LinksPanel />,

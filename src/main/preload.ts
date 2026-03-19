@@ -30,6 +30,8 @@ const SEND_ALLOWLIST: Set<string> = new Set<string>([
   'window-action',
   'open-settings',
   'media-control',
+  'check-for-update',
+  'install-update',
 ] satisfies (keyof RendererToMainEvents)[]);
 
 const INVOKE_ALLOWLIST: Set<string> = new Set<string>([
@@ -48,6 +50,7 @@ const RECEIVE_ALLOWLIST: Set<string> = new Set<string>([
   'internal-page-navigate',
   'feature-flags-sync',
   'media-state',
+  'update-status',
 ] satisfies (keyof MainToRendererEvents)[]);
 
 const electronHandler = {

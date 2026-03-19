@@ -2,14 +2,23 @@ import PackageJson from '../../../../../../package.json';
 import Changelog from '../../../../../../CHANGELOG.md';
 
 import iconImage from 'assets/icon.png';
-import { lazy, PropsWithChildren, Suspense, useState } from 'react';
+import {
+  lazy,
+  PropsWithChildren,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import { cn } from '@/lib/utils';
 
 const Markdown = lazy(() => import('react-markdown'));
 
 import styles from './AboutPanel.module.css';
-import { Github, Heart } from 'lucide-react';
+import { Download, Github, Heart, Loader2, RefreshCw } from 'lucide-react';
 import { useSystemMeta } from '@/lib/system-meta';
+import { UpdateStatusIpc } from '../../../../../ipc';
+import { Button } from '@/components/ui/button';
 
 export const AboutPanel = () => {
   const [iconLoaded, setIconLoaded] = useState(false);
@@ -43,6 +52,111 @@ export const AboutPanel = () => {
         <span className="select-none">Version</span>
         <span>{PackageJson.version}</span>
       </div>
+    </div>
+  );
+};
+
+export const UpdatePanel = () => {
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatusIpc | null>(
+    null,
+  );
+
+  useEffect(() => {
+    return window.electron.ipcRenderer.on('update-status', (status) => {
+      setUpdateStatus(status);
+    });
+  }, []);
+
+  const checkForUpdate = useCallback(() => {
+    setUpdateStatus({ status: 'checking' });
+    window.electron.ipcRenderer.sendMessage('check-for-update');
+  }, []);
+
+  const installUpdate = useCallback(() => {
+    window.electron.ipcRenderer.sendMessage('install-update');
+  }, []);
+
+  const status = updateStatus?.status;
+  const isChecking = status === 'checking';
+  const isDownloading = status === 'downloading';
+  const isAvailable = status === 'available';
+  const isDownloaded = status === 'downloaded';
+  const isError = status === 'error';
+  const isUpToDate = status === 'not-available';
+
+  return (
+    <div className="flex flex-col items-center gap-3 py-2">
+      {!status && (
+        <Button variant="outline" size="sm" onClick={checkForUpdate}>
+          <RefreshCw className="size-4" />
+          Check for Updates
+        </Button>
+      )}
+
+      {isChecking && (
+        <div className="flex items-center gap-2 text-sm opacity-60">
+          <Loader2 className="size-4 animate-spin" />
+          Checking for updates...
+        </div>
+      )}
+
+      {isUpToDate && (
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-sm opacity-60">Palladium is up to date.</span>
+          <Button variant="ghost" size="xs" onClick={checkForUpdate}>
+            Check Again
+          </Button>
+        </div>
+      )}
+
+      {isAvailable && (
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-sm font-medium">
+            Version {updateStatus?.version} is available!
+          </span>
+          <Button size="sm" onClick={installUpdate}>
+            <Download className="size-4" />
+            Download & Install
+          </Button>
+        </div>
+      )}
+
+      {isDownloading && (
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2 text-sm">
+            <Loader2 className="size-4 animate-spin" />
+            Downloading update...
+          </div>
+          {updateStatus?.progress != null && (
+            <div className="bg-secondary h-1.5 w-48 overflow-hidden rounded-full">
+              <div
+                className="bg-primary h-full rounded-full transition-all"
+                style={{ width: `${updateStatus.progress}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {isDownloaded && (
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-sm font-medium">
+            Update ready! Restart to apply.
+          </span>
+          <Button size="sm" onClick={installUpdate}>
+            Restart & Update
+          </Button>
+        </div>
+      )}
+
+      {isError && (
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-destructive text-sm">Update check failed.</span>
+          <Button variant="ghost" size="xs" onClick={checkForUpdate}>
+            Try Again
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

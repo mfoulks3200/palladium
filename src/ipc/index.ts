@@ -143,6 +143,19 @@ export interface MediaControlIpc {
   action: 'play' | 'pause' | 'next' | 'previous';
 }
 
+export interface UpdateStatusIpc {
+  status:
+    | 'checking'
+    | 'available'
+    | 'not-available'
+    | 'downloading'
+    | 'downloaded'
+    | 'error';
+  version?: string;
+  error?: string;
+  progress?: number;
+}
+
 export interface SystemMetaIpc {
   platform: string;
   arch: string;
@@ -183,6 +196,8 @@ export interface RendererToMainEvents {
   'window-action': [WindowActionIpc];
   'open-settings': [];
   'media-control': [MediaControlIpc];
+  'check-for-update': [];
+  'install-update': [];
 }
 
 /**
@@ -196,6 +211,7 @@ export interface MainToRendererEvents {
   'internal-page-navigate': [InternalPageNavigateIpc];
   'feature-flags-sync': [FeatureFlagsIpc];
   'media-state': [MediaStateIpc];
+  'update-status': [UpdateStatusIpc];
 }
 
 /**

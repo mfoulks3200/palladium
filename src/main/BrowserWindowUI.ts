@@ -1,9 +1,10 @@
 import { app, BrowserWindow, screen, Menu } from 'electron';
 import os from 'node:os';
 import path from 'node:path';
+import { autoUpdater } from 'electron-updater';
 import MenuBuilder from './menu';
-import { typedIpcMain } from './ipc';
-import { SystemMetaIpc, WindowActionIpc } from '../ipc';
+import { typedIpcMain, typedWebContents } from './ipc';
+import { SystemMetaIpc, UpdateStatusIpc, WindowActionIpc } from '../ipc';
 import { SettingsManager } from './SettingsManager';
 import { HistoryManager } from './HistoryManager';
 import { setupOverlayManager } from './OverlayManager';
@@ -17,12 +18,64 @@ import { resolveHtmlPath } from './util';
 import { AnalyticsManager } from './AnalyticsManager';
 
 class AppUpdater {
-  constructor() {
-    log.transports.file.level = false;
-    log.transports.console.level = false;
-    // log.transports.file.level = 'info';
-    // autoUpdater.logger = log;
-    // autoUpdater.checkForUpdatesAndNotify();
+  private mainWindow: BrowserWindow;
+
+  constructor(mainWindow: BrowserWindow) {
+    this.mainWindow = mainWindow;
+
+    log.transports.file.level = 'info';
+    autoUpdater.logger = log;
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = true;
+
+    autoUpdater.on('checking-for-update', () => {
+      this.broadcast({ status: 'checking' });
+    });
+
+    autoUpdater.on('update-available', (info) => {
+      this.broadcast({ status: 'available', version: info.version });
+    });
+
+    autoUpdater.on('update-not-available', () => {
+      this.broadcast({ status: 'not-available' });
+    });
+
+    autoUpdater.on('download-progress', (progress) => {
+      this.broadcast({
+        status: 'downloading',
+        progress: Math.round(progress.percent),
+      });
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+      this.broadcast({ status: 'downloaded', version: info.version });
+    });
+
+    autoUpdater.on('error', (err) => {
+      this.broadcast({ status: 'error', error: err.message });
+    });
+
+    typedIpcMain.on('check-for-update', () => {
+      autoUpdater.checkForUpdates().catch((err) => {
+        this.broadcast({ status: 'error', error: err.message });
+      });
+    });
+
+    typedIpcMain.on('install-update', () => {
+      autoUpdater.quitAndInstall();
+    });
+
+    // Check for updates on launch
+    autoUpdater.checkForUpdates().catch(() => {});
+  }
+
+  private broadcast(status: UpdateStatusIpc) {
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      typedWebContents(this.mainWindow.webContents).send(
+        'update-status',
+        status,
+      );
+    }
   }
 }
 
@@ -120,9 +173,8 @@ export class BrowserWindowUI {
     //   return { action: 'deny' };
     // });
 
-    // Remove this if your app does not use auto updates
-    // eslint-disable-next-line
-    new AppUpdater();
+    // Auto-updater: checks for updates on launch, broadcasts status via IPC
+    new AppUpdater(this.mainWindow);
   }
 
   public initializeSubsystems() {
@@ -155,8 +207,9 @@ export class BrowserWindowUI {
     });
 
     initSubsystem('GlobalShortcuts', () => {
-      const savedShortcut =
-        SettingsManager.getInstance().getItem('shortcuts.commandBar');
+      const savedShortcut = SettingsManager.getInstance().getItem(
+        'shortcuts.commandBar',
+      );
       registerGlobalShortcuts(savedShortcut);
     });
 
