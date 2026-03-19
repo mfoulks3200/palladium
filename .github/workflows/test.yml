@@ -8,7 +8,12 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14, windows-latest]
 
     steps:
       - name: Checkout git repo
@@ -23,5 +28,35 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      - name: Run tests
-        run: npx jest --ci --no-coverage
+      - name: Run tests with coverage
+        run: npx jest --ci --coverage --coverageReporters=json-summary --coverageReporters=text
+
+      - name: Check global coverage threshold (60%)
+        shell: bash
+        run: |
+          COVERAGE=$(node -e "
+            const r = require('./coverage/coverage-summary.json');
+            const t = r.total;
+            const avg = (t.lines.pct + t.statements.pct + t.branches.pct + t.functions.pct) / 4;
+            console.log(avg.toFixed(2));
+          ")
+          echo "Global coverage: ${COVERAGE}%"
+          node -e "if ($COVERAGE < 60) { console.error('Global coverage ${COVERAGE}% is below 60% threshold'); process.exit(1); }"
+
+      - name: Check src/ipc/ coverage threshold (80%)
+        shell: bash
+        run: |
+          COVERAGE=$(node -e "
+            const r = require('./coverage/coverage-summary.json');
+            const ipcKeys = Object.keys(r).filter(k => k.includes('/src/ipc/'));
+            if (ipcKeys.length === 0) { console.log('100.00'); process.exit(0); }
+            let totalLines = 0, coveredLines = 0;
+            for (const k of ipcKeys) {
+              totalLines += r[k].lines.total;
+              coveredLines += r[k].lines.covered;
+            }
+            const pct = totalLines > 0 ? (coveredLines / totalLines * 100) : 100;
+            console.log(pct.toFixed(2));
+          ")
+          echo "src/ipc/ coverage: ${COVERAGE}%"
+          node -e "if ($COVERAGE < 80) { console.error('src/ipc/ coverage ${COVERAGE}% is below 80% threshold'); process.exit(1); }"
