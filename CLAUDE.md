@@ -84,3 +84,7 @@ Use Radix UI or Base UI primitives for components needing focus management, keyb
 ## Testing
 
 Jest 29 with React Testing Library. Tests are co-located with source files in `__tests__/` directories (e.g., `src/ipc/__tests__/`, `src/renderer/lib/__tests__/`). Run all tests with `npm test`. Run a single test with `npx jest path/to/test`.
+
+## Standards & Conventions
+
+All contributors must read and follow `STANDARDS.md` before making changes. It covers the branch workflow, merge requirements, commit message conventions, and code quality expectations.
