@@ -46,18 +46,28 @@ export interface DesignPreferences {
   opacity?: number;
 }
 
+/** Extra semantic tokens that plugins/extensions can register without modifying core. */
+export type SemanticTokens = Record<string, string>;
+
 // Context shape
 interface DesignTokenContextValue {
   tokens: DesignTokens;
   preferences: DesignPreferences;
+  semanticTokens: SemanticTokens;
 }
 
 const DesignTokenContext = createContext<DesignTokenContextValue | undefined>(
   undefined,
 );
 
+/** Default number of steps in the primary color palette. */
+export const DEFAULT_PALETTE_STEPS = 9;
+
 // Main generator function
-const generateTokens = (prefs: DesignPreferences): DesignTokens => {
+const generateTokens = (
+  prefs: DesignPreferences,
+  paletteSteps: number = DEFAULT_PALETTE_STEPS,
+): DesignTokens => {
   // Raw tint color and its luminance
   const rawPrimary = prefs.primaryColor;
   const primaryLuminance = chroma(rawPrimary).luminance();
@@ -134,7 +144,7 @@ const generateTokens = (prefs: DesignPreferences): DesignTokens => {
   const border = chroma(borderHex).alpha(opacity).css();
 
   // Generate a full palette for the primary color
-  const primaryPalette = generatePalette(primary, 9);
+  const primaryPalette = generatePalette(primary, paletteSteps);
 
   // Calculate accessible text colors using the solid hexes
   const text = getAccessibleTextColor(backgroundHex, '#0f172a', '#f8fafc');
@@ -185,7 +195,15 @@ const generateTokens = (prefs: DesignPreferences): DesignTokens => {
 
 export const DesignTokenProvider: React.FC<{
   children: React.ReactNode;
-}> = ({ children }) => {
+  /** Number of steps in the primary color palette (default: 9). */
+  paletteSteps?: number;
+  /** Extra semantic tokens registered by plugins/extensions. */
+  semanticTokens?: SemanticTokens;
+}> = ({
+  children,
+  paletteSteps = DEFAULT_PALETTE_STEPS,
+  semanticTokens: extraSemanticTokens,
+}) => {
   const [tintColor] = useSettings('personalization.userInterface.tintColor');
   const [opacity] = useSettings('personalization.userInterface.transparency');
   const [blur] = useSettings('personalization.userInterface.blur');
@@ -200,7 +218,16 @@ export const DesignTokenProvider: React.FC<{
   );
 
   // Recalculate tokens when preferences change
-  const tokens = useMemo(() => generateTokens(preferences), [preferences]);
+  const tokens = useMemo(
+    () => generateTokens(preferences, paletteSteps),
+    [preferences, paletteSteps],
+  );
+
+  // Merge extra semantic tokens (stable ref via useMemo)
+  const semanticTokens: SemanticTokens = useMemo(
+    () => extraSemanticTokens ?? {},
+    [extraSemanticTokens],
+  );
 
   // Inject CSS variables into the root document so regular CSS/Tailwind can use them
   useEffect(() => {
@@ -243,7 +270,19 @@ export const DesignTokenProvider: React.FC<{
     }
   }, [tokens, blur, saturation]);
 
-  const value = useMemo(() => ({ tokens, preferences }), [tokens, preferences]);
+  // Inject extra semantic tokens as CSS variables
+  useEffect(() => {
+    const root = document.documentElement;
+    Object.entries(semanticTokens).forEach(([key, value]) => {
+      const cssVarKey = `--color-${key.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`;
+      root.style.setProperty(cssVarKey, value);
+    });
+  }, [semanticTokens]);
+
+  const value = useMemo(
+    () => ({ tokens, preferences, semanticTokens }),
+    [tokens, preferences, semanticTokens],
+  );
 
   return (
     <DesignTokenContext.Provider value={value}>

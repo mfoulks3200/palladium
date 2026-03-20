@@ -6,6 +6,7 @@ import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { CheckIcon, ChevronDownIcon, XIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { useComboboxValues } from '@/hooks/use-combobox-values';
 import { Button } from '@/components/ui/button';
 import {
   InputGroup,
@@ -57,10 +58,16 @@ function Combobox<Value, Multiple extends boolean | undefined = false>(
     ...rest
   } = props;
 
+  const valueMapping = useComboboxValues({
+    getDisplayValue,
+    getFormValue,
+    itemToStringLabel,
+    itemToStringValue,
+  });
+
   const rootProps = {
     ...rest,
-    itemToStringLabel: getDisplayValue ?? itemToStringLabel,
-    itemToStringValue: getFormValue ?? itemToStringValue,
+    ...valueMapping,
   } as ComboboxPrimitive.Root.Props<Value, Multiple>;
 
   return <ComboboxRoot {...rootProps} />;

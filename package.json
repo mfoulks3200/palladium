@@ -51,6 +51,7 @@
     "test:e2e": "npm run test:e2e:setup && npx playwright test",
     "test:e2e:headed": "cross-env PALLADIUM_HEADLESS=0 npm run test:e2e:setup && cross-env PALLADIUM_HEADLESS=0 npx playwright test --headed",
     "test:e2e:setup": "mkdir -p release/app/.erb/dll && cp release/app/dist/main/preload.js release/app/.erb/dll/preload.js",
+    "dev": "ts-node ./.erb/scripts/check-port-in-use.js && concurrently -k \"npm run start:main\" \"npm run start:renderer\"",
     "start:headless": "cross-env PALLADIUM_HEADLESS=1 npm start",
     "prepare": "husky"
   },
