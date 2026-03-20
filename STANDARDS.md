@@ -41,6 +41,12 @@ Do not merge a branch that has failing tests or lint errors, even if the failure
 - Prefer Tailwind CSS classes over custom CSS. Use the `cn()` utility for dynamic class composition.
 - Co-locate tests in `__tests__/` directories next to the source files they cover.
 
+## Changelog
+
+Significant changes must be documented in `CHANGELOG.md`. Add entries under an `## [Unreleased]` section at the top of the file. Use the existing format with `### Added`, `### Changed`, `### Fixed`, and `### Tests & Tooling` subsections as appropriate.
+
+Not every change needs a changelog entry. Use your judgment — bug fixes, new features, architectural changes, and breaking changes should be documented. Minor refactors, typo fixes, and internal-only changes can be skipped.
+
 ## Documentation
 
 - Keep `CLAUDE.md` up to date when adding new patterns or changing architecture.
