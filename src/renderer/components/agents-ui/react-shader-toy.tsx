@@ -1,159 +1,38 @@
 import React, { useEffect, useRef, type ComponentPropsWithoutRef } from 'react';
-const PRECISIONS = ['lowp', 'mediump', 'highp'];
-const FS_MAIN_SHADER = `\nvoid main(void){
-    vec4 color = vec4(0.0,0.0,0.0,1.0);
-    mainImage( color, gl_FragCoord.xy );
-    gl_FragColor = color;
-}`;
-const BASIC_FS = `void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
-    vec2 uv = fragCoord/iResolution.xy;
-    vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
-    fragColor = vec4(col,1.0);
-}`;
-const BASIC_VS = `attribute vec3 aVertexPosition;
-void main(void) {
-    gl_Position = vec4(aVertexPosition, 1.0);
-}`;
-const UNIFORM_TIME = 'iTime';
-const UNIFORM_TIMEDELTA = 'iTimeDelta';
-const UNIFORM_DATE = 'iDate';
-const UNIFORM_FRAME = 'iFrame';
-const UNIFORM_MOUSE = 'iMouse';
-const UNIFORM_RESOLUTION = 'iResolution';
-const UNIFORM_CHANNEL = 'iChannel';
-const UNIFORM_CHANNELRESOLUTION = 'iChannelResolution';
-const UNIFORM_DEVICEORIENTATION = 'iDeviceOrientation';
-
-type Vector4<T = number> = [T, T, T, T];
-type UniformType = keyof Uniforms;
-
-function isMatrixType(t: string, v: number[] | number): v is number[] {
-  return t.includes('Matrix') && Array.isArray(v);
-}
-function isVectorListType(t: string, v: number[] | number): v is number[] {
-  return (
-    t.includes('v') &&
-    Array.isArray(v) &&
-    v.length > Number.parseInt(t.charAt(0))
-  );
-}
-function isVectorType(t: string, v: number[] | number): v is Vector4 {
-  return (
-    !t.includes('v') &&
-    Array.isArray(v) &&
-    v.length > Number.parseInt(t.charAt(0))
-  );
-}
-const processUniform = <T extends UniformType>(
-  gl: WebGLRenderingContext,
-  location: WebGLUniformLocation,
-  t: T,
-  value: number | number[],
-) => {
-  if (isVectorType(t, value)) {
-    switch (t) {
-      case '2f':
-        return gl.uniform2f(location, value[0], value[1]);
-      case '3f':
-        return gl.uniform3f(location, value[0], value[1], value[2]);
-      case '4f':
-        return gl.uniform4f(location, value[0], value[1], value[2], value[3]);
-      case '2i':
-        return gl.uniform2i(location, value[0], value[1]);
-      case '3i':
-        return gl.uniform3i(location, value[0], value[1], value[2]);
-      case '4i':
-        return gl.uniform4i(location, value[0], value[1], value[2], value[3]);
-    }
-  }
-  if (typeof value === 'number') {
-    switch (t) {
-      case '1i':
-        return gl.uniform1i(location, value);
-      default:
-        return gl.uniform1f(location, value);
-    }
-  }
-  switch (t) {
-    case '1iv':
-      return gl.uniform1iv(location, value);
-    case '2iv':
-      return gl.uniform2iv(location, value);
-    case '3iv':
-      return gl.uniform3iv(location, value);
-    case '4iv':
-      return gl.uniform4iv(location, value);
-    case '1fv':
-      return gl.uniform1fv(location, value);
-    case '2fv':
-      return gl.uniform2fv(location, value);
-    case '3fv':
-      return gl.uniform3fv(location, value);
-    case '4fv':
-      return gl.uniform4fv(location, value);
-    case 'Matrix2fv':
-      return gl.uniformMatrix2fv(location, false, value);
-    case 'Matrix3fv':
-      return gl.uniformMatrix3fv(location, false, value);
-    case 'Matrix4fv':
-      return gl.uniformMatrix4fv(location, false, value);
-  }
-};
-
-const uniformTypeToGLSLType = (t: string) => {
-  switch (t) {
-    case '1f':
-      return 'float';
-    case '2f':
-      return 'vec2';
-    case '3f':
-      return 'vec3';
-    case '4f':
-      return 'vec4';
-    case '1i':
-      return 'int';
-    case '2i':
-      return 'ivec2';
-    case '3i':
-      return 'ivec3';
-    case '4i':
-      return 'ivec4';
-    case '1iv':
-      return 'int';
-    case '2iv':
-      return 'ivec2';
-    case '3iv':
-      return 'ivec3';
-    case '4iv':
-      return 'ivec4';
-    case '1fv':
-      return 'float';
-    case '2fv':
-      return 'vec2';
-    case '3fv':
-      return 'vec3';
-    case '4fv':
-      return 'vec4';
-    case 'Matrix2fv':
-      return 'mat2';
-    case 'Matrix3fv':
-      return 'mat3';
-    case 'Matrix4fv':
-      return 'mat4';
-    default:
-      console.error(
-        log(
-          `The uniform type "${t}" is not valid, please make sure your uniform type is valid`,
-        ),
-      );
-  }
-};
+import {
+  BASIC_FS,
+  BASIC_VS,
+  createShader,
+  preProcessFragment,
+} from './shader-compiler';
+import {
+  type Vector4,
+  type Uniforms,
+  type UniformType,
+  type UniformMap,
+  UNIFORM_TIME,
+  UNIFORM_TIMEDELTA,
+  UNIFORM_DATE,
+  UNIFORM_FRAME,
+  UNIFORM_MOUSE,
+  UNIFORM_RESOLUTION,
+  UNIFORM_CHANNEL,
+  UNIFORM_CHANNELRESOLUTION,
+  UNIFORM_DEVICEORIENTATION,
+  processUniform,
+  uniformTypeToGLSLType,
+  isMatrixType,
+  isVectorListType,
+  createDefaultUniforms,
+} from './uniform-manager';
 
 const LinearFilter = 9729;
 const NearestFilter = 9728;
 const LinearMipMapLinearFilter = 9987;
 const ClampToEdgeWrapping = 33071;
 const RepeatWrapping = 10497;
+
+const log = (text: string) => `react-shaders: ${text}`;
 
 class Texture {
   gl: WebGLRenderingContext;
@@ -394,8 +273,6 @@ class Texture {
   };
 }
 
-const log = (text: string) => `react-shaders: ${text}`;
-
 const latestPointerClientCoords = (e: MouseEvent | TouchEvent) => {
   if ('changedTouches' in e) {
     const t = e.changedTouches[0];
@@ -405,19 +282,7 @@ const latestPointerClientCoords = (e: MouseEvent | TouchEvent) => {
 };
 
 const lerpVal = (v0: number, v1: number, t: number) => v0 * (1 - t) + v1 * t;
-const insertStringAtIndex = (
-  currentString: string,
-  string: string,
-  index: number,
-) =>
-  index > 0
-    ? currentString.substring(0, index) +
-      string +
-      currentString.substring(index, currentString.length)
-    : string + currentString;
 
-type Uniform = { type: string; value: number[] | number };
-type Uniforms = Record<string, Uniform>;
 type TextureParams = {
   url: string;
   wrapS?: number;
@@ -558,29 +423,7 @@ export function ReactShaderToy({
   const timeMultiplierRef = useRef(timeMultiplier);
   const onPerformanceReportRef = useRef(onPerformanceReport);
   const resizeObserverRef = useRef<ResizeObserver | undefined>(undefined);
-  const uniformsRef = useRef<
-    Record<
-      string,
-      {
-        type: string;
-        isNeeded: boolean;
-        value?: number[] | number;
-        arraySize?: string;
-      }
-    >
-  >({
-    [UNIFORM_TIME]: { type: 'float', isNeeded: false, value: 0 },
-    [UNIFORM_TIMEDELTA]: { type: 'float', isNeeded: false, value: 0 },
-    [UNIFORM_DATE]: { type: 'vec4', isNeeded: false, value: [0, 0, 0, 0] },
-    [UNIFORM_MOUSE]: { type: 'vec4', isNeeded: false, value: [0, 0, 0, 0] },
-    [UNIFORM_RESOLUTION]: { type: 'vec2', isNeeded: false, value: [0, 0] },
-    [UNIFORM_FRAME]: { type: 'int', isNeeded: false, value: 0 },
-    [UNIFORM_DEVICEORIENTATION]: {
-      type: 'vec4',
-      isNeeded: false,
-      value: [0, 0, 0, 0],
-    },
-  });
+  const uniformsRef = useRef<UniformMap>(createDefaultUniforms());
   const propsUniformsRef = useRef<Uniforms | undefined>(propUniforms);
 
   const setupChannelRes = (texture: TextureParams | Texture, id: number) => {
@@ -684,11 +527,6 @@ export function ReactShaderToy({
   };
 
   const onResize = () => {
-    // Only update the cached bounding rect (for mouse calculations) and flag
-    // that the WebGL drawing buffer needs resizing.  The actual buffer resize
-    // is deferred to the start of the next drawScene frame so the browser can
-    // stretch the last rendered image via CSS in the meantime – avoiding the
-    // gray flicker caused by an immediate buffer reallocation + clear.
     canvasPositionRef.current = canvasRef.current?.getBoundingClientRect();
     needsResizeRef.current = true;
   };
@@ -717,27 +555,23 @@ export function ReactShaderToy({
     }
   };
 
-  const createShader = (type: number, shaderCodeAsText: string) => {
-    const gl = glRef.current;
-    if (!gl) return null;
-    const shader = gl.createShader(type);
-    if (!shader) return null;
-    gl.shaderSource(shader, shaderCodeAsText);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      onWarning?.(log(`Error compiling the shader:\n${shaderCodeAsText}`));
-      const compilationLog = gl.getShaderInfoLog(shader);
-      gl.deleteShader(shader);
-      onError?.(log(`Shader compiler log: ${compilationLog}`));
-    }
-    return shader;
-  };
-
   const initShaders = (fragmentShader: string, vertexShader: string) => {
     const gl = glRef.current;
     if (!gl) return;
-    const fragmentShaderObj = createShader(gl.FRAGMENT_SHADER, fragmentShader);
-    const vertexShaderObj = createShader(gl.VERTEX_SHADER, vertexShader);
+    const fragmentShaderObj = createShader(
+      gl,
+      gl.FRAGMENT_SHADER,
+      fragmentShader,
+      onWarning,
+      onError,
+    );
+    const vertexShaderObj = createShader(
+      gl,
+      gl.VERTEX_SHADER,
+      vertexShader,
+      onWarning,
+      onError,
+    );
     shaderProgramRef.current = gl.createProgram();
     if (!shaderProgramRef.current || !vertexShaderObj || !fragmentShaderObj)
       return;
@@ -800,7 +634,6 @@ export function ReactShaderToy({
       };
       const texturePromisesArr = textures.map(
         (texture: TextureParams, id: number) => {
-          // Dynamically add textures uniforms.
           uniformsRef.current[`${UNIFORM_CHANNEL}${id}`] = {
             type: 'sampler2D',
             isNeeded: false,
@@ -823,41 +656,6 @@ export function ReactShaderToy({
           if (onDoneLoadingTextures) onDoneLoadingTextures();
         });
     } else if (onDoneLoadingTextures) onDoneLoadingTextures();
-  };
-
-  const preProcessFragment = (fragment: string) => {
-    const isValidPrecision = PRECISIONS.includes(precision ?? 'highp');
-    const precisionString = `precision ${isValidPrecision ? precision : PRECISIONS[1]} float;\n`;
-    if (!isValidPrecision) {
-      onWarning?.(
-        log(
-          `wrong precision type ${precision}, please make sure to pass one of a valid precision lowp, mediump, highp, by default you shader precision will be set to highp.`,
-        ),
-      );
-    }
-    const extensionMatches = fragment.match(/^\s*#extension.*\n/gm) || [];
-    const cleanFragment = fragment.replace(/^\s*#extension.*\n/gm, '');
-
-    let fragmentShader = extensionMatches
-      .join('')
-      .concat(precisionString)
-      .concat(`#define DPR ${devicePixelRatio.toFixed(1)}\n`)
-      .concat(cleanFragment.replace(/texture\(/g, 'texture2D('));
-    for (const uniform of Object.keys(uniformsRef.current)) {
-      if (fragment.includes(uniform)) {
-        const u = uniformsRef.current[uniform];
-        if (!u) continue;
-        fragmentShader = insertStringAtIndex(
-          fragmentShader,
-          `uniform ${u.type} ${uniform}${u.arraySize || ''}; \n`,
-          fragmentShader.lastIndexOf(precisionString) + precisionString.length,
-        );
-        u.isNeeded = true;
-      }
-    }
-    const isShadertoy = fragment.includes('mainImage');
-    if (isShadertoy) fragmentShader = fragmentShader.concat(FS_MAIN_SHADER);
-    return fragmentShader;
   };
 
   const setUniforms = (timestamp: number) => {
@@ -1168,7 +966,15 @@ export function ReactShaderToy({
         canvasRef.current.width = canvasRef.current.clientWidth;
         processCustomUniforms();
         processTextures();
-        initShaders(preProcessFragment(fs || BASIC_FS), vs || BASIC_VS);
+        initShaders(
+          preProcessFragment(
+            fs || BASIC_FS,
+            uniformsRef.current,
+            precision,
+            devicePixelRatio,
+          ),
+          vs || BASIC_VS,
+        );
         initBuffers();
         addEventListeners();
         requestAnimationFrame(drawScene);
