@@ -6,11 +6,6 @@ import {
   ComboboxContent,
   ComboboxList,
   ComboboxItem,
-  ComboboxGroup,
-  ComboboxLabel,
-  ComboboxEmpty,
-  ComboboxSeparator,
-  ComboboxValue,
 } from '../combobox';
 
 describe('Combobox', () => {

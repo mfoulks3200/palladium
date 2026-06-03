@@ -9,9 +9,6 @@
 
 import { EventEmitter } from 'events';
 import type {
-  RendererToMainEvents,
-  MainToRendererEvents,
-  RendererToMainInvocations,
   TabManagerIpc,
   OverlayOptions,
   TabActionsIpc,
@@ -84,7 +81,7 @@ jest.mock('src/main/ipc', () => ({
     handle: (channel: string, handler: any) => bus.handle(channel, handler),
     removeListener: jest.fn(),
   },
-  typedWebContents: (wc: any) => ({
+  typedWebContents: (_wc: any) => ({
     send: (channel: string, ...args: any[]) => bus.sendToRenderer(channel, ...args),
   }),
 }));

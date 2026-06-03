@@ -8,7 +8,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
 } from '../dialog';
 
 describe('Dialog', () => {

@@ -18,7 +18,7 @@ if (typeof crypto === 'undefined' || !crypto.randomUUID) {
 
 import {
   createMockElectronModule,
-  createMockWebContentsView,
+  
   type MockWebContentsView,
 } from '../../__test-utils__/electron-mocks';
 
