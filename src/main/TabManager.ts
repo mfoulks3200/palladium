@@ -6,7 +6,6 @@ import { AnalyticsManager } from './AnalyticsManager';
 import { registerTabManagerIpc } from './TabManagerIpcHandlers';
 import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import fetch from 'cross-fetch'; // required 'fetch'
-import { SettingsManager } from './SettingsManager';
 
 export class TabManager {
   private static instance: TabManager;

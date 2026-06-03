@@ -117,7 +117,7 @@ export class SettingsManager {
       });
     }
     for (const listener of this.listeners.filter(
-      (listener) => listener.key === key,
+      (l) => l.key === key,
     )) {
       try {
         listener.callback(value);
