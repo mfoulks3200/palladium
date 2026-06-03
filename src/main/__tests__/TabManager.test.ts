@@ -749,7 +749,7 @@ describe('TabManager', () => {
     });
 
     it('does nothing when no tab is focused', () => {
-      const tm2 = TabManager.getInstance();
+      const _tm2 = TabManager.getInstance();
       // Manually clear currentTab via a fresh manager -- actually we can't easily
       // do this with singleton, so just verify no error with null current tab
       // by using the existing tm before focusTab
