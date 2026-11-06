@@ -3,52 +3,19 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import {
   MainToRendererEvents,
+  mainToRendererChannels,
   RendererToMainEvents,
   RendererToMainInvocations,
 } from '../ipc';
 
-// Runtime allowlists prevent DevTools/userscripts from sending to arbitrary
-// IPC channels. TypeScript generics enforce types at compile time, but the
-// preload context bridge is reachable at runtime by anything in the renderer.
-const SEND_ALLOWLIST: Set<string> = new Set<string>([
-  'request-tab-meta',
-  'update-active-tab',
-  'update-tab-url',
-  'open-new-tab',
-  'close-tab',
-  'tab-actions',
-  'reorder-tab',
-  'tab-context-menu',
-  'app-resize',
-  'browser-layout-change',
-  'devtools-layout-change',
-  'command-bar',
-  'settings-sync',
-  'clear-history',
-  'feature-flags-refresh',
-  'capture-exception',
-  'window-action',
-  'open-settings',
-  'media-control',
-] satisfies (keyof RendererToMainEvents)[]);
+import {
+  rendererEventSchemas,
+  rendererInvocationSchemas,
+} from '../ipc/RequestSchemas';
 
-const INVOKE_ALLOWLIST: Set<string> = new Set<string>([
-  'get-history',
-  'get-system-meta',
-  'get-settings',
-  'get-feature-flags',
-  'command-input',
-] satisfies (keyof RendererToMainInvocations)[]);
-
-const RECEIVE_ALLOWLIST: Set<string> = new Set<string>([
-  'update-tab-meta',
-  'request-browser-layout',
-  'request-devtools-layout',
-  'command-setup',
-  'internal-page-navigate',
-  'feature-flags-sync',
-  'media-state',
-] satisfies (keyof MainToRendererEvents)[]);
+const SEND_ALLOWLIST = new Set(Object.keys(rendererEventSchemas));
+const INVOKE_ALLOWLIST = new Set(Object.keys(rendererInvocationSchemas));
+const RECEIVE_ALLOWLIST = new Set(Object.keys(mainToRendererChannels));
 
 const electronHandler = {
   ipcRenderer: {
@@ -94,11 +61,12 @@ const electronHandler = {
     ) {
       if (!RECEIVE_ALLOWLIST.has(channel)) {
         console.warn(`Blocked IPC once on unknown channel: ${channel}`);
-        return;
+        return () => {};
       }
-      ipcRenderer.once(channel, (_event, ...args) =>
-        func(...(args as MainToRendererEvents[T])),
-      );
+      const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
+        func(...(args as MainToRendererEvents[T]));
+      ipcRenderer.once(channel, subscription);
+      return () => ipcRenderer.removeListener(channel, subscription);
     },
   },
 };

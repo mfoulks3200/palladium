@@ -88,6 +88,7 @@ export class CommandParser {
     const metadata: CommandMetadata = { tabUuid };
     if (tabUuid) {
       metadata.tab = TabManager.getInstance().getTabByUuid(tabUuid);
+      if (!metadata.tab) throw new Error('Unknown command tab');
     }
     return metadata;
   }

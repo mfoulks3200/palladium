@@ -9,29 +9,81 @@ import {
   RendererToMainEvents,
   RendererToMainInvocations,
 } from '../ipc';
+import {
+  rendererEventSchemas,
+  rendererInvocationSchemas,
+} from '../ipc/RequestSchemas';
+import { isAuthorizedIpcRequest } from './IpcAuthorization';
+
+type EventListener<T extends keyof RendererToMainEvents> = (
+  event: IpcMainEvent,
+  ...args: RendererToMainEvents[T]
+) => void;
+const subscriptions = new Set<{
+  channel: string;
+  listener: unknown;
+  dispose: () => void;
+}>();
+const handlers = new Map<string, () => void>();
+
+function subscribe<T extends keyof RendererToMainEvents>(
+  channel: T,
+  listener: EventListener<T>,
+  once = false,
+) {
+  let active = true;
+  const dispose = () => {
+    if (!active) return;
+    active = false;
+    ipcMain.removeListener(channel, wrapper);
+    subscriptions.delete(registration);
+  };
+  const wrapper = (event: IpcMainEvent, ...args: unknown[]) => {
+    if (!active) return;
+    const parsed = rendererEventSchemas[channel].safeParse(args);
+    if (!isAuthorizedIpcRequest(event, channel) || !parsed.success) {
+      console.warn(`Rejected IPC event: ${channel}`);
+      return;
+    }
+    if (once) dispose();
+    try {
+      Promise.resolve(
+        listener(event, ...(parsed.data as RendererToMainEvents[T])),
+      ).catch(() => console.warn(`IPC event failed: ${channel}`));
+    } catch {
+      console.warn(`IPC event failed: ${channel}`);
+    }
+  };
+  const registration = { channel, listener, dispose };
+  ipcMain.on(channel, wrapper);
+  subscriptions.add(registration);
+  return dispose;
+}
 
 export const typedIpcMain = {
   on<T extends keyof RendererToMainEvents>(
     channel: T,
-    listener: (event: IpcMainEvent, ...args: RendererToMainEvents[T]) => void,
+    listener: EventListener<T>,
   ) {
-    ipcMain.on(channel, (event, ...args) =>
-      listener(event, ...(args as RendererToMainEvents[T])),
-    );
+    return subscribe(channel, listener);
   },
   once<T extends keyof RendererToMainEvents>(
     channel: T,
-    listener: (event: IpcMainEvent, ...args: RendererToMainEvents[T]) => void,
+    listener: EventListener<T>,
   ) {
-    ipcMain.once(channel, (event, ...args) =>
-      listener(event, ...(args as RendererToMainEvents[T])),
-    );
+    return subscribe(channel, listener, true);
   },
   removeListener<T extends keyof RendererToMainEvents>(
     channel: T,
-    listener: (event: IpcMainEvent, ...args: RendererToMainEvents[T]) => void,
+    listener: EventListener<T>,
   ) {
-    ipcMain.removeListener(channel, listener as any);
+    for (const subscription of subscriptions) {
+      if (
+        subscription.channel === channel &&
+        subscription.listener === listener
+      )
+        subscription.dispose();
+    }
   },
   handle<T extends keyof RendererToMainInvocations>(
     channel: T,
@@ -42,9 +94,27 @@ export const typedIpcMain = {
       | RendererToMainInvocations[T]['result']
       | Promise<RendererToMainInvocations[T]['result']>,
   ) {
-    ipcMain.handle(channel, (event, ...args) =>
-      listener(event, ...(args as RendererToMainInvocations[T]['args'])),
-    );
+    const dispose = () => {
+      if (handlers.get(channel) !== dispose) return;
+      ipcMain.removeHandler(channel);
+      handlers.delete(channel);
+    };
+    ipcMain.handle(channel, async (event, ...args) => {
+      if (!isAuthorizedIpcRequest(event, channel))
+        throw new Error('IPC request unauthorized');
+      const parsed = rendererInvocationSchemas[channel].safeParse(args);
+      if (!parsed.success) throw new Error('IPC request invalid');
+      try {
+        return await listener(
+          event,
+          ...(parsed.data as RendererToMainInvocations[T]['args']),
+        );
+      } catch {
+        throw new Error('IPC request failed');
+      }
+    });
+    handlers.set(channel, dispose);
+    return dispose;
   },
 };
 

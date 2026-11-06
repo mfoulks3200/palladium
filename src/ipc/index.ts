@@ -1,14 +1,17 @@
+import { RendererInvocationArgs } from './RequestSchemas';
+export type {
+  RendererToMainEvents,
+  OverlayOptions,
+  TabActionsIpc,
+  CommandBarIpc,
+  CommandInputIpc,
+  CaptureExceptionIpc,
+  WindowActionIpc,
+  MediaControlIpc,
+} from './RequestSchemas';
+import type { RendererToMainEvents } from './RequestSchemas';
 import { IpcIcons } from './Icons';
 import { SettingSchema } from './SettingsRegistry';
-
-export interface OverlayOptions {
-  position: {
-    x: number;
-    y: number;
-    height: number;
-    width: number;
-  };
-}
 
 export interface TabIpcPacket {
   uuid: string;
@@ -26,28 +29,6 @@ export interface TabManagerIpc {
   currentTabUuid?: string | null;
   tabs: TabIpcPacket[];
 }
-
-export interface TabActionsIpc {
-  action: 'back' | 'forward' | 'refresh' | 'hard-refresh' | 'mute' | 'unmute';
-}
-
-interface CommandInputSuggestionIpc {
-  provider?: string;
-  mode: 'suggestions';
-  input: string;
-}
-
-interface CommandInputExecutionIpc {
-  provider?: string;
-  mode: 'execute';
-  input: string;
-  command: string;
-  tabUuid?: string;
-}
-
-export type CommandInputIpc =
-  | CommandInputSuggestionIpc
-  | CommandInputExecutionIpc;
 
 export interface CommandResponseIpc {
   provider: {
@@ -82,11 +63,6 @@ export interface CommandResponseIpc {
   };
 }
 
-export interface CommandBarIpc {
-  action: 'open' | 'close';
-  tabUuid?: string;
-}
-
 export interface CommandBarSetupIpc {
   tabUuid: string;
   prefill: string;
@@ -110,17 +86,6 @@ export interface FeatureFlagsIpc {
   flags: Record<string, string | boolean>;
 }
 
-export interface CaptureExceptionIpc {
-  message: string;
-  stack: string;
-  name: string;
-  source: string;
-}
-
-export interface WindowActionIpc {
-  action: 'close' | 'minimize' | 'maximize';
-}
-
 export interface MediaState {
   id: string;
   type: string;
@@ -138,11 +103,6 @@ export type MediaStateIpc =
   | { action: 'update'; state: Partial<MediaState> & { id: string } }
   | { action: 'remove'; id: string };
 
-export interface MediaControlIpc {
-  mediaId: string;
-  action: 'play' | 'pause' | 'next' | 'previous';
-}
-
 export interface SystemMetaIpc {
   platform: string;
   arch: string;
@@ -158,31 +118,6 @@ export interface SystemMetaIpc {
     branch: string;
     lastCommitDateTime: string;
   };
-}
-
-/**
- * Protocol definition for Renderer -> Main communication
- */
-export interface RendererToMainEvents {
-  'request-tab-meta': [];
-  'update-active-tab': [{ activeTabUuid: string }];
-  'update-tab-url': [{ newUrl: string }];
-  'open-new-tab': [{ newUrl: string }];
-  'close-tab': [{ uuid: string }];
-  'tab-actions': [TabActionsIpc];
-  'reorder-tab': [{ startIndex: number; finishIndex: number }];
-  'tab-context-menu': [{ uuid: string }];
-  'app-resize': [{ width: number; height: number }];
-  'browser-layout-change': [OverlayOptions];
-  'devtools-layout-change': [OverlayOptions];
-  'command-bar': [CommandBarIpc];
-  'settings-sync': [SettingSchema];
-  'clear-history': [];
-  'feature-flags-refresh': [];
-  'capture-exception': [CaptureExceptionIpc];
-  'window-action': [WindowActionIpc];
-  'open-settings': [];
-  'media-control': [MediaControlIpc];
 }
 
 /**
@@ -203,16 +138,30 @@ export interface MainToRendererEvents {
  * Uses ipcMain.handle / ipcRenderer.invoke pattern.
  * Each key maps to { args: [...], result: ReturnType }.
  */
-export interface RendererToMainInvocations {
-  'get-history': { args: []; result: HistoryItem[] };
-  'get-system-meta': { args: []; result: SystemMetaIpc };
-  'get-settings': { args: []; result: SettingSchema };
-  'get-feature-flags': { args: []; result: FeatureFlagsIpc };
-  'command-input': {
-    args: [CommandInputIpc];
-    result: CommandResponseIpc | void;
-  };
+interface InvocationResults {
+  'get-history': HistoryItem[];
+  'get-system-meta': SystemMetaIpc;
+  'get-settings': SettingSchema;
+  'get-feature-flags': FeatureFlagsIpc;
+  'command-input': CommandResponseIpc | void;
 }
+
+export type RendererToMainInvocations = {
+  [K in keyof RendererInvocationArgs]: {
+    args: RendererInvocationArgs[K];
+    result: InvocationResults[K];
+  };
+};
+
+export const mainToRendererChannels = {
+  'update-tab-meta': true,
+  'request-browser-layout': true,
+  'request-devtools-layout': true,
+  'command-setup': true,
+  'internal-page-navigate': true,
+  'feature-flags-sync': true,
+  'media-state': true,
+} satisfies Record<keyof MainToRendererEvents, true>;
 
 export type Channels =
   | keyof RendererToMainEvents

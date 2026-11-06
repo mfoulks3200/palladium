@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import MenuBuilder from './menu';
 import { typedIpcMain } from './ipc';
+import { authorizeIpcRenderer } from './IpcAuthorization';
 import { SystemMetaIpc, WindowActionIpc } from '../ipc';
 import { SettingsManager } from './SettingsManager';
 import { HistoryManager } from './HistoryManager';
@@ -77,6 +78,11 @@ export class BrowserWindowUI {
       },
     });
 
+    authorizeIpcRenderer(
+      this.mainWindow.webContents,
+      resolveHtmlPath('mainUi.html'),
+      'main-ui',
+    );
     this.mainWindow.loadURL(resolveHtmlPath('mainUi.html'));
 
     this.mainWindow.on('ready-to-show', () => {
@@ -145,13 +151,14 @@ export class BrowserWindowUI {
     });
 
     initSubsystem('GlobalShortcuts', () => {
-      const savedShortcut =
-        SettingsManager.getInstance().getItem('shortcuts.commandBar');
+      const savedShortcut = SettingsManager.getInstance().getItem(
+        'shortcuts.commandBar',
+      );
       registerGlobalShortcuts(savedShortcut);
     });
 
     initSubsystem('SystemMetaIpc', () => {
-      typedIpcMain.handle('get-system-meta', () => {
+      const dispose = typedIpcMain.handle('get-system-meta', () => {
         return {
           platform: process.platform,
           arch: process.arch,
@@ -169,31 +176,36 @@ export class BrowserWindowUI {
           },
         } satisfies SystemMetaIpc;
       });
+      this.mainWindow.once('closed', dispose);
     });
 
     initSubsystem('WindowActions', () => {
-      typedIpcMain.on('window-action', (event, { action }: WindowActionIpc) => {
-        const win = BrowserWindow.fromWebContents(event.sender);
-        if (!win || win.isDestroyed()) return;
+      const dispose = typedIpcMain.on(
+        'window-action',
+        (event, { action }: WindowActionIpc) => {
+          const win = BrowserWindow.fromWebContents(event.sender);
+          if (!win || win.isDestroyed()) return;
 
-        switch (action) {
-          case 'close':
-            win.close();
-            break;
-          case 'minimize':
-            win.minimize();
-            break;
-          case 'maximize':
-            if (win.isMaximized()) {
-              win.unmaximize();
-            } else {
-              win.maximize();
-            }
-            break;
-          default:
-            break;
-        }
-      });
+          switch (action) {
+            case 'close':
+              win.close();
+              break;
+            case 'minimize':
+              win.minimize();
+              break;
+            case 'maximize':
+              if (win.isMaximized()) {
+                win.unmaximize();
+              } else {
+                win.maximize();
+              }
+              break;
+            default:
+              break;
+          }
+        },
+      );
+      this.mainWindow.once('closed', dispose);
     });
 
     initSubsystem('CommandParser', () => {
