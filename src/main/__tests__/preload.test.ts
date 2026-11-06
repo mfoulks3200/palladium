@@ -48,10 +48,7 @@ describe('preload', () => {
       it('registers a listener via ipcRenderer.on and returns an unsubscribe function', () => {
         const callback = jest.fn();
 
-        const unsubscribe = handler.ipcRenderer.on(
-          'update-tab-meta',
-          callback,
-        );
+        const unsubscribe = handler.ipcRenderer.on('update-tab-meta', callback);
 
         expect(mockOn).toHaveBeenCalledWith(
           'update-tab-meta',
@@ -78,10 +75,7 @@ describe('preload', () => {
       it('removes the listener when the unsubscribe function is called', () => {
         const callback = jest.fn();
 
-        const unsubscribe = handler.ipcRenderer.on(
-          'update-tab-meta',
-          callback,
-        );
+        const unsubscribe = handler.ipcRenderer.on('update-tab-meta', callback);
 
         // Grab the exact subscription reference that was registered
         const subscription = mockOn.mock.calls[0][1];
@@ -104,6 +98,19 @@ describe('preload', () => {
         expect(mockOnce).toHaveBeenCalledWith(
           'update-tab-meta',
           expect.any(Function),
+        );
+      });
+
+      it('can cancel a once listener before delivery', () => {
+        const unsubscribe = handler.ipcRenderer.once(
+          'update-tab-meta',
+          jest.fn(),
+        );
+        const subscription = mockOnce.mock.calls[0][1];
+        unsubscribe();
+        expect(mockRemoveListener).toHaveBeenCalledWith(
+          'update-tab-meta',
+          subscription,
         );
       });
 

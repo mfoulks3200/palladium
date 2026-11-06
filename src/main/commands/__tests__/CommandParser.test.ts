@@ -24,7 +24,9 @@ jest.mock('fuzzysort', () => ({
 jest.mock('../../TabManager', () => ({
   TabManager: {
     getInstance: jest.fn(() => ({
-      getTabByUuid: jest.fn(() => undefined),
+      getTabByUuid: jest.fn((uuid: string) =>
+        uuid === 'tab-123' ? { uuid } : undefined,
+      ),
       focusTab: jest.fn(),
     })),
   },
@@ -355,6 +357,27 @@ describe('CommandParser', () => {
         expect.objectContaining({ tabUuid: 'tab-123' }),
       );
       expect(providerA.runCommand).not.toHaveBeenCalled();
+    });
+
+    it('rejects an execution for a tab that no longer exists', async () => {
+      const parser = CommandParser.getInstance();
+      const provider = createMockProvider('test', 'Test');
+      parser.addProvider(provider);
+      const ipcHandler = mockIpcHandle.mock.calls.find(
+        (call: any[]) => call[0] === 'command-input',
+      )![1];
+      await expect(
+        ipcHandler(
+          {},
+          {
+            mode: 'execute',
+            input: '',
+            command: 'test.run',
+            tabUuid: 'missing',
+          },
+        ),
+      ).rejects.toThrow('Unknown command tab');
+      expect(provider.runCommand).not.toHaveBeenCalled();
     });
 
     it('strips provider prefix and dot from the command id', async () => {

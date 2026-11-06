@@ -45,7 +45,8 @@ export class TabManager {
       await this.updateBrowsingView();
       await this.updateDevtoolsView();
     });
-    registerTabManagerIpc(this);
+    const disposeIpc = registerTabManagerIpc(this);
+    mainWindow.once('closed', disposeIpc);
     setInterval(() => {
       this.updateRenderProcess();
     }, 500);
@@ -66,10 +67,10 @@ export class TabManager {
       return;
     }
     const internalSize = {
-      x: (dimensions?.x ?? 0) + 1,
-      y: (dimensions?.y ?? 0) + 1,
-      width: (dimensions?.width ?? 0) - 2,
-      height: (dimensions?.height ?? 0) - 2,
+      x: Math.round(dimensions?.x ?? 0) + 1,
+      y: Math.round(dimensions?.y ?? 0) + 1,
+      width: Math.max(0, Math.round(dimensions?.width ?? 0) - 2),
+      height: Math.max(0, Math.round(dimensions?.height ?? 0) - 2),
     };
     if (this.currentTab) {
       this.currentTab.view.setBounds(internalSize);
@@ -91,10 +92,10 @@ export class TabManager {
       return;
     }
     const internalSize = {
-      x: (dimensions?.x ?? 0) + 1,
-      y: (dimensions?.y ?? 0) + 1,
-      width: (dimensions?.width ?? 0) - 2,
-      height: (dimensions?.height ?? 0) - 2,
+      x: Math.round(dimensions?.x ?? 0) + 1,
+      y: Math.round(dimensions?.y ?? 0) + 1,
+      width: Math.max(0, Math.round(dimensions?.width ?? 0) - 2),
+      height: Math.max(0, Math.round(dimensions?.height ?? 0) - 2),
     };
     if (this.currentTab) {
       this.currentTab.devToolsView.setBounds(internalSize);
@@ -211,8 +212,8 @@ export class TabManager {
   }
 
   public focusTabUuid(uuid: string) {
-    const nextTab = this.tabs.find((tab) => tab.uuid === uuid)!;
-    this.focusTab(nextTab);
+    const nextTab = this.tabs.find((tab) => tab.uuid === uuid);
+    if (nextTab) this.focusTab(nextTab);
   }
 
   public getTabIndex(tabUuid: string) {
@@ -232,7 +233,7 @@ export class TabManager {
   }
 
   public loadUrlInCurrentTab(url: string) {
-    this.currentTab?.view.webContents.loadURL(url);
+    return this.currentTab?.view.webContents.loadURL(url);
   }
 
   public openNewTab(url: string) {
@@ -270,6 +271,15 @@ export class TabManager {
   }
 
   public reorderTab(startIndex: number, finishIndex: number) {
+    if (
+      !Number.isInteger(startIndex) ||
+      !Number.isInteger(finishIndex) ||
+      startIndex < 0 ||
+      finishIndex < 0 ||
+      startIndex >= this.tabs.length ||
+      finishIndex >= this.tabs.length
+    )
+      return;
     const [removed] = this.tabs.splice(startIndex, 1);
     this.tabs.splice(finishIndex, 0, removed);
     this.updateRenderProcess();

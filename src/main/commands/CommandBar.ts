@@ -2,6 +2,7 @@ import { app, BrowserWindow, screen } from 'electron';
 import path from 'node:path';
 import { resolveHtmlPath } from '../util';
 import { typedIpcMain, typedWebContents } from '../ipc';
+import { authorizeIpcRenderer } from '../IpcAuthorization';
 import { TabManager } from '../TabManager';
 
 let commandBarWindow: BrowserWindow | null = null;
@@ -70,6 +71,11 @@ const createCommandBarWindow = (): BrowserWindow => {
     isWindowReady = false;
   });
 
+  authorizeIpcRenderer(
+    win.webContents,
+    resolveHtmlPath('commandBar.html'),
+    'command-bar',
+  );
   win.loadURL(resolveHtmlPath('commandBar.html'));
 
   return win;
@@ -118,6 +124,8 @@ export const commandBarSetup = () => {
   preWarmCommandBar();
 
   typedIpcMain.on('command-bar', (_event, data) => {
+    if (data.tabUuid && !TabManager.getInstance().getTabByUuid(data.tabUuid))
+      return;
     if (data.action === 'open') {
       spawnCommandBarUI(data.tabUuid);
     } else if (data.action === 'close' && commandBarWindow) {

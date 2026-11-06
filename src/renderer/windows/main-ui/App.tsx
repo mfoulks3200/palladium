@@ -32,11 +32,15 @@ function Main() {
   >({});
 
   useEffect(() => {
-    window.electron.ipcRenderer.on('update-tab-meta', (args) => {
-      setTabMeta(args);
-    });
+    const unsubscribe = window.electron.ipcRenderer.on(
+      'update-tab-meta',
+      (args) => {
+        setTabMeta(args);
+      },
+    );
 
     window.electron.ipcRenderer.sendMessage('request-tab-meta');
+    return unsubscribe;
   }, []);
 
   const tabMetaRef = useRef(tabMeta);
