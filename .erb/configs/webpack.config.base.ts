@@ -43,8 +43,12 @@ const configuration: webpack.Configuration = {
    */
   resolve: {
     extensions: ['.js', '.jsx', '.json', '.ts', '.tsx'],
+    // Select the webpack-compatible ESM entry instead of Monaco's AMD bundle.
+    alias: {
+      'monaco-editor$': require.resolve('monaco-editor/editor/editor.api.js'),
+    },
     modules: [webpackPaths.srcPath, 'node_modules'],
-    // There is no need to add aliases here, the paths in tsconfig get mirrored
+    // Mirror application import paths from tsconfig.
     plugins: [new TsconfigPathsPlugins()],
   },
 
