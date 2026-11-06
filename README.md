@@ -15,7 +15,7 @@ Palladium is a modern, minimalist web browser built on top of [Electron](https:/
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18 or higher recommended)
+- [Node.js](https://nodejs.org/) (22.22.2+ on Node 22, 24.15.0+ on Node 24, or Node 26+)
 - [npm](https://www.npmjs.com/)
 
 ### Installation

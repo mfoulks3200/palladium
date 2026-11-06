@@ -36,7 +36,7 @@ interface BrowserTabProps {
   isLoading: boolean;
 }
 
-export const BrowserTab = memo(function BrowserTab(props: BrowserTabProps) {
+export const BrowserTab = memo(function BrowserTabComponent(props: BrowserTabProps) {
   const tabRef = useRef<HTMLDivElement>(null);
 
   const [closestEdge, setClosestEdge] = useState<Edge | null>(null);

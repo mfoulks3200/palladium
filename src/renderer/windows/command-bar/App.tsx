@@ -1,10 +1,10 @@
 import { CommandBar } from '@/components/CommandBar';
 import '../globals.css';
-import '@fontsource/inter/100';
-import '@fontsource/inter/200';
-import '@fontsource/inter/400';
-import '@fontsource/inter/500';
-import '@fontsource/inter/800';
+import '@fontsource/inter/100.css';
+import '@fontsource/inter/200.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/800.css';
 import './App.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { SettingsProvider } from '@/lib/settings';

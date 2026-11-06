@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 const Markdown = lazy(() => import('react-markdown'));
 
 import styles from './AboutPanel.module.css';
-import { Github, Heart } from 'lucide-react';
+import { CodeXml, Heart } from 'lucide-react';
 import { useSystemMeta } from '@/lib/system-meta';
 
 export const AboutPanel = () => {
@@ -56,7 +56,7 @@ export const LinksPanel = () => {
         <span>in North Carolina</span>
       </div>
       <a href="https://github.com/mfoulks3200/palladium" className="flex gap-1">
-        <Github />
+        <CodeXml />
         <span className="text-primary underline">GitHub Repository</span>
       </a>
     </div>
