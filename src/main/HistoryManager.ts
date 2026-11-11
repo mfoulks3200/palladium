@@ -39,8 +39,8 @@ export class HistoryManager extends EventTarget {
   }
 
   private registerIpc() {
-    typedIpcMain.handle('get-history', () => {
-      return this.getHistory() as HistoryItem[];
+    typedIpcMain.handle('get-history', (_event, beforeId) => {
+      return this.getHistory(beforeId);
     });
 
     typedIpcMain.on('clear-history', () => {
@@ -131,10 +131,14 @@ export class HistoryManager extends EventTarget {
     this.dispatchEvent(updateEvent);
   }
 
-  public getHistory() {
+  public getHistory(beforeId?: number): HistoryItem[] {
     return this.db
-      .prepare('SELECT * FROM history ORDER BY timestamp DESC')
-      .all();
+      .prepare(
+        beforeId === undefined
+          ? 'SELECT * FROM history ORDER BY id DESC LIMIT 100'
+          : 'SELECT * FROM history WHERE id < ? ORDER BY id DESC LIMIT 100',
+      )
+      .all(...(beforeId === undefined ? [] : [beforeId])) as HistoryItem[];
   }
 
   public searchHistory(query: string, limit: number = 20) {
@@ -158,8 +162,10 @@ export class HistoryManager extends EventTarget {
   }
 
   public clearHistory() {
-    this.db.prepare('DELETE FROM history').run();
-    this.db.prepare('DELETE FROM tabs').run();
+    this.db.transaction(() => {
+      this.db.prepare('DELETE FROM history').run();
+      this.db.prepare('DELETE FROM tabs WHERE closed_at IS NOT NULL').run();
+    })();
     const updateEvent = new CustomEvent('history-cleared', {
       bubbles: true,
     });

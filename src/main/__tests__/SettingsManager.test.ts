@@ -16,6 +16,10 @@ jest.mock('node:fs', () => ({
   readFileSync: jest.fn(),
   writeFileSync: jest.fn(),
   mkdirSync: jest.fn(),
+  copyFileSync: jest.fn(),
+  renameSync: jest.fn(),
+  unlinkSync: jest.fn(),
+  constants: { COPYFILE_EXCL: 1 },
 }));
 
 const mockIpcOn = jest.fn();
@@ -30,6 +34,8 @@ jest.mock('src/main/GlobalShortcuts', () => ({
   rebindCommandBarShortcut: jest.fn(),
 }));
 
+jest.mock('node:crypto', () => ({ randomUUID: () => 'test-write' }));
+
 jest.mock('src/main/AnalyticsManager', () => ({
   AnalyticsManager: {
     getInstance: () => ({
@@ -41,7 +47,7 @@ jest.mock('src/main/AnalyticsManager', () => ({
 
 import fs from 'node:fs';
 import { SettingsManager } from '../SettingsManager';
-import { settingsSchema, settingsDefaults } from 'src/ipc/SettingsRegistry';
+import { settingsSchema } from 'src/ipc/SettingsRegistry';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -82,6 +88,52 @@ describe('SettingsManager', () => {
   // 1. Singleton
   // -----------------------------------------------------------------------
 
+  it('preserves invalid original settings before replacing them', () => {
+    existsSync.mockReturnValue(true);
+    readFileSync.mockReturnValue('{broken');
+    const spy = jest.spyOn(console, 'error').mockImplementation();
+    const mgr = SettingsManager.getInstance();
+    expect(writeFileSync).not.toHaveBeenCalled();
+    mgr.persist();
+    expect(fs.copyFileSync).toHaveBeenCalledWith(
+      expectedPath,
+      expect.stringContaining(`${expectedPath}.unreadable-`),
+      1,
+    );
+    expect(
+      (fs.copyFileSync as jest.Mock).mock.invocationCallOrder[0],
+    ).toBeLessThan(writeFileSync.mock.invocationCallOrder[0]);
+    spy.mockRestore();
+  });
+
+  it('keeps original settings when preservation fails', () => {
+    existsSync.mockReturnValue(true);
+    readFileSync.mockImplementationOnce(() => {
+      throw new Error('read denied');
+    });
+    (fs.copyFileSync as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('copy denied');
+    });
+    const spy = jest.spyOn(console, 'error').mockImplementation();
+    const mgr = SettingsManager.getInstance();
+    expect(writeFileSync).not.toHaveBeenCalled();
+    expect(() => mgr.persist()).toThrow('could not be preserved');
+    spy.mockRestore();
+  });
+
+  it('does not replace original settings when an atomic write fails', () => {
+    const mgr = SettingsManager.getInstance();
+    (fs.renameSync as jest.Mock).mockClear();
+    writeFileSync.mockImplementationOnce(() => {
+      throw new Error('disk full');
+    });
+    expect(() => mgr.persist()).toThrow('disk full');
+    expect(fs.renameSync).not.toHaveBeenCalled();
+    expect(fs.unlinkSync).toHaveBeenCalledWith(
+      `${expectedPath}.test-write.tmp`,
+    );
+  });
+
   it('returns the same instance on subsequent getInstance calls', () => {
     const a = SettingsManager.getInstance();
     const b = SettingsManager.getInstance();
@@ -98,8 +150,15 @@ describe('SettingsManager', () => {
     SettingsManager.getInstance();
 
     expect(mkdirSync).toHaveBeenCalledWith(expectedDir, { recursive: true });
-    // First writeFileSync call is the empty-file seed, second is persist()
-    expect(writeFileSync).toHaveBeenCalledWith(expectedPath, '{}');
+    expect(writeFileSync).toHaveBeenCalledWith(
+      `${expectedPath}.test-write.tmp`,
+      expect.any(String),
+      { mode: 0o600, flag: 'wx' },
+    );
+    expect(fs.renameSync).toHaveBeenCalledWith(
+      `${expectedPath}.test-write.tmp`,
+      expectedPath,
+    );
   });
 
   // -----------------------------------------------------------------------
@@ -139,9 +198,7 @@ describe('SettingsManager', () => {
     const mgr = SettingsManager.getInstance();
 
     // Should have survived the corruption and fallen back to defaults
-    expect(mgr.getItem('analytics.enabled')).toBe(
-      settingsDefaults.analytics.enabled,
-    );
+    expect(mgr.getItem('analytics.enabled')).toBe(false);
 
     consoleSpy.mockRestore();
   });
@@ -180,8 +237,9 @@ describe('SettingsManager', () => {
     expect(mgr.getItem('searchEngines.defaultEngines.google')).toBe(false);
     // persist() should have been called
     expect(writeFileSync).toHaveBeenCalledWith(
-      expectedPath,
+      `${expectedPath}.test-write.tmp`,
       expect.any(String),
+      { mode: 0o600, flag: 'wx' },
     );
   });
 
@@ -229,7 +287,7 @@ describe('SettingsManager', () => {
 
     expect(writeFileSync).toHaveBeenCalledTimes(1);
     const [writtenPath, writtenData] = writeFileSync.mock.calls[0];
-    expect(writtenPath).toBe(expectedPath);
+    expect(writtenPath).toBe(`${expectedPath}.test-write.tmp`);
     // Should be valid JSON
     expect(() => JSON.parse(writtenData)).not.toThrow();
   });
@@ -240,7 +298,10 @@ describe('SettingsManager', () => {
 
   it('registers a settings-sync IPC handler on construction', () => {
     SettingsManager.getInstance();
-    expect(mockIpcOn).toHaveBeenCalledWith('settings-sync', expect.any(Function));
+    expect(mockIpcOn).toHaveBeenCalledWith(
+      'settings-sync',
+      expect.any(Function),
+    );
   });
 
   it('returns current settings when get-settings is invoked', () => {

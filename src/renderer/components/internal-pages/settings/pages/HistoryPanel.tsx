@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { HistoryItem } from '../../../../../ipc';
 import { Button } from '@/components/ui/button';
 import { Trash2, ExternalLink, Globe } from 'lucide-react';
@@ -7,17 +7,60 @@ import { Card } from '@/components/ui/card';
 export const HistoryPanel = () => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const generation = useRef(0);
+
+  const loadMore = async () => {
+    const requestGeneration = generation.current;
+    setLoading(true);
+    setError('');
+    try {
+      const page = await window.electron.ipcRenderer.invoke(
+        'get-history',
+        history[history.length - 1]?.id,
+      );
+      if (requestGeneration !== generation.current) return;
+      setHistory((previous) => [...previous, ...page]);
+      setHasMore(page.length === 100);
+    } catch {
+      if (requestGeneration === generation.current)
+        setError('Could not load history. Try again.');
+    } finally {
+      if (requestGeneration === generation.current) setLoading(false);
+    }
+  };
+
   useEffect(() => {
+    let active = true;
+    setLoading(true);
     window.electron.ipcRenderer
       .invoke('get-history')
-      .then(setHistory)
-      .catch(console.error);
+      .then((page) => {
+        if (!active) return;
+        setHistory(page);
+        setHasMore(page.length === 100);
+      })
+      .catch(() => {
+        if (active) setError('Could not load history. Try again.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const clearHistory = () => {
     if (confirm('Are you sure you want to clear all history?')) {
       window.electron.ipcRenderer.sendMessage('clear-history');
+      generation.current += 1;
       setHistory([]);
+      setHasMore(false);
+      setLoading(false);
+      setError('');
     }
   };
 
@@ -42,7 +85,9 @@ export const HistoryPanel = () => {
 
       <div className="flex flex-col gap-2 px-4 pb-4">
         {history.length === 0 ? (
-          <div className="py-8 text-center text-muted-foreground">No history found</div>
+          <div className="text-muted-foreground py-8 text-center">
+            No history found
+          </div>
         ) : (
           history.map((item) => (
             <Card key={item.id} className="group flex flex-col gap-1 p-3">
@@ -84,6 +129,12 @@ export const HistoryPanel = () => {
               )}
             </Card>
           ))
+        )}
+        {error && <p role="alert">{error}</p>}
+        {(hasMore || error) && (
+          <Button onClick={loadMore} disabled={loading}>
+            {loading ? 'Loading…' : 'Load more'}
+          </Button>
         )}
       </div>
     </div>

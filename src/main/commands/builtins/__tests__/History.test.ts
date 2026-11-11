@@ -70,7 +70,7 @@ describe('History command provider', () => {
       expect(suggestions[0].icon).toBe('History');
     });
 
-    it('deduplicates results by sanitized URL', () => {
+    it('keeps distinct query URLs as distinct results', () => {
       const mockSearch = jest.fn(() => [
         {
           id: 1,
@@ -96,11 +96,10 @@ describe('History command provider', () => {
       });
 
       const suggestions = provider.getSuggestions('test');
-      // Both URLs sanitize to the same thing (only ?q=test is kept for google.com)
-      expect(suggestions).toHaveLength(1);
+      expect(suggestions).toHaveLength(2);
     });
 
-    it('strips non-allowlisted query params from Google URLs', () => {
+    it('preserves the exact Google navigation URL', () => {
       const mockSearch = jest.fn(() => [
         {
           id: 1,
@@ -118,10 +117,9 @@ describe('History command provider', () => {
 
       const suggestions = provider.getSuggestions('hello');
       expect(suggestions).toHaveLength(1);
-      // The sanitized URL should only contain ?q=hello
       expect(suggestions[0].value).toContain('q=hello');
-      expect(suggestions[0].value).not.toContain('tracking');
-      expect(suggestions[0].value).not.toContain('sourceid');
+      expect(suggestions[0].value).toContain('tracking');
+      expect(suggestions[0].value).toContain('sourceid');
     });
 
     it('preserves query params for non-allowlisted domains', () => {
@@ -142,8 +140,9 @@ describe('History command provider', () => {
 
       const suggestions = provider.getSuggestions('example');
       expect(suggestions).toHaveLength(1);
-      // No allowlisted params for example.com, so all are stripped
-      expect(suggestions[0].value).toBe('https://example.com/page');
+      expect(suggestions[0].value).toBe(
+        'https://example.com/page?foo=bar&baz=qux',
+      );
     });
 
     it('filters out results without titles', () => {

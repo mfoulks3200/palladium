@@ -1,11 +1,13 @@
 import '@testing-library/jest-dom';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { HistoryItem } from '../../../../../../ipc';
 
 // Mock lucide-react icons
 jest.mock('lucide-react', () => ({
   Trash2: (props: any) => <span data-testid="trash-icon" {...props} />,
-  ExternalLink: (props: any) => <span data-testid="external-link-icon" {...props} />,
+  ExternalLink: (props: any) => (
+    <span data-testid="external-link-icon" {...props} />
+  ),
   Globe: (props: any) => <span data-testid="globe-icon" {...props} />,
 }));
 
@@ -24,10 +26,12 @@ jest.mock('@/components/ui/card', () => ({
 let ipcListeners: Record<string, (...args: any[]) => void> = {};
 const mockSendMessage = jest.fn();
 const mockInvoke = jest.fn();
-const mockOn = jest.fn((channel: string, callback: (...args: any[]) => void) => {
-  ipcListeners[channel] = callback;
-  return jest.fn(); // cleanup function
-});
+const mockOn = jest.fn(
+  (channel: string, callback: (...args: any[]) => void) => {
+    ipcListeners[channel] = callback;
+    return jest.fn(); // cleanup function
+  },
+);
 
 Object.defineProperty(window, 'electron', {
   value: {
@@ -43,7 +47,9 @@ Object.defineProperty(window, 'electron', {
 // Import after mocks are set up
 import { HistoryPanel } from '../HistoryPanel';
 
-const makeHistoryItem = (overrides: Partial<HistoryItem> = {}): HistoryItem => ({
+const makeHistoryItem = (
+  overrides: Partial<HistoryItem> = {},
+): HistoryItem => ({
   id: 1,
   tab_uuid: 'tab-1',
   url: 'https://example.com',
@@ -61,6 +67,56 @@ describe('HistoryPanel', () => {
     mockInvoke.mockReset();
     mockInvoke.mockResolvedValue([]);
     mockOn.mockClear();
+  });
+
+  it('appends the next bounded page and hides Load more at the end', async () => {
+    const page = Array.from({ length: 100 }, (_, i) =>
+      makeHistoryItem({ id: 200 - i, title: `Page ${200 - i}` }),
+    );
+    mockInvoke
+      .mockResolvedValueOnce(page)
+      .mockResolvedValueOnce([
+        makeHistoryItem({ id: 100, title: 'Older page' }),
+      ]);
+    await act(async () => {
+      render(<HistoryPanel />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText('Load more'));
+    });
+    expect(mockInvoke).toHaveBeenLastCalledWith('get-history', 101);
+    expect(screen.getByText('Page 200')).toBeInTheDocument();
+    expect(screen.getByText('Older page')).toBeInTheDocument();
+    expect(screen.queryByText('Load more')).not.toBeInTheDocument();
+  });
+
+  it('ignores an outstanding page response after clear', async () => {
+    const page = Array.from({ length: 100 }, (_, i) =>
+      makeHistoryItem({ id: 200 - i }),
+    );
+    let resolvePage!: (items: HistoryItem[]) => void;
+    mockInvoke.mockResolvedValueOnce(page).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePage = resolve;
+        }),
+    );
+    jest.spyOn(window, 'confirm').mockReturnValue(true);
+    await act(async () => {
+      render(<HistoryPanel />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText('Load more'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText('Clear History'));
+    });
+    await act(async () => {
+      resolvePage([makeHistoryItem({ id: 100, title: 'Stale page' })]);
+    });
+    expect(screen.queryByText('Stale page')).not.toBeInTheDocument();
+    expect(screen.getByText('No history found')).toBeInTheDocument();
+    jest.restoreAllMocks();
   });
 
   it('renders "No history found" when there are no history items', async () => {
@@ -81,7 +137,11 @@ describe('HistoryPanel', () => {
   it('renders history items when data is received via invoke', async () => {
     const items: HistoryItem[] = [
       makeHistoryItem({ id: 1, title: 'First Page', url: 'https://first.com' }),
-      makeHistoryItem({ id: 2, title: 'Second Page', url: 'https://second.com' }),
+      makeHistoryItem({
+        id: 2,
+        title: 'Second Page',
+        url: 'https://second.com',
+      }),
     ];
 
     mockInvoke.mockResolvedValue(items);
