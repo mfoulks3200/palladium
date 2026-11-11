@@ -1,9 +1,7 @@
-import { Menu, MenuItem, Session, WebContentsView, session } from 'electron';
-import { configureWebsitePermissions } from './WebsitePermissions';
+import { Menu, MenuItem, WebContentsView } from 'electron';
+import { getWebsiteSession } from './WebsiteSession';
 import { MediaState, TabIpcPacket } from '../ipc';
 import { HistoryEvent, HistoryManager } from './HistoryManager';
-import path from 'node:path';
-import os from 'node:os';
 import { AnalyticsManager } from './AnalyticsManager';
 
 const devToolsCSS = `
@@ -38,28 +36,17 @@ export class Tab extends EventTarget {
   private activeMediaId: string | null = null;
   public view: WebContentsView;
   public devToolsView: WebContentsView = null as any;
-  private static session: Session;
 
   constructor(currentUrl: string) {
     super();
     this.currentUrl = currentUrl;
-    if (!Tab.session) {
-      const sessionPath = path.join(
-        os.homedir(),
-        '.palladium',
-        'sessions',
-        'main',
-      );
-      Tab.session = session.fromPath(sessionPath);
-      configureWebsitePermissions(Tab.session);
-    }
     this.view = new WebContentsView({
       webPreferences: {
         contextIsolation: true,
         sandbox: true,
         scrollBounce: true,
         backgroundThrottling: true,
-        session: Tab.session,
+        session: getWebsiteSession(),
       },
     });
     this.setupDevtoolsWindow();
@@ -94,7 +81,7 @@ export class Tab extends EventTarget {
         sandbox: true,
         scrollBounce: true,
         backgroundThrottling: true,
-        session: Tab.session,
+        session: getWebsiteSession(),
       },
     });
 
@@ -319,13 +306,13 @@ export class Tab extends EventTarget {
         ),
       };
       HistoryManager.getInstance().addHistoryEvent(historyEvent);
-      Tab.session.flushStorageData();
+      getWebsiteSession().flushStorageData();
       this.publishMetadataUpdateEvent();
     });
 
     this.view.webContents.on('destroyed', () => {
       HistoryManager.getInstance().closeTab(this.uuid);
-      Tab.session.flushStorageData();
+      getWebsiteSession().flushStorageData();
     });
 
     this.view.webContents.on('did-start-loading', async () => {

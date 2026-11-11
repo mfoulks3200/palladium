@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import { render, screen, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { InternalPageRouter } from '../InternalPageRouter';
 
 // Mock the settings/editor pages to avoid pulling in heavy deps
@@ -23,9 +24,11 @@ Object.defineProperty(window, 'electron', {
 });
 
 describe('InternalPageRouter', () => {
-  it('renders settings page for palladium://settings', async () => {
+  it('renders settings inside the main window router', async () => {
     await act(async () => {
-      render(<InternalPageRouter path="palladium://settings" />);
+      render(<InternalPageRouter path="palladium://settings" />, {
+        wrapper: MemoryRouter,
+      });
     });
     expect(screen.getByTestId('settings-page')).toBeInTheDocument();
   });

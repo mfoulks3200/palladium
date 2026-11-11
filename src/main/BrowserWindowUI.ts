@@ -57,7 +57,7 @@ export class BrowserWindowUI {
       titleBarStyle: 'hidden',
       ...(process.platform !== 'darwin'
         ? { titleBarOverlay: true }
-        : { trafficLightPosition: { x: 17, y: 17 } }),
+        : { trafficLightPosition: { x: 17, y: 18 } }),
       transparent: true,
       frame: false,
       backgroundColor: '#FFFFFF00',
