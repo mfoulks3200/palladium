@@ -65,12 +65,19 @@ describe('HistoryManager with real SQLite', () => {
   afterAll(() => fs.rmSync(mockHome, { recursive: true, force: true }));
 
   it('clears history while retaining open tabs for future navigation', () => {
+    manager.addTab('abandoned');
+    manager.close();
+    HistoryManager['instance'] = undefined as any;
+    manager = HistoryManager.getInstance();
     manager.addTab('open');
     manager.addTab('closed');
     manager.closeTab('closed');
     manager.addHistoryEvent({ tabUuid: 'open', url: 'https://old.example' });
     manager.clearHistory();
     expect(manager.getHistory()).toEqual([]);
+    expect(manager['db'].prepare('SELECT uuid FROM tabs').all()).toEqual([
+      { uuid: 'open' },
+    ]);
     expect(() =>
       manager.addHistoryEvent({
         tabUuid: 'open',

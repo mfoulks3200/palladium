@@ -96,7 +96,10 @@ describe('SettingsManager', () => {
     existsSync.mockReturnValue(true);
     readFileSync.mockReturnValue('{broken');
     const spy = jest.spyOn(console, 'error').mockImplementation();
+    SettingsManager.getInstance();
+    resetSingleton();
     const mgr = SettingsManager.getInstance();
+    expect(fs.copyFileSync).not.toHaveBeenCalled();
     expect(writeFileSync).not.toHaveBeenCalled();
     mgr.persist();
     expect(fs.copyFileSync).toHaveBeenCalledWith(
@@ -106,7 +109,9 @@ describe('SettingsManager', () => {
     );
     expect(
       (fs.copyFileSync as jest.Mock).mock.invocationCallOrder[0],
-    ).toBeLessThan(writeFileSync.mock.invocationCallOrder[0]);
+    ).toBeLessThan((fs.renameSync as jest.Mock).mock.invocationCallOrder[0]);
+    mgr.persist();
+    expect(fs.copyFileSync).toHaveBeenCalledTimes(1);
     spy.mockRestore();
   });
 
@@ -121,7 +126,10 @@ describe('SettingsManager', () => {
     const spy = jest.spyOn(console, 'error').mockImplementation();
     const mgr = SettingsManager.getInstance();
     expect(writeFileSync).not.toHaveBeenCalled();
-    expect(() => mgr.persist()).toThrow('could not be preserved');
+    expect(() => mgr.persist()).toThrow('copy denied');
+    expect(fs.renameSync).not.toHaveBeenCalled();
+    mgr.persist();
+    expect(fs.copyFileSync).toHaveBeenCalledTimes(2);
     spy.mockRestore();
   });
 

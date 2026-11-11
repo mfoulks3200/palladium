@@ -20,7 +20,7 @@ const dataDir = path.dirname(dataPath);
 
 export class SettingsManager {
   private static instance: SettingsManager;
-  private canPersist = true;
+  private needsRecoveryCopy = false;
   private currentSettings: Partial<SettingSchema> = {} as const;
 
   public static getInstance() {
@@ -104,15 +104,7 @@ export class SettingsManager {
         this.currentSettings = settingsSchema.parse({
           analytics: { enabled: false },
         });
-        try {
-          fs.copyFileSync(
-            dataPath,
-            `${dataPath}.unreadable-${Date.now()}`,
-            fs.constants.COPYFILE_EXCL,
-          );
-        } catch {
-          this.canPersist = false;
-        }
+        this.needsRecoveryCopy = true;
       }
     }
   }
@@ -126,10 +118,6 @@ export class SettingsManager {
   }
 
   public persist() {
-    if (!this.canPersist)
-      throw new Error(
-        'Settings file could not be preserved; changes cannot be saved.',
-      );
     const temporaryPath = `${dataPath}.${randomUUID()}.tmp`;
     try {
       fs.writeFileSync(
@@ -137,6 +125,14 @@ export class SettingsManager {
         JSON.stringify(this.currentSettings, null, 2),
         { mode: 0o600, flag: 'wx' },
       );
+      if (this.needsRecoveryCopy) {
+        fs.copyFileSync(
+          dataPath,
+          `${dataPath}.unreadable-${Date.now()}`,
+          fs.constants.COPYFILE_EXCL,
+        );
+        this.needsRecoveryCopy = false;
+      }
       fs.renameSync(temporaryPath, dataPath);
     } catch (error) {
       try {

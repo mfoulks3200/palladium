@@ -15,6 +15,7 @@ export interface HistoryEvent {
 
 export class HistoryManager extends EventTarget {
   private static instance: HistoryManager;
+  private readonly openTabIds = new Set<string>();
   private db: Database.Database;
 
   public static getInstance() {
@@ -83,6 +84,7 @@ export class HistoryManager extends EventTarget {
       'INSERT OR IGNORE INTO tabs (uuid) VALUES (?)',
     );
     stmt.run(uuid);
+    this.openTabIds.add(uuid);
     const updateEvent = new CustomEvent('tab-added', {
       detail: {
         uuid,
@@ -93,6 +95,7 @@ export class HistoryManager extends EventTarget {
   }
 
   public closeTab(uuid: string) {
+    this.openTabIds.delete(uuid);
     const stmt = this.db.prepare(
       'UPDATE tabs SET closed_at = CURRENT_TIMESTAMP WHERE uuid = ?',
     );
@@ -164,7 +167,11 @@ export class HistoryManager extends EventTarget {
   public clearHistory() {
     this.db.transaction(() => {
       this.db.prepare('DELETE FROM history').run();
-      this.db.prepare('DELETE FROM tabs WHERE closed_at IS NOT NULL').run();
+      this.db
+        .prepare(
+          'DELETE FROM tabs WHERE uuid NOT IN (SELECT value FROM json_each(?))',
+        )
+        .run(JSON.stringify([...this.openTabIds]));
     })();
     const updateEvent = new CustomEvent('history-cleared', {
       bubbles: true,
