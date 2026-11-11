@@ -16,6 +16,7 @@ import { CommandParser } from './commands/CommandParser';
 import { commandBarSetup } from './commands/CommandBar';
 import { TabManager } from './TabManager';
 import { Tab } from './Tab';
+import { SpaceSession } from './SpaceSession';
 import log from 'electron-log';
 import { resolveHtmlPath } from './util';
 import { AnalyticsManager } from './AnalyticsManager';
@@ -213,6 +214,10 @@ export class BrowserWindowUI {
 
     initSubsystem('TabManager', () => {
       const tabManager = TabManager.initialize(this.mainWindow);
+      const session = new SpaceSession(
+        path.join(os.homedir(), '.palladium', 'spaces.json'),
+      );
+      if (tabManager.restoreSession(session)) return;
       if (this.debugMode) {
         tabManager.addTab(new Tab('https://www.electronjs.org'));
         tabManager.addTab(new Tab('https://www.google.com'));

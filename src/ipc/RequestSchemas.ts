@@ -13,10 +13,9 @@ export const overlayOptionsSchema = z.object({
     height: dimension,
   }),
 });
-const navigationUrl = z
+export const sessionUrl = z
   .string()
   .min(1)
-  .max(32768)
   .refine((value) => {
     try {
       return ['http:', 'https:', 'file:', 'about:', 'palladium:'].includes(
@@ -26,6 +25,7 @@ const navigationUrl = z
       return false;
     }
   }, 'Unsupported navigation URL');
+const navigationUrl = z.string().max(32768).pipe(sessionUrl);
 export const tabActionsSchema = z.object({
   action: z.enum([
     'back',
@@ -71,6 +71,11 @@ export const mediaControlSchema = z.object({
 // Tuple schemas validate argument counts as well as payloads. Both the types
 // and preload allowlists are derived from these registries.
 export const rendererEventSchemas = {
+  'create-space': z.tuple([]),
+  'switch-space': z.tuple([z.object({ space: index })]),
+  'move-tab-to-space': z.tuple([
+    z.object({ uuid: tabId, space: index, activate: z.boolean().optional() }),
+  ]),
   'request-tab-meta': z.tuple([]),
   'update-active-tab': z.tuple([z.object({ activeTabUuid: tabId })]),
   'update-tab-url': z.tuple([z.object({ newUrl: navigationUrl })]),
@@ -92,6 +97,7 @@ export const rendererEventSchemas = {
   'media-control': z.tuple([mediaControlSchema]),
 };
 export const rendererInvocationSchemas = {
+  'get-space-previews': z.tuple([]),
   'get-history': z.tuple([
     z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
   ]),

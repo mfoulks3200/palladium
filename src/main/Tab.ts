@@ -128,7 +128,7 @@ export class Tab extends EventTarget {
     if (this.isInternalPage) {
       return this.currentUrl;
     } else {
-      return this.view.webContents.getURL();
+      return this.view.webContents.getURL() || this.currentUrl;
     }
   }
 

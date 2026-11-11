@@ -295,10 +295,16 @@ it('validates tab existence, reorder bounds and window layout before mutation', 
 it('sends typed messages to WebContents', () => {
   const send = jest.fn();
   typedWebContents({ send } as any).send('update-tab-meta', {
+    neighbors: {},
+    activeSpace: 0,
+    spaceCount: 1,
     currentTabUuid: 'abc',
     tabs: [],
   });
   expect(send).toHaveBeenCalledWith('update-tab-meta', {
+    neighbors: {},
+    activeSpace: 0,
+    spaceCount: 1,
     currentTabUuid: 'abc',
     tabs: [],
   });

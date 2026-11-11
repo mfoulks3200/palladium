@@ -5,3 +5,25 @@
     app-region: no-drag;
   }
 }
+
+.spaceDot {
+  --position: var(--swipe-space, var(--selected-space));
+  --weight: max(0, 1 - abs(var(--position) - var(--dot-index)));
+  scale: calc(0.75 + 0.25 * var(--weight));
+  opacity: calc(0.5 + 0.5 * var(--weight));
+  transition:
+    scale 150ms ease-out,
+    opacity 150ms ease-out;
+}
+
+/* Track scroll position directly while the gesture or its snap is underway. */
+nav[style*='--swipe-space'] .spaceDot {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spaceDot {
+    scale: 1;
+    transition: none;
+  }
+}
