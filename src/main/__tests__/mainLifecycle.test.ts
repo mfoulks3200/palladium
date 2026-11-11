@@ -9,6 +9,15 @@ jest.mock('electron', () => {
     }),
   };
 });
+jest.mock('node:fs/promises', () => ({
+  realpath: async (path: string) => require('node:path').resolve(path),
+}));
+jest.mock('../ExtensionManager', () => ({
+  setupExtensions: async () => ({ ownsSource: () => false }),
+}));
+jest.mock('../WebsiteSession', () => ({
+  getWebsiteSession: jest.fn(),
+}));
 jest.mock('../BrowserWindowUI', () => ({
   BrowserWindowUI: jest.fn().mockImplementation(() => {
     const { EventEmitter: Emitter } = require('events');
@@ -29,13 +38,35 @@ jest.mock('../AnalyticsManager', () => ({
   AnalyticsManager: { getInstance: jest.fn() },
 }));
 
-it('reuses the actual owner on activation and recreates it only after close', async () => {
+it('loads the developer extension before the first window and reuses the owner until close', async () => {
   const exceptions = process.listeners('uncaughtException');
   const rejections = process.listeners('unhandledRejection');
   const { app } = require('electron');
   const { BrowserWindowUI } = require('../BrowserWindowUI');
-  require('../main');
-  await Promise.resolve();
+  const { getWebsiteSession } = require('../WebsiteSession');
+  let finishLoading!: (extension: { name: string }) => void;
+  const loadExtension = jest.fn(
+    () =>
+      new Promise((resolve) => {
+        finishLoading = resolve;
+      }),
+  );
+  getWebsiteSession.mockReturnValue({ extensions: { loadExtension } });
+  const previous = process.env.PALLADIUM_UNPACKED_EXTENSION;
+  process.env.PALLADIUM_UNPACKED_EXTENSION = '/demo';
+  try {
+    require('../main');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(loadExtension).toHaveBeenCalledWith(
+      require('node:path').resolve('/demo'),
+    );
+    expect(BrowserWindowUI).not.toHaveBeenCalled();
+    finishLoading({ name: 'demo' });
+    await Promise.resolve();
+  } finally {
+    if (previous === undefined) delete process.env.PALLADIUM_UNPACKED_EXTENSION;
+    else process.env.PALLADIUM_UNPACKED_EXTENSION = previous;
+  }
   expect(BrowserWindowUI).toHaveBeenCalledTimes(1);
   const first = BrowserWindowUI.mock.results[0].value
     .mainWindow as EventEmitter & any;
@@ -48,6 +79,7 @@ it('reuses the actual owner on activation and recreates it only after close', as
   app.emit('activate');
   app.emit('activate');
   expect(BrowserWindowUI).toHaveBeenCalledTimes(2);
+  expect(loadExtension).toHaveBeenCalledTimes(1);
   for (const listener of process.listeners('uncaughtException'))
     if (!exceptions.includes(listener))
       process.removeListener('uncaughtException', listener);

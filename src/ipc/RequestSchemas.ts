@@ -91,7 +91,14 @@ export const rendererEventSchemas = {
   'open-settings': z.tuple([]),
   'media-control': z.tuple([mediaControlSchema]),
 };
+export const extensionAction = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('list') }),
+  z.object({ action: z.literal('install') }),
+  z.object({ action: z.enum(['enable', 'disable', 'remove']), id: z.uuid() }),
+]);
+
 export const rendererInvocationSchemas = {
+  'manage-extensions': z.tuple([extensionAction]),
   'get-history': z.tuple([
     z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
   ]),

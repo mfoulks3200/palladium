@@ -9,6 +9,9 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import { app } from 'electron';
+import { realpath } from 'node:fs/promises';
+import { setupExtensions } from './ExtensionManager';
+import { getWebsiteSession } from './WebsiteSession';
 import { unregisterGlobalShortcuts } from './GlobalShortcuts';
 import { BrowserWindowUI } from './BrowserWindowUI';
 import { AnalyticsManager } from './AnalyticsManager';
@@ -93,7 +96,21 @@ app.on('window-all-closed', () => {
 
 app
   .whenReady()
-  .then(() => {
+  .then(async () => {
+    const manager = await setupExtensions();
+    const directory = process.env.PALLADIUM_UNPACKED_EXTENSION;
+    if (directory && !app.isPackaged) {
+      try {
+        const source = await realpath(directory);
+        if (!manager.ownsSource(source)) {
+          const extension =
+            await getWebsiteSession().extensions.loadExtension(source);
+          console.info('[Extensions] Loaded', extension.name);
+        }
+      } catch (error) {
+        console.error('[Extensions] Could not load unpacked extension', error);
+      }
+    }
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the

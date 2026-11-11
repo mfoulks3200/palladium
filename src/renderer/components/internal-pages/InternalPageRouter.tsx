@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { matchRoutes } from 'react-router-dom';
 import { SettingsPage } from './settings';
 import { EditorPage } from './editor';
 
@@ -19,15 +18,6 @@ const routes = [
 ];
 
 export const InternalPageRouter = ({ path }: { path: string }) => {
-  const [router] = useState(() =>
-    createMemoryRouter(routes, {
-      initialEntries: [path.replace('palladium://', '/')],
-    }),
-  );
-
-  useEffect(() => {
-    router.navigate(path.replace('palladium://', '/'));
-  }, [path, router]);
-
-  return <RouterProvider router={router} />;
+  const matches = matchRoutes(routes, path.replace('palladium://', '/'));
+  return matches?.[0]?.route.element ?? null;
 };
