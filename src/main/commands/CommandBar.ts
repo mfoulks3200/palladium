@@ -104,7 +104,8 @@ export const spawnCommandBarUI = (tabUuid?: string) => {
     typedWebContents(win.webContents).send('command-setup', {
       tabUuid: tabUuid ?? '',
       prefill: tabUuid
-        ? (TabManager.getInstance().getCurrentTab()?.getCurrentUrl() ?? '')
+        ? (TabManager.getInstance().getTabByUuid(tabUuid)?.getCurrentUrl() ??
+          '')
         : '',
     });
 

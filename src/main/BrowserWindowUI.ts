@@ -17,16 +17,6 @@ import log from 'electron-log';
 import { resolveHtmlPath } from './util';
 import { AnalyticsManager } from './AnalyticsManager';
 
-class AppUpdater {
-  constructor() {
-    log.transports.file.level = false;
-    log.transports.console.level = false;
-    // log.transports.file.level = 'info';
-    // autoUpdater.logger = log;
-    // autoUpdater.checkForUpdatesAndNotify();
-  }
-}
-
 export class BrowserWindowUI {
   public mainWindow: BrowserWindow = null as any;
   public debugMode: boolean = false;
@@ -116,9 +106,9 @@ export class BrowserWindowUI {
     //   return { action: 'deny' };
     // });
 
-    // Remove this if your app does not use auto updates
-    // eslint-disable-next-line
-    new AppUpdater();
+    // Keep logging disabled until an explicit logging policy is enabled.
+    log.transports.file.level = false;
+    log.transports.console.level = false;
   }
 
   public initializeSubsystems() {

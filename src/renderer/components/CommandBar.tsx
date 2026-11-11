@@ -33,6 +33,7 @@ export const CommandBar = ({ className }: CommandBarProps) => {
   const [selectedCommand, setSelectedCommand] = useState<string | undefined>(
     undefined,
   );
+  const requestVersion = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // The command bar is a separate BrowserWindow that always needs focus when
@@ -50,16 +51,33 @@ export const CommandBar = ({ className }: CommandBarProps) => {
     (response: CommandResponseIpc) => {
       setCommandResponse(response);
       setSelectedCommand((prev) => {
-        if (!prev && Object.keys(response.suggestions).length > 0) {
-          return Object.values(response.suggestions)[0].commands[0].value;
-        }
-        if (prev && Object.keys(response.suggestions).length === 0) {
-          return undefined;
+        const commands = Object.values(response.suggestions).flatMap(
+          (section) => section.commands,
+        );
+        if (!commands.some((command) => command.value === prev)) {
+          return commands.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]
+            ?.value;
         }
         return prev;
       });
     },
     [],
+  );
+
+  const fetchSuggestions = useCallback(
+    (input: string) => {
+      const version = ++requestVersion.current;
+      setCommandResponse(null);
+      setSelectedCommand(undefined);
+      window.electron.ipcRenderer
+        .invoke('command-input', { mode: 'suggestions', input })
+        .then((response) => {
+          if (response && version === requestVersion.current)
+            handleSuggestionResponse(response);
+        })
+        .catch(console.error);
+    },
+    [handleSuggestionResponse],
   );
 
   useEffect(() => {
@@ -77,16 +95,7 @@ export const CommandBar = ({ className }: CommandBarProps) => {
         setCommandResponse(null);
         setSelectedCommand(undefined);
 
-        // Fetch fresh suggestions for the new context.
-        window.electron.ipcRenderer
-          .invoke('command-input', {
-            mode: 'suggestions' as const,
-            input: newText,
-          })
-          .then((res) => {
-            if (res) handleSuggestionResponse(res);
-          })
-          .catch(console.error);
+        fetchSuggestions(newText);
 
         setTimeout(() => {
           if (newText.length > 0) {
@@ -101,36 +110,21 @@ export const CommandBar = ({ className }: CommandBarProps) => {
     return () => {
       removeListener();
     };
-  }, [handleSuggestionResponse]);
+  }, [fetchSuggestions]);
 
   useEffect(() => {
-    window.electron.ipcRenderer
-      .invoke('command-input', {
-        mode: 'suggestions' as const,
-        input: currentText,
-      })
-      .then((response) => {
-        if (response) handleSuggestionResponse(response);
-        return undefined;
-      })
-      .catch(console.error);
-  }, []);
+    fetchSuggestions('');
+    return () => {
+      ++requestVersion.current;
+    };
+  }, [fetchSuggestions]);
 
   const onInput = useCallback(
     (newInput: string) => {
       setCurrentText(newInput);
-      window.electron.ipcRenderer
-        .invoke('command-input', {
-          mode: 'suggestions' as const,
-          input: newInput,
-        })
-        .then((response) => {
-          if (response) handleSuggestionResponse(response);
-          return undefined;
-        })
-        .catch(console.error);
+      fetchSuggestions(newInput);
     },
-    [handleSuggestionResponse],
+    [fetchSuggestions],
   );
 
   const closeCommandBar = useCallback(() => {
@@ -158,7 +152,7 @@ export const CommandBar = ({ className }: CommandBarProps) => {
         }
       }
     },
-    [currentText, selectedCommand],
+    [currentText, selectedCommand, tabUuid, closeCommandBar],
   );
 
   const groupedSections = useMemo((): GroupedSection[] => {

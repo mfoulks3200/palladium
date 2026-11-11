@@ -5,7 +5,8 @@ import {
   SettingsKeys,
   settingsDefaults,
 } from 'src/ipc/SettingsRegistry';
-import { typedIpcMain } from './ipc';
+import { dialog } from 'electron';
+import { typedWebContents, typedIpcMain } from './ipc';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
@@ -34,23 +35,53 @@ export class SettingsManager {
       return settingsSchema.parse(this.currentSettings);
     });
 
-    typedIpcMain.on('settings-sync', (_event, newSettings) => {
+    typedIpcMain.on('settings-sync', (event, newSettings) => {
+      const previousSettings = this.currentSettings;
       const prevAnalytics = this.getItem('analytics.enabled');
       const prevShortcut = this.getItem('shortcuts.commandBar');
-      this.currentSettings = settingsSchema.parse(newSettings);
-      this.persist();
+      const candidate = settingsSchema.parse(newSettings);
+      const shortcutRejected =
+        prevShortcut !== candidate.shortcuts.commandBar &&
+        !rebindCommandBarShortcut(candidate.shortcuts.commandBar);
+      const requestedShortcut = candidate.shortcuts.commandBar;
+      if (shortcutRejected) candidate.shortcuts.commandBar = prevShortcut;
+      this.currentSettings = candidate;
+      try {
+        this.persist();
+      } catch (error) {
+        this.currentSettings = previousSettings;
+        const shortcutRestored =
+          shortcutRejected ||
+          requestedShortcut === prevShortcut ||
+          rebindCommandBarShortcut(prevShortcut);
+        typedWebContents(event.sender).send('shortcut-rejected', {
+          requested: requestedShortcut,
+          actual: prevShortcut,
+        });
+        dialog.showErrorBox(
+          'Settings could not be saved',
+          shortcutRestored
+            ? 'Your settings could not be saved. The previous shortcut has been kept.'
+            : 'Your settings could not be saved, and the system could not restore the previous shortcut. Restart Palladium to retry.',
+        );
+        throw error;
+      }
+      if (shortcutRejected) {
+        typedWebContents(event.sender).send('shortcut-rejected', {
+          requested: requestedShortcut,
+          actual: prevShortcut,
+        });
+        dialog.showErrorBox(
+          'Shortcut unavailable',
+          'The system could not register that shortcut. Your previous shortcut has been kept.',
+        );
+      }
 
       // Reflect analytics opt-in/out changes immediately so toggling the
       // setting in the UI takes effect without an app restart.
       const nextAnalytics = this.getItem('analytics.enabled');
       if (prevAnalytics !== nextAnalytics) {
         AnalyticsManager.getInstance().setEnabled(nextAnalytics);
-      }
-
-      // Rebind the global shortcut if it changed.
-      const nextShortcut = this.getItem('shortcuts.commandBar');
-      if (prevShortcut !== nextShortcut) {
-        rebindCommandBarShortcut(nextShortcut);
       }
     });
 

@@ -128,6 +128,7 @@ export interface MainToRendererEvents {
   'request-browser-layout': [];
   'request-devtools-layout': [];
   'command-setup': [CommandBarSetupIpc];
+  'shortcut-rejected': [{ requested: string; actual: string }];
   'internal-page-navigate': [InternalPageNavigateIpc];
   'feature-flags-sync': [FeatureFlagsIpc];
   'media-state': [MediaStateIpc];
@@ -158,6 +159,7 @@ export const mainToRendererChannels = {
   'request-browser-layout': true,
   'request-devtools-layout': true,
   'command-setup': true,
+  'shortcut-rejected': true,
   'internal-page-navigate': true,
   'feature-flags-sync': true,
   'media-state': true,

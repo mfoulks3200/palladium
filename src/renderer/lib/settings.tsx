@@ -15,7 +15,6 @@ import {
 } from 'src/ipc/SettingsRegistry';
 import { getDeepProp, setDeepProp } from 'src/ipc/Utility';
 
-
 type SettingStateFunction = <T extends SettingsKeys>(
   settingKey: T,
 ) => [SettingKeyType<T>, (newValue: SettingKeyType<T>) => void];
@@ -34,10 +33,22 @@ export const SettingsProvider = ({ children }: PropsWithChildren) => {
   settingsRef.current = settingsValues;
 
   useEffect(() => {
+    const unsubscribe = window.electron.ipcRenderer.on(
+      'shortcut-rejected',
+      ({ requested, actual }) =>
+        setSettingsValues((current) => {
+          if (current.shortcuts.commandBar !== requested) return current;
+          return {
+            ...current,
+            shortcuts: { ...current.shortcuts, commandBar: actual },
+          };
+        }),
+    );
     window.electron.ipcRenderer
       .invoke('get-settings')
       .then(setSettingsValues)
       .catch(console.error);
+    return unsubscribe;
   }, []);
 
   const setNewSettingItemValue = useCallback(

@@ -10,21 +10,8 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { SettingsProvider } from '@/lib/settings';
 import { DesignTokenProvider } from '@/hooks/use-design-tokens';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { useEffect, useState } from 'react';
 
 export const App = () => {
-  const [visible, setVisible] = useState(
-    document.visibilityState === 'visible',
-  );
-
-  useEffect(() => {
-    const handleVisibility = () =>
-      setVisible(document.visibilityState === 'visible');
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () =>
-      document.removeEventListener('visibilitychange', handleVisibility);
-  }, []);
-
   return (
     <ErrorBoundary>
       <SettingsProvider>
@@ -35,11 +22,7 @@ export const App = () => {
             enableSystem
             disableTransitionOnChange
           >
-            {visible ? (
-              <CommandBar className="h-full max-h-full min-h-full w-full max-w-full min-w-full" />
-            ) : (
-              <></>
-            )}
+            <CommandBar className="h-full max-h-full min-h-full w-full max-w-full min-w-full" />
           </ThemeProvider>
         </DesignTokenProvider>
       </SettingsProvider>
