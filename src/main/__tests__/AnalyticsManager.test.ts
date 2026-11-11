@@ -91,6 +91,7 @@ describe('AnalyticsManager', () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     resetSingleton();
+    (BrowserWindow.getAllWindows as jest.Mock).mockReturnValue([]);
 
     // Default: directory exists, analytics_id file does not.
     existsSync.mockImplementation((p: string) => {
@@ -179,6 +180,32 @@ describe('AnalyticsManager', () => {
     jest.advanceTimersByTime(10 * 60 * 1000);
     expect(mockGetAllFlags).toHaveBeenCalledTimes(calls);
     expect(mgr.getAllFlags()).toEqual({});
+  });
+
+  it('ignores pre-opt-out flags that arrive after the new flags', async () => {
+    let resolveOld!: (flags: Record<string, boolean>) => void;
+    mockGetAllFlags
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveOld = resolve;
+        }),
+      )
+      .mockResolvedValueOnce({ current: true });
+    (BrowserWindow.getAllWindows as jest.Mock).mockReturnValue([
+      { isDestroyed: () => false, webContents: {} },
+    ]);
+    const mgr = AnalyticsManager.getInstance();
+    mgr.setEnabled(true);
+    mgr.setEnabled(false);
+    mgr.setEnabled(true);
+    await Promise.resolve();
+    expect(mockWebContentsSend).toHaveBeenLastCalledWith('feature-flags-sync', {
+      flags: { current: true },
+    });
+    resolveOld({ stale: true });
+    await Promise.resolve();
+    expect(mgr.getAllFlags()).toEqual({ current: true });
+    expect(mockWebContentsSend).toHaveBeenCalledTimes(2);
   });
 
   it('returns the same instance on subsequent getInstance calls', () => {

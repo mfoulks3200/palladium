@@ -41,6 +41,8 @@ export class AnalyticsManager {
 
   private featureFlags: Record<string, string | boolean> = {};
 
+  private flagGeneration = 0;
+
   private flagPollTimer: ReturnType<typeof setInterval> | null = null;
 
   /** How often (ms) to re-fetch feature flags from PostHog. */
@@ -120,6 +122,7 @@ export class AnalyticsManager {
     }
     if (!this.client) return;
     if (!enabled) {
+      this.flagGeneration += 1;
       this.client.optOut();
       this.featureFlags = {};
       this.broadcastFlags();
@@ -190,9 +193,10 @@ export class AnalyticsManager {
    */
   public async refreshFeatureFlags(): Promise<void> {
     if (!this.client || !this.analyticsEnabled) return;
+    const generation = this.flagGeneration;
     try {
       const flags = await this.client.getAllFlags(this.distinctId);
-      if (!this.analyticsEnabled) return;
+      if (generation !== this.flagGeneration) return;
       this.featureFlags = flags;
       this.broadcastFlags();
     } catch (err) {
