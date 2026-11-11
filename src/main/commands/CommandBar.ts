@@ -122,9 +122,9 @@ export const spawnCommandBarUI = (tabUuid?: string) => {
 };
 
 export const commandBarSetup = () => {
-  preWarmCommandBar();
+  if (!commandBarWindow || commandBarWindow.isDestroyed()) preWarmCommandBar();
 
-  typedIpcMain.on('command-bar', (_event, data) => {
+  const disposeIpc = typedIpcMain.on('command-bar', (_event, data) => {
     if (data.tabUuid && !TabManager.getInstance().getTabByUuid(data.tabUuid))
       return;
     if (data.action === 'open') {
@@ -133,4 +133,14 @@ export const commandBarSetup = () => {
       commandBarWindow.hide();
     }
   });
+  let disposed = false;
+  return () => {
+    if (disposed) return;
+    disposed = true;
+    disposeIpc();
+    if (commandBarWindow && !commandBarWindow.isDestroyed())
+      commandBarWindow.destroy();
+    commandBarWindow = null;
+    isWindowReady = false;
+  };
 };

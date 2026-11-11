@@ -1,10 +1,5 @@
-import {
-  Menu,
-  MenuItem,
-  Session,
-  WebContentsView,
-  session,
-} from 'electron';
+import { Menu, MenuItem, Session, WebContentsView, session } from 'electron';
+import { configureWebsitePermissions } from './WebsitePermissions';
 import { MediaState, TabIpcPacket } from '../ipc';
 import { HistoryEvent, HistoryManager } from './HistoryManager';
 import path from 'node:path';
@@ -39,6 +34,7 @@ export class Tab extends EventTarget {
   private faviconB64: string | null = null;
   private isPlayingAudio: boolean = false;
   private mediaStates: Map<string, MediaState> = new Map();
+  private disposed = false;
   private activeMediaId: string | null = null;
   public view: WebContentsView;
   public devToolsView: WebContentsView = null as any;
@@ -55,6 +51,7 @@ export class Tab extends EventTarget {
         'main',
       );
       Tab.session = session.fromPath(sessionPath);
+      configureWebsitePermissions(Tab.session);
     }
     this.view = new WebContentsView({
       webPreferences: {
@@ -102,7 +99,7 @@ export class Tab extends EventTarget {
     });
 
     this.devToolsView.webContents.on('destroyed', () => {
-      if (!this.view.webContents.isDestroyed()) {
+      if (!this.disposed && !this.view.webContents.isDestroyed()) {
         this.setDevMode(false);
         this.setupDevtoolsWindow();
         this.dispatchEvent(new CustomEvent('request-focus'));
@@ -350,10 +347,17 @@ export class Tab extends EventTarget {
   }
 
   public destroyTab() {
-    HistoryManager.getInstance().closeTab(this.uuid);
+    if (this.disposed) return;
+    this.disposed = true;
+    this.mediaStates.clear();
+    for (const view of [this.view, this.devToolsView]) {
+      if (!view.webContents.isDestroyed())
+        view.webContents.close({ waitForBeforeUnload: false });
+    }
   }
 
   private publishMetadataUpdateEvent() {
+    if (this.disposed || this.view.webContents.isDestroyed()) return;
     const updateEvent = new CustomEvent('tab-updated', {
       detail: this.getTabIpcMeta(),
       bubbles: true, // Events can bubble up the DOM if necessary
