@@ -91,7 +91,7 @@ export const BrowserTab = memo(function BrowserTabComponent(props: BrowserTabPro
 
   if (!props.isLoading) {
     if (props.favicon) {
-      favicon = <img height="18px" width="18px" src={props.favicon} />;
+      favicon = <img draggable={false} height="18px" width="18px" src={props.favicon} />;
     } else {
       favicon = <Cog size="18px" className="max-w-[18px] min-w-[18px]" />;
     }

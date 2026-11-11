@@ -26,6 +26,9 @@ export interface TabIpcPacket {
 }
 
 export interface TabManagerIpc {
+  activeSpace: number;
+  spaceCount: number;
+  neighbors: Record<number, { tabs: TabIpcPacket[]; selected: string | null }>;
   currentTabUuid?: string | null;
   tabs: TabIpcPacket[];
 }
@@ -140,6 +143,7 @@ export interface MainToRendererEvents {
  * Each key maps to { args: [...], result: ReturnType }.
  */
 interface InvocationResults {
+  'get-space-previews': TabManagerIpc['neighbors'][number][];
   'get-history': HistoryItem[];
   'get-system-meta': SystemMetaIpc;
   'get-settings': SettingSchema;

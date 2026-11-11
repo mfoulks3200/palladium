@@ -1,15 +1,28 @@
 import { BrowserWindow, clipboard, Menu, MenuItem } from 'electron';
 import { Tab } from './Tab';
-import { MediaControlIpc, MediaState } from '../ipc';
+import { SpaceSession } from './SpaceSession';
+import { sessionUrl } from '../ipc/RequestSchemas';
+import { MediaControlIpc, MediaState, TabManagerIpc } from '../ipc';
 import { typedWebContents } from './ipc';
 import { AnalyticsManager } from './AnalyticsManager';
 import { registerTabManagerIpc } from './TabManagerIpcHandlers';
+
+interface Space {
+  tabs: Tab[];
+  selected: Tab | null;
+}
 
 export class TabManager {
   private static instance: TabManager | null = null;
   private mainWindow: BrowserWindow;
   private currentTab: Tab | null = null;
-  private tabs: Tab[] = [];
+  private spaces: Space[] = [{ tabs: [], selected: null }];
+  private activeSpace = 0;
+
+  private get tabs() {
+    return this.spaces[this.activeSpace].tabs;
+  }
+
   private mediaStates: Map<string, MediaState> = new Map();
 
   public static getInstance(): TabManager {
@@ -50,8 +63,8 @@ export class TabManager {
     mainWindow.once('closed', () => {
       clearInterval(timer);
       disposeIpc();
-      const tabs = this.tabs;
-      this.tabs = [];
+      const tabs = this.getAllTabs();
+      this.spaces = [];
       this.currentTab = null;
       this.mediaStates.clear();
       tabs.forEach((tab) => tab.destroyTab());
@@ -112,21 +125,39 @@ export class TabManager {
     }
   }
 
+  private spacePreview(space: Space) {
+    return {
+      tabs: space.tabs
+        .filter((tab) => tab.view)
+        .map((tab) => tab.getTabIpcMeta()),
+      selected: (space.selected ?? space.tabs[0])?.uuid ?? null,
+    };
+  }
+
+  public getSpacePreviews() {
+    return this.spaces.map((space) => this.spacePreview(space));
+  }
+
   public updateRenderProcess() {
-    const tabMeta = this.tabs
-      .map((tab) => (tab.view ? tab.getTabIpcMeta() : undefined))
-      .filter((meta) => !!meta);
     if (!this.mainWindow.isDestroyed()) {
+      const neighbors: TabManagerIpc['neighbors'] = {};
+      for (const index of [this.activeSpace - 1, this.activeSpace + 1]) {
+        const space = this.spaces[index];
+        if (space) neighbors[index] = this.spacePreview(space);
+      }
       typedWebContents(this.mainWindow.webContents).send('update-tab-meta', {
+        neighbors,
+        activeSpace: this.activeSpace,
+        spaceCount: this.spaces.length,
         currentTabUuid: this.currentTab?.uuid ?? null,
-        tabs: tabMeta,
+        tabs: this.spacePreview(this.spaces[this.activeSpace]).tabs,
       });
     }
   }
 
-  public addTab(tab: Tab) {
-    if (!this.tabs.includes(tab)) {
-      this.tabs.push(tab);
+  public addTab(tab: Tab, space = this.spaces[this.activeSpace]) {
+    if (!this.spaces.some((s) => s.tabs.includes(tab))) {
+      space.tabs.push(tab);
       tab.addEventListener('tab-updated', () => {
         this.updateRenderProcess();
       });
@@ -142,7 +173,10 @@ export class TabManager {
         const { url, disposition } = (event as CustomEvent).detail;
         const newTab = new Tab(url);
         if (disposition === 'background-tab') {
-          this.addTab(newTab);
+          this.addTab(
+            newTab,
+            this.spaces.find((s) => s.tabs.includes(tab)),
+          );
         } else {
           this.focusTab(newTab);
         }
@@ -153,7 +187,7 @@ export class TabManager {
   private syncMediaStates() {
     const previousIds = new Set(this.mediaStates.keys());
     const nextStates = new Map<string, MediaState>();
-    for (const tab of this.tabs) {
+    for (const tab of this.getAllTabs()) {
       for (const state of tab.getMediaStates()) {
         nextStates.set(state.id, state);
       }
@@ -184,12 +218,28 @@ export class TabManager {
 
   public focusTab(tab: Tab) {
     this.addTab(tab);
+    this.activeSpace = this.spaces.findIndex((space) =>
+      space.tabs.includes(tab),
+    );
+    this.spaces[this.activeSpace].selected = tab;
+    this.showTab(tab);
+  }
+
+  private showTab(tab: Tab | null) {
     if (this.currentTab) {
       this.mainWindow.contentView.removeChildView(this.currentTab.view);
       this.mainWindow.contentView.removeChildView(this.currentTab.devToolsView);
     }
 
     this.currentTab = tab;
+    if (!this.currentTab) {
+      typedWebContents(this.mainWindow.webContents).send(
+        'internal-page-navigate',
+        { newPath: '' },
+      );
+      this.updateRenderProcess();
+      return;
+    }
     this.currentTab.view.setBorderRadius(6);
     this.currentTab.devToolsView.setBorderRadius(6);
     if (!this.currentTab.isInternalPage) {
@@ -215,20 +265,16 @@ export class TabManager {
   }
 
   public focusTabIndex(index: number) {
-    this.focusTab(this.tabs[index]);
+    if (this.tabs[index]) this.focusTab(this.tabs[index]);
   }
 
   public focusTabUuid(uuid: string) {
-    const nextTab = this.tabs.find((tab) => tab.uuid === uuid);
+    const nextTab = this.getTabByUuid(uuid);
     if (nextTab) this.focusTab(nextTab);
   }
 
-  public getTabIndex(tabUuid: string) {
-    return this.tabs.findIndex((t) => t.uuid === tabUuid);
-  }
-
   public getTabByUuid(tabUuid: string) {
-    return this.tabs.find((t) => t.uuid === tabUuid);
+    return this.getAllTabs().find((t) => t.uuid === tabUuid);
   }
 
   public getCurrentTab() {
@@ -236,7 +282,7 @@ export class TabManager {
   }
 
   public getAllTabs() {
-    return [...this.tabs];
+    return this.spaces.flatMap((space) => space.tabs);
   }
 
   public loadUrlInCurrentTab(url: string) {
@@ -260,25 +306,75 @@ export class TabManager {
     }
   }
 
-  public closeTab(uuid: string) {
-    const index = this.getTabIndex(uuid);
-    if (index < 0) return;
-    const tab = this.tabs[index];
-    const wasCurrent = this.currentTab === tab;
-    this.tabs.splice(index, 1);
-    if (wasCurrent) {
-      this.mainWindow.contentView.removeChildView(tab.view);
-      this.mainWindow.contentView.removeChildView(tab.devToolsView);
-      this.currentTab = null;
-      const nextTab = this.tabs[Math.max(0, index - 1)];
-      if (nextTab) this.focusTab(nextTab);
-      else {
-        typedWebContents(this.mainWindow.webContents).send(
-          'internal-page-navigate',
-          { newPath: '' },
-        );
-      }
+  public restoreSession(session: SpaceSession) {
+    const saved = session.read();
+    if (saved) {
+      this.spaces = saved.spaces.map(() => ({ tabs: [], selected: null }));
+      saved.spaces.forEach(({ tabs, selected }, index) => {
+        const space = this.spaces[index];
+        tabs.forEach((url) => this.addTab(new Tab(url), space));
+        space.selected = selected === null ? null : space.tabs[selected];
+      });
+      this.activeSpace = saved.activeSpace;
+      this.showTab(this.spaces[this.activeSpace].selected);
     }
+    this.mainWindow.on('close', () => {
+      try {
+        session.write({
+          version: 1,
+          activeSpace: this.activeSpace,
+          spaces: this.spaces.map(({ tabs, selected }) => ({
+            tabs: tabs.map((tab) => {
+              const url = tab.getCurrentUrl();
+              return sessionUrl.safeParse(url).success ? url : 'about:blank';
+            }),
+            selected: selected ? tabs.indexOf(selected) : null,
+          })),
+        });
+      } catch {
+        console.warn('Could not save spaces on close.');
+      }
+    });
+    return saved !== null;
+  }
+
+  public createSpace() {
+    this.spaces.push({ tabs: [], selected: null });
+    this.switchSpace(this.spaces.length - 1);
+  }
+
+  public switchSpace(index: number) {
+    const space = this.spaces[index];
+    if (!space || index === this.activeSpace) return;
+    this.activeSpace = index;
+    space.selected ??= space.tabs[0] ?? null;
+    this.showTab(space.selected);
+  }
+
+  private removeFromSpace(tab: Tab, space: Space) {
+    const index = space.tabs.indexOf(tab);
+    space.tabs.splice(index, 1);
+    if (space.selected === tab) {
+      space.selected = space.tabs[Math.max(0, index - 1)] ?? null;
+      if (this.currentTab === tab) this.showTab(space.selected);
+    }
+  }
+
+  public moveTabToSpace(uuid: string, index: number, activate = false) {
+    const destination = this.spaces[index];
+    const tab = this.tabs.find((item) => item.uuid === uuid);
+    if (!tab || !destination || index === this.activeSpace) return;
+    this.removeFromSpace(tab, this.spaces[this.activeSpace]);
+    destination.tabs.push(tab);
+    if (activate) this.focusTab(tab);
+    else this.updateRenderProcess();
+  }
+
+  public closeTab(uuid: string) {
+    const tab = this.getTabByUuid(uuid);
+    if (!tab) return;
+    const space = this.spaces.find((item) => item.tabs.includes(tab))!;
+    this.removeFromSpace(tab, space);
     tab.destroyTab();
     this.syncMediaStates();
     this.updateRenderProcess();
@@ -353,7 +449,7 @@ export class TabManager {
    * Find the tab that owns a given media state ID.
    */
   private getTabByMediaId(mediaId: string): Tab | undefined {
-    for (const tab of this.tabs) {
+    for (const tab of this.getAllTabs()) {
       if (tab.getMediaStates().some((s) => s.id === mediaId)) {
         return tab;
       }

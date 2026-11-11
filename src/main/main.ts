@@ -9,6 +9,9 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import { app } from 'electron';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { unregisterGlobalShortcuts } from './GlobalShortcuts';
 import { BrowserWindowUI } from './BrowserWindowUI';
 import { AnalyticsManager } from './AnalyticsManager';
@@ -91,35 +94,44 @@ app.on('window-all-closed', () => {
   }
 });
 
-app
-  .whenReady()
-  .then(() => {
-    createWindow();
-    app.on('activate', () => {
-      // On macOS it's common to re-create a window in the app when the
-      // dock icon is clicked and there are no other windows open.
-      if (!windowOwner) createWindow();
-      else {
-        const win = windowOwner.mainWindow;
-        if (win.isMinimized()) win.restore();
-        win.show();
-        win.focus();
-      }
-    });
-  })
-  .catch(console.log);
+function focusOrCreateWindow() {
+  if (!windowOwner) return createWindow();
+  const win = windowOwner.mainWindow;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
 
-// app.on('before-quit', async (e) => {
-//   e.preventDefault(); // prevents the default quit
-//   setTimeout(() => {
-//     app.exit();
-//   }, 500);
-// });
+function lockProfile() {
+  // Electron keys its instance lock by userData. All builds share the spaces profile.
+  const userData = app.getPath('userData');
+  const profile = path.join(os.homedir(), '.palladium');
+  fs.mkdirSync(profile, { recursive: true });
+  app.setPath('userData', profile);
+  try {
+    return app.requestSingleInstanceLock();
+  } finally {
+    app.setPath('userData', userData);
+  }
+}
 
-app.on('will-quit', async (e) => {
-  e.preventDefault();
-  unregisterGlobalShortcuts();
-  AnalyticsManager.getInstance().capture('app_quit');
-  await AnalyticsManager.getInstance().shutdown();
+if (!lockProfile()) {
   app.exit(0);
-});
+} else {
+  app.on('second-instance', focusOrCreateWindow);
+  app
+    .whenReady()
+    .then(() => {
+      app.on('activate', focusOrCreateWindow);
+      return createWindow();
+    })
+    .catch(console.log);
+
+  app.on('will-quit', async (e) => {
+    e.preventDefault();
+    unregisterGlobalShortcuts();
+    AnalyticsManager.getInstance().capture('app_quit');
+    await AnalyticsManager.getInstance().shutdown();
+    app.exit(0);
+  });
+}

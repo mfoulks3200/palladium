@@ -18,6 +18,16 @@ export function registerTabManagerIpc(tabManager: TabManager) {
     );
   };
   disposers.push(
+    typedIpcMain.handle('get-space-previews', () =>
+      tabManager.getSpacePreviews(),
+    ),
+    typedIpcMain.on('create-space', () => tabManager.createSpace()),
+    typedIpcMain.on('switch-space', (_event, { space }) =>
+      tabManager.switchSpace(space),
+    ),
+    typedIpcMain.on('move-tab-to-space', (_event, { uuid, space, activate }) =>
+      tabManager.moveTabToSpace(uuid, space, activate),
+    ),
     typedIpcMain.on('request-tab-meta', () => {
       tabManager.updateRenderProcess();
     }),

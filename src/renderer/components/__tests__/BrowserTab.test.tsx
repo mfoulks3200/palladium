@@ -84,6 +84,7 @@ describe('BrowserTab', () => {
     );
     const img = screen.getByRole('img');
     expect(img).toHaveAttribute('src', 'data:image/png;base64,abc');
+    expect(img).toHaveProperty('draggable', false);
   });
 
   it('calls onClick when tab is clicked', () => {
