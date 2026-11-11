@@ -34,10 +34,7 @@ const TestSettingConsumer = () => {
   return (
     <div>
       <span data-testid="setting-value">{String(value)}</span>
-      <button
-        data-testid="toggle-btn"
-        onClick={() => setValue(!value as any)}
-      >
+      <button data-testid="toggle-btn" onClick={() => setValue(!value as any)}>
         Toggle
       </button>
     </div>
@@ -105,5 +102,43 @@ describe('SettingsProvider', () => {
         analytics: expect.objectContaining({ enabled: false }),
       }),
     );
+  });
+  it('rolls back only a rejected shortcut and ignores a stale rejection', async () => {
+    const Shortcut = () => {
+      const [value, setValue] = useSettings('shortcuts.commandBar');
+      return (
+        <button onClick={() => setValue(value === 'Alt+X' ? 'Alt+Y' : 'Alt+X')}>
+          {value}
+        </button>
+      );
+    };
+    await act(async () =>
+      render(
+        <SettingsProvider>
+          <Shortcut />
+          <TestSettingConsumer />
+        </SettingsProvider>,
+      ),
+    );
+    const button = screen.getByText(settingsDefaults.shortcuts.commandBar);
+    act(() => button.click());
+    act(() => screen.getByTestId('toggle-btn').click());
+    act(() =>
+      ipcListeners['shortcut-rejected']({
+        requested: 'Alt+X',
+        actual: settingsDefaults.shortcuts.commandBar,
+      }),
+    );
+    expect(button).toHaveTextContent(settingsDefaults.shortcuts.commandBar);
+    expect(screen.getByTestId('setting-value')).toHaveTextContent('false');
+    act(() => button.click());
+    act(() => button.click());
+    act(() =>
+      ipcListeners['shortcut-rejected']({
+        requested: 'Alt+X',
+        actual: settingsDefaults.shortcuts.commandBar,
+      }),
+    );
+    expect(button).toHaveTextContent('Alt+Y');
   });
 });

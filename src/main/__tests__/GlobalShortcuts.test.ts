@@ -1,6 +1,7 @@
 jest.mock('electron', () => ({
   globalShortcut: {
     register: jest.fn(() => true),
+    unregister: jest.fn(),
     unregisterAll: jest.fn(),
   },
 }));
@@ -9,13 +10,19 @@ jest.mock('src/main/commands/CommandBar', () => ({
   spawnCommandBarUI: jest.fn(),
 }));
 
-import { registerGlobalShortcuts, unregisterGlobalShortcuts } from '../GlobalShortcuts';
+import {
+  registerGlobalShortcuts,
+  rebindCommandBarShortcut,
+  unregisterGlobalShortcuts,
+} from '../GlobalShortcuts';
 import { globalShortcut } from 'electron';
 import { spawnCommandBarUI } from 'src/main/commands/CommandBar';
 
 describe('GlobalShortcuts', () => {
   beforeEach(() => {
+    unregisterGlobalShortcuts();
     jest.clearAllMocks();
+    (globalShortcut.register as jest.Mock).mockReturnValue(true);
   });
 
   describe('registerGlobalShortcuts', () => {
@@ -36,14 +43,32 @@ describe('GlobalShortcuts', () => {
 
     it('logs failure when registration fails', () => {
       (globalShortcut.register as jest.Mock).mockReturnValue(false);
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       registerGlobalShortcuts();
       expect(consoleSpy).toHaveBeenCalledWith(
-        'registration failed for shortcut:',
+        'Failed to register shortcut:',
         'CommandOrControl+Shift+T',
       );
       consoleSpy.mockRestore();
     });
+  });
+
+  it('keeps the existing OS registration when a replacement fails or throws', () => {
+    registerGlobalShortcuts();
+    (globalShortcut.register as jest.Mock).mockReturnValueOnce(false);
+    expect(rebindCommandBarShortcut('Alt+X')).toBe(false);
+    expect(globalShortcut.unregister).not.toHaveBeenCalled();
+    (globalShortcut.register as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('invalid');
+    });
+    const spy = jest.spyOn(console, 'error').mockImplementation();
+    expect(rebindCommandBarShortcut('invalid')).toBe(false);
+    expect(globalShortcut.unregister).not.toHaveBeenCalled();
+    spy.mockRestore();
+    expect(rebindCommandBarShortcut('Alt+Y')).toBe(true);
+    expect(globalShortcut.unregister).toHaveBeenCalledWith(
+      'CommandOrControl+Shift+T',
+    );
   });
 
   describe('unregisterGlobalShortcuts', () => {

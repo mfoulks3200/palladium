@@ -1,27 +1,37 @@
 import '@testing-library/jest-dom';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 
 // Mock the command UI primitives to avoid TS compile error with interpolateSize CSS prop
 jest.mock('@/components/ui/command', () => {
   const React = require('react');
   return {
     Command: ({ children, className }: any) => (
-      <div data-testid="command-root" className={className}>{children}</div>
+      <div data-testid="command-root" className={className}>
+        {children}
+      </div>
     ),
-    CommandInput: React.forwardRef(({ placeholder, onKeyDown, onInput, value }: any, ref: any) => (
-      <input
-        ref={ref}
-        placeholder={placeholder}
-        onKeyDown={onKeyDown}
-        onInput={onInput}
-        value={value}
-        data-testid="command-input"
-      />
-    )),
-    CommandList: ({ children }: any) => <div data-testid="command-list">{children}</div>,
+    CommandInput: React.forwardRef(
+      ({ placeholder, onKeyDown, onInput, value }: any, ref: any) => (
+        <input
+          ref={ref}
+          placeholder={placeholder}
+          onKeyDown={onKeyDown}
+          onInput={onInput}
+          value={value}
+          data-testid="command-input"
+        />
+      ),
+    ),
+    CommandList: ({ children }: any) => (
+      <div data-testid="command-list">{children}</div>
+    ),
     CommandEmpty: ({ children }: any) => <div>{children}</div>,
-    CommandGroup: ({ children }: any) => <div data-testid="command-group">{children}</div>,
-    CommandItem: ({ children }: any) => <div data-testid="command-item">{children}</div>,
+    CommandGroup: ({ children }: any) => (
+      <div data-testid="command-group">{children}</div>
+    ),
+    CommandItem: ({ children }: any) => (
+      <div data-testid="command-item">{children}</div>
+    ),
     CommandSeparator: () => <hr />,
     CommandShortcut: ({ children }: any) => <span>{children}</span>,
   };
@@ -135,5 +145,58 @@ describe('CommandBar', () => {
     });
 
     expect(screen.getByText('No results found.')).toBeInTheDocument();
+  });
+  it('ignores delayed previous queries and executes only the current selection and target', async () => {
+    const pending: ((value: any) => void)[] = [];
+    mockInvoke.mockImplementation(
+      () => new Promise((resolve) => pending.push(resolve)),
+    );
+    const response = (value: string) => ({
+      provider: { prompt: 'Search' },
+      suggestions: {
+        test: {
+          section: { id: 'test', name: 'Test' },
+          commands: [{ name: value, value }],
+        },
+      },
+    });
+    render(<CommandBar />);
+    act(() =>
+      ipcListeners['command-setup']({ tabUuid: 'target-1', prefill: 'first' }),
+    );
+    act(() =>
+      fireEvent.input(screen.getByTestId('command-input'), {
+        target: { value: 'latest' },
+      }),
+    );
+    await act(async () => pending[2](response('latest-command')));
+    await act(async () => pending[1](response('stale-command')));
+    expect(screen.queryByText('stale-command')).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByTestId('command-input'), { key: 'Enter' });
+    expect(mockInvoke).toHaveBeenLastCalledWith('command-input', {
+      mode: 'execute',
+      input: 'latest',
+      command: 'latest-command',
+      tabUuid: 'target-1',
+    });
+    act(() =>
+      ipcListeners['command-setup']({
+        tabUuid: 'target-2',
+        prefill: 'reopened',
+      }),
+    );
+    fireEvent.keyDown(screen.getByTestId('command-input'), { key: 'Enter' });
+    expect(mockInvoke).toHaveBeenLastCalledWith('command-input', {
+      mode: 'suggestions',
+      input: 'reopened',
+    });
+    await act(async () => pending[4](response('new-command')));
+    fireEvent.keyDown(screen.getByTestId('command-input'), { key: 'Enter' });
+    expect(mockInvoke).toHaveBeenLastCalledWith('command-input', {
+      mode: 'execute',
+      input: 'reopened',
+      command: 'new-command',
+      tabUuid: 'target-2',
+    });
   });
 });

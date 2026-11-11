@@ -4,6 +4,8 @@
 // the mocked values.
 // ---------------------------------------------------------------------------
 
+jest.mock('electron', () => ({ dialog: { showErrorBox: jest.fn() } }));
+
 const mockSetEnabled = jest.fn();
 const mockCapture = jest.fn();
 
@@ -40,6 +42,8 @@ jest.mock('src/main/AnalyticsManager', () => ({
 }));
 
 import fs from 'node:fs';
+import { dialog } from 'electron';
+import { rebindCommandBarShortcut } from '../GlobalShortcuts';
 import { SettingsManager } from '../SettingsManager';
 import { settingsSchema, settingsDefaults } from 'src/ipc/SettingsRegistry';
 
@@ -240,7 +244,10 @@ describe('SettingsManager', () => {
 
   it('registers a settings-sync IPC handler on construction', () => {
     SettingsManager.getInstance();
-    expect(mockIpcOn).toHaveBeenCalledWith('settings-sync', expect.any(Function));
+    expect(mockIpcOn).toHaveBeenCalledWith(
+      'settings-sync',
+      expect.any(Function),
+    );
   });
 
   it('returns current settings when get-settings is invoked', () => {
@@ -281,5 +288,50 @@ describe('SettingsManager', () => {
     expect(mgr.getItem('searchEngines.defaultEngines.google')).toBe(false);
     // Should have persisted after updating
     expect(writeFileSync).toHaveBeenCalled();
+  });
+  it('preserves and sends back the saved shortcut when the OS rejects a change', () => {
+    const mgr = SettingsManager.getInstance();
+    const oldShortcut = mgr.getItem('shortcuts.commandBar');
+    (rebindCommandBarShortcut as jest.Mock).mockReturnValue(false);
+    const handler = mockIpcOn.mock.calls.find(
+      (c) => c[0] === 'settings-sync',
+    )[1];
+    handler(
+      { sender: {} },
+      settingsSchema.parse({ shortcuts: { commandBar: 'Alt+X' } }),
+    );
+    expect(mgr.getItem('shortcuts.commandBar')).toBe(oldShortcut);
+    expect(
+      JSON.parse(writeFileSync.mock.calls.at(-1)[1]).shortcuts.commandBar,
+    ).toBe(oldShortcut);
+    expect(mockWebContentsSend).toHaveBeenCalledWith('shortcut-rejected', {
+      requested: 'Alt+X',
+      actual: oldShortcut,
+    });
+    expect(dialog.showErrorBox).toHaveBeenCalled();
+  });
+  it('restores memory and the OS binding if saving a replacement fails', () => {
+    const mgr = SettingsManager.getInstance();
+    const oldShortcut = mgr.getItem('shortcuts.commandBar');
+    (rebindCommandBarShortcut as jest.Mock).mockReturnValue(true);
+    const handler = mockIpcOn.mock.calls.find(
+      (c) => c[0] === 'settings-sync',
+    )[1];
+    writeFileSync.mockImplementationOnce(() => {
+      throw new Error('disk full');
+    });
+    expect(() =>
+      handler(
+        { sender: {} },
+        settingsSchema.parse({ shortcuts: { commandBar: 'Alt+X' } }),
+      ),
+    ).toThrow('disk full');
+    expect(mgr.getItem('shortcuts.commandBar')).toBe(oldShortcut);
+    expect(rebindCommandBarShortcut).toHaveBeenNthCalledWith(1, 'Alt+X');
+    expect(rebindCommandBarShortcut).toHaveBeenNthCalledWith(2, oldShortcut);
+    expect(mockWebContentsSend).toHaveBeenCalledWith('shortcut-rejected', {
+      requested: 'Alt+X',
+      actual: oldShortcut,
+    });
   });
 });

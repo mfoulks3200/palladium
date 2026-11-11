@@ -40,8 +40,7 @@ jobs:
 
       - name: Install and build
         run: |
-          npm install
-          npm run postinstall
+          npm ci
           npm run build
 
       - name: Publish releases
