@@ -4,8 +4,6 @@
 // the mocked values.
 // ---------------------------------------------------------------------------
 
-jest.mock('node:crypto', () => ({ randomUUID: () => 'test-write' }));
-
 const mockSetEnabled = jest.fn();
 const mockCapture = jest.fn();
 
@@ -35,6 +33,8 @@ jest.mock('src/main/ipc', () => ({
 jest.mock('src/main/GlobalShortcuts', () => ({
   rebindCommandBarShortcut: jest.fn(),
 }));
+
+jest.mock('node:crypto', () => ({ randomUUID: () => 'test-write' }));
 
 jest.mock('src/main/AnalyticsManager', () => ({
   AnalyticsManager: {
