@@ -9,6 +9,7 @@ import { typedIpcMain } from './ipc';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { getDeepProp, setDeepProp } from 'src/ipc/Utility';
 import { AnalyticsManager } from './AnalyticsManager';
 import { rebindCommandBarShortcut } from './GlobalShortcuts';
@@ -18,6 +19,7 @@ const dataDir = path.dirname(dataPath);
 
 export class SettingsManager {
   private static instance: SettingsManager;
+  private canPersist = true;
   private currentSettings: Partial<SettingSchema> = {} as const;
 
   public static getInstance() {
@@ -53,8 +55,6 @@ export class SettingsManager {
     });
 
     this.initializeAndLoadSettings();
-
-    this.persist();
   }
 
   private initializeAndLoadSettings() {
@@ -62,14 +62,26 @@ export class SettingsManager {
       fs.mkdirSync(dataDir, { recursive: true });
     }
     if (!fs.existsSync(dataPath)) {
-      fs.writeFileSync(dataPath, '{}');
+      this.currentSettings = settingsSchema.parse({});
+      this.persist();
     } else {
       try {
         const settings = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
         this.deserializeSettings(settings);
       } catch (e) {
         console.error('Could not read or decode settings file: ', e);
-        this.currentSettings = settingsSchema.parse({});
+        this.currentSettings = settingsSchema.parse({
+          analytics: { enabled: false },
+        });
+        try {
+          fs.copyFileSync(
+            dataPath,
+            `${dataPath}.unreadable-${Date.now()}`,
+            fs.constants.COPYFILE_EXCL,
+          );
+        } catch {
+          this.canPersist = false;
+        }
       }
     }
   }
@@ -83,7 +95,26 @@ export class SettingsManager {
   }
 
   public persist() {
-    fs.writeFileSync(dataPath, JSON.stringify(this.currentSettings, null, 2));
+    if (!this.canPersist)
+      throw new Error(
+        'Settings file could not be preserved; changes cannot be saved.',
+      );
+    const temporaryPath = `${dataPath}.${randomUUID()}.tmp`;
+    try {
+      fs.writeFileSync(
+        temporaryPath,
+        JSON.stringify(this.currentSettings, null, 2),
+        { mode: 0o600, flag: 'wx' },
+      );
+      fs.renameSync(temporaryPath, dataPath);
+    } catch (error) {
+      try {
+        fs.unlinkSync(temporaryPath);
+      } catch {
+        /* No temporary file to remove. */
+      }
+      throw error;
+    }
   }
 
   public setItem<T extends SettingsKeys>(

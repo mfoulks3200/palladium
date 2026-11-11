@@ -92,7 +92,9 @@ export const rendererEventSchemas = {
   'media-control': z.tuple([mediaControlSchema]),
 };
 export const rendererInvocationSchemas = {
-  'get-history': z.tuple([]),
+  'get-history': z.tuple([
+    z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
+  ]),
   'get-system-meta': z.tuple([]),
   'get-settings': z.tuple([]),
   'get-feature-flags': z.tuple([]),

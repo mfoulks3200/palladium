@@ -33,11 +33,11 @@ const distinctIdPath = path.join(os.homedir(), '.palladium', 'analytics_id');
 export class AnalyticsManager {
   private static instance: AnalyticsManager;
 
-  private client: PostHog;
+  private client: PostHog | null = null;
 
   private distinctId: string;
 
-  private analyticsEnabled: boolean = true;
+  private analyticsEnabled: boolean = false;
 
   private featureFlags: Record<string, string | boolean> = {};
 
@@ -55,25 +55,6 @@ export class AnalyticsManager {
 
   private constructor() {
     this.distinctId = AnalyticsManager.loadOrCreateDistinctId();
-    // Skip PostHog initialization when no API key is configured.
-    if (POSTHOG_API_KEY.length === 0) {
-      this.analyticsEnabled = false;
-      this.client = null as unknown as PostHog;
-      return;
-    }
-    this.client = new PostHog(POSTHOG_API_KEY, {
-      host: POSTHOG_HOST,
-      flushAt: 20,
-      flushInterval: 10000,
-    });
-
-    // Perform an initial feature flag fetch and start periodic polling.
-    this.refreshFeatureFlags();
-    this.flagPollTimer = setInterval(
-      () => this.refreshFeatureFlags(),
-      AnalyticsManager.FLAG_POLL_INTERVAL,
-    );
-
     // When a renderer window requests the current flags (e.g. on load),
     // respond with the cached state immediately.
     typedIpcMain.handle('get-feature-flags', () => {
@@ -123,12 +104,32 @@ export class AnalyticsManager {
    * the analytics.enabled setting changes).
    */
   public setEnabled(enabled: boolean): void {
+    enabled = enabled && POSTHOG_API_KEY.trim().length > 0;
+    const wasEnabled = this.analyticsEnabled;
     this.analyticsEnabled = enabled;
+    if (enabled && !this.client) {
+      this.client = new PostHog(POSTHOG_API_KEY, {
+        host: POSTHOG_HOST,
+        flushAt: 20,
+        flushInterval: 10000,
+      });
+    }
+    if (this.flagPollTimer) {
+      clearInterval(this.flagPollTimer);
+      this.flagPollTimer = null;
+    }
     if (!this.client) return;
     if (!enabled) {
       this.client.optOut();
+      this.featureFlags = {};
+      this.broadcastFlags();
     } else {
       this.client.optIn();
+      if (!wasEnabled) void this.refreshFeatureFlags();
+      this.flagPollTimer = setInterval(
+        () => this.refreshFeatureFlags(),
+        AnalyticsManager.FLAG_POLL_INTERVAL,
+      );
     }
   }
 
@@ -143,7 +144,7 @@ export class AnalyticsManager {
     event: string,
     properties?: Record<string, string | number | boolean | null>,
   ): void {
-    if (!this.analyticsEnabled) return;
+    if (!this.analyticsEnabled || !this.client) return;
     this.client.capture({
       distinctId: this.distinctId,
       event,
@@ -163,10 +164,19 @@ export class AnalyticsManager {
    */
   public captureException(error: Error, extra?: Record<string, string>): void {
     this.capture('exception', {
-      error_name: error.name,
-      error_message: error.message,
-      error_stack: error.stack ?? '',
-      ...extra,
+      error_name: [
+        'Error',
+        'TypeError',
+        'RangeError',
+        'SyntaxError',
+        'ReferenceError',
+        'URIError',
+        'EvalError',
+        'AggregateError',
+      ].includes(error.name)
+        ? error.name
+        : 'Error',
+      source: extra?.source === 'main' ? 'main' : 'renderer',
     });
   }
 
@@ -182,6 +192,7 @@ export class AnalyticsManager {
     if (!this.client || !this.analyticsEnabled) return;
     try {
       const flags = await this.client.getAllFlags(this.distinctId);
+      if (!this.analyticsEnabled) return;
       this.featureFlags = flags;
       this.broadcastFlags();
     } catch (err) {

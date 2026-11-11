@@ -62,6 +62,7 @@ jest.mock('src/ipc', () => ({}));
 
 import fs from 'node:fs';
 import { BrowserWindow } from 'electron';
+import { PostHog } from 'posthog-node';
 import { AnalyticsManager } from '../AnalyticsManager';
 import { typedWebContents } from '../ipc';
 
@@ -107,6 +108,79 @@ describe('AnalyticsManager', () => {
   // 1. Singleton
   // -----------------------------------------------------------------------
 
+  it('does not initialize PostHog or fetch flags before consent is applied', () => {
+    const mgr = AnalyticsManager.getInstance();
+    mgr.capture('early_event');
+    expect(PostHog).not.toHaveBeenCalled();
+    expect(mockGetAllFlags).not.toHaveBeenCalled();
+    expect(mockCapture).not.toHaveBeenCalled();
+    mgr.setEnabled(false);
+    expect(PostHog).not.toHaveBeenCalled();
+  });
+
+  it('does not send error message, stack, custom name or arbitrary extra fields', () => {
+    const mgr = AnalyticsManager.getInstance();
+    mgr.setEnabled(true);
+    const error = new Error('secret URL');
+    error.name = 'secret path';
+    mgr.captureException(error, {
+      source: 'https://private.example',
+      extra: 'secret',
+    });
+    const properties = mockCapture.mock.calls[0][0].properties;
+    expect(properties).toEqual({
+      app_version: '0.0.8',
+      platform: process.platform,
+      error_name: 'Error',
+      source: 'renderer',
+    });
+  });
+
+  it('keeps IPC safe and capture disabled with an empty API key', async () => {
+    const original = process.env.POSTHOG_API_KEY;
+    process.env.POSTHOG_API_KEY = '';
+    try {
+      await jest.isolateModulesAsync(async () => {
+        const {
+          AnalyticsManager: EmptyKeyManager,
+        } = require('../AnalyticsManager');
+        const mgr = EmptyKeyManager.getInstance();
+        mgr.setEnabled(true);
+        mgr.capture('should_not_send');
+        await mgr.refreshFeatureFlags();
+        await mgr.shutdown();
+        expect(PostHog).not.toHaveBeenCalled();
+        expect(mockCapture).not.toHaveBeenCalled();
+        expect(mockIpcHandle).toHaveBeenCalledWith(
+          'get-feature-flags',
+          expect.any(Function),
+        );
+      });
+    } finally {
+      if (original === undefined) delete process.env.POSTHOG_API_KEY;
+      else process.env.POSTHOG_API_KEY = original;
+    }
+  });
+
+  it('stops polling and drops a pending flag response on opt-out', async () => {
+    let resolveFlags!: (flags: Record<string, boolean>) => void;
+    mockGetAllFlags.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFlags = resolve;
+        }),
+    );
+    const mgr = AnalyticsManager.getInstance();
+    mgr.setEnabled(true);
+    mgr.setEnabled(false);
+    const calls = mockGetAllFlags.mock.calls.length;
+    resolveFlags({ private: true });
+    await Promise.resolve();
+    jest.advanceTimersByTime(10 * 60 * 1000);
+    expect(mockGetAllFlags).toHaveBeenCalledTimes(calls);
+    expect(mgr.getAllFlags()).toEqual({});
+  });
+
   it('returns the same instance on subsequent getInstance calls', () => {
     const a = AnalyticsManager.getInstance();
     const b = AnalyticsManager.getInstance();
@@ -127,6 +201,7 @@ describe('AnalyticsManager', () => {
     readFileSync.mockReturnValue(savedId);
 
     const mgr = AnalyticsManager.getInstance();
+    mgr.setEnabled(true);
 
     expect(readFileSync).toHaveBeenCalledWith(analyticsIdPath, 'utf8');
     // The loaded ID should be used for capture calls.
@@ -156,6 +231,7 @@ describe('AnalyticsManager', () => {
 
   it('calls client.optOut when setEnabled(false)', () => {
     const mgr = AnalyticsManager.getInstance();
+    mgr.setEnabled(true);
 
     mgr.setEnabled(false);
 
@@ -168,6 +244,7 @@ describe('AnalyticsManager', () => {
 
   it('calls client.optIn when setEnabled(true)', () => {
     const mgr = AnalyticsManager.getInstance();
+    mgr.setEnabled(true);
 
     mgr.setEnabled(true);
 
@@ -180,6 +257,7 @@ describe('AnalyticsManager', () => {
 
   it('sends an event with properties through PostHog when enabled', () => {
     const mgr = AnalyticsManager.getInstance();
+    mgr.setEnabled(true);
 
     mgr.capture('app_launched', { first_run: true });
 
@@ -201,6 +279,7 @@ describe('AnalyticsManager', () => {
 
   it('does not send events when analytics is disabled', () => {
     const mgr = AnalyticsManager.getInstance();
+    mgr.setEnabled(true);
     mgr.setEnabled(false);
     mockCapture.mockClear();
 
@@ -215,7 +294,8 @@ describe('AnalyticsManager', () => {
 
   it('captures an exception with error fields', () => {
     const mgr = AnalyticsManager.getInstance();
-    const err = new Error('something broke');
+    mgr.setEnabled(true);
+    const err = new Error('https://private.example/?secret=yes /Users/private');
     err.name = 'TestError';
 
     mgr.captureException(err, { source: 'main' });
@@ -224,9 +304,7 @@ describe('AnalyticsManager', () => {
       expect.objectContaining({
         event: 'exception',
         properties: expect.objectContaining({
-          error_name: 'TestError',
-          error_message: 'something broke',
-          error_stack: expect.any(String),
+          error_name: 'Error',
           source: 'main',
         }),
       }),
@@ -239,9 +317,8 @@ describe('AnalyticsManager', () => {
 
   it('returns the cached feature flag value after refresh', async () => {
     const mgr = AnalyticsManager.getInstance();
+    mgr.setEnabled(true);
 
-    // The constructor already called refreshFeatureFlags once; let the
-    // promise resolve so the flags are cached.
     await mgr.refreshFeatureFlags();
 
     expect(mgr.getFeatureFlag('test-flag')).toBe(true);
@@ -254,6 +331,7 @@ describe('AnalyticsManager', () => {
 
   it('returns a copy of all cached flags', async () => {
     const mgr = AnalyticsManager.getInstance();
+    mgr.setEnabled(true);
     await mgr.refreshFeatureFlags();
 
     const flags = mgr.getAllFlags();
@@ -271,6 +349,7 @@ describe('AnalyticsManager', () => {
 
   it('clears the polling interval and shuts down the PostHog client', async () => {
     const mgr = AnalyticsManager.getInstance();
+    mgr.setEnabled(true);
     const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
 
     await mgr.shutdown();
@@ -306,6 +385,7 @@ describe('AnalyticsManager', () => {
 
   it('responds with cached flags when get-feature-flags is invoked', async () => {
     const mgr = AnalyticsManager.getInstance();
+    mgr.setEnabled(true);
     await mgr.refreshFeatureFlags();
 
     const handler = mockIpcHandle.mock.calls.find(
@@ -332,6 +412,7 @@ describe('AnalyticsManager', () => {
     (typedWebContents as jest.Mock).mockReturnValue({ send: mockSend });
 
     const mgr = AnalyticsManager.getInstance();
+    mgr.setEnabled(true);
     await mgr.refreshFeatureFlags();
 
     expect(mockSend).toHaveBeenCalledWith('feature-flags-sync', {
