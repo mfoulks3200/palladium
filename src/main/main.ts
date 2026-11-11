@@ -9,7 +9,8 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import { app } from 'electron';
-import path from 'node:path';
+import { realpath } from 'node:fs/promises';
+import { setupExtensions } from './ExtensionManager';
 import { getWebsiteSession } from './WebsiteSession';
 import { unregisterGlobalShortcuts } from './GlobalShortcuts';
 import { BrowserWindowUI } from './BrowserWindowUI';
@@ -96,13 +97,16 @@ app.on('window-all-closed', () => {
 app
   .whenReady()
   .then(async () => {
+    const manager = await setupExtensions();
     const directory = process.env.PALLADIUM_UNPACKED_EXTENSION;
     if (directory && !app.isPackaged) {
       try {
-        const extension = await getWebsiteSession().extensions.loadExtension(
-          path.resolve(directory),
-        );
-        console.info('[Extensions] Loaded', extension.name);
+        const source = await realpath(directory);
+        if (!manager.ownsSource(source)) {
+          const extension =
+            await getWebsiteSession().extensions.loadExtension(source);
+          console.info('[Extensions] Loaded', extension.name);
+        }
       } catch (error) {
         console.error('[Extensions] Could not load unpacked extension', error);
       }

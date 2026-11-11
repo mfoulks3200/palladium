@@ -7,6 +7,7 @@ import {
   LinksPanel,
   VersionsPanel,
 } from './pages/AboutPanel';
+import { ExtensionsPanel } from './pages/ExtensionsPanel';
 import { HistoryPanel } from './pages/HistoryPanel';
 import { DefaultSearchEngines } from './pages/DefaultSearchEngines';
 import { CustomSearchEngines } from './pages/CustomSearchEngines';
@@ -128,11 +129,11 @@ const settingsUi: Record<string, SettingsPages> = {
   },
   extensions: {
     name: 'Extensions',
-    disabled: true,
     icon: <Blocks />,
     cards: {
       extensions: {
         name: 'Extensions',
+        customContents: <ExtensionsPanel />,
       },
     },
   },

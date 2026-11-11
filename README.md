@@ -36,7 +36,13 @@ Run the following command to start the browser in development mode:
 npm start
 ```
 
-### Trying an unpacked Chrome extension
+### Managing unpacked Chrome extensions
+
+Open **Settings → Extensions → Load unpacked…**, choose a folder containing a Chrome extension’s `manifest.json`, review its requested permissions and website access, then select **Install**. Palladium installs a private copy and remembers which extensions are enabled. Use **Permissions**, **Enable**, **Disable**, or **Remove** in the same panel. Reload an open website to see content-script changes. Removing an extension leaves its original folder alone. To install an edited version, remove it and select the updated folder again.
+
+The included `examples/localhost-extension` is a small extension you can try. Compatibility depends on Electron’s supported Chrome APIs.
+
+### Trying an extension from the development shell
 
 Start a local page by running `python3 -m http.server 8765 --bind 127.0.0.1 --directory examples/localhost-extension` from the repository root. In a second terminal, launch the development browser with the demo extension:
 

@@ -69,7 +69,10 @@ export const SettingsTab = ({
   onClick: () => void;
 }) => {
   return (
-    <div
+    <button
+      type="button"
+      disabled={disabled}
+      aria-pressed={isActive}
       className={cn(
         'flex w-full items-center gap-2 rounded-l-full',
         `[&_svg:not([class*='size-'])]:size-4`,
@@ -80,10 +83,10 @@ export const SettingsTab = ({
           ['cursor-auto opacity-25']: disabled,
         },
       )}
-      onClick={disabled ? () => {} : onClick}
+      onClick={onClick}
     >
       {icon}
       {name}
-    </div>
+    </button>
   );
 };

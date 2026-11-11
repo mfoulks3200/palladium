@@ -139,7 +139,20 @@ export interface MainToRendererEvents {
  * Uses ipcMain.handle / ipcRenderer.invoke pattern.
  * Each key maps to { args: [...], result: ReturnType }.
  */
+export interface ManagedExtension {
+  id: string;
+  name: string;
+  version: string;
+  permissions: string[];
+  enabled: boolean;
+  error?: string;
+}
+export interface ExtensionResult {
+  extensions: ManagedExtension[];
+  error?: string;
+}
 interface InvocationResults {
+  'manage-extensions': ExtensionResult;
   'get-history': HistoryItem[];
   'get-system-meta': SystemMetaIpc;
   'get-settings': SettingSchema;

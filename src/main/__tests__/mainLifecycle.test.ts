@@ -9,6 +9,12 @@ jest.mock('electron', () => {
     }),
   };
 });
+jest.mock('node:fs/promises', () => ({
+  realpath: async (path: string) => require('node:path').resolve(path),
+}));
+jest.mock('../ExtensionManager', () => ({
+  setupExtensions: async () => ({ ownsSource: () => false }),
+}));
 jest.mock('../WebsiteSession', () => ({
   getWebsiteSession: jest.fn(),
 }));
@@ -50,7 +56,7 @@ it('loads the developer extension before the first window and reuses the owner u
   process.env.PALLADIUM_UNPACKED_EXTENSION = '/demo';
   try {
     require('../main');
-    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(loadExtension).toHaveBeenCalledWith(
       require('node:path').resolve('/demo'),
     );
