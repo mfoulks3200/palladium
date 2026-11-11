@@ -8,7 +8,10 @@ import { SystemMetaIpc, WindowActionIpc } from '../ipc';
 import { SettingsManager } from './SettingsManager';
 import { HistoryManager } from './HistoryManager';
 import { setupOverlayManager } from './OverlayManager';
-import { registerGlobalShortcuts } from './GlobalShortcuts';
+import {
+  registerGlobalShortcuts,
+  unregisterGlobalShortcuts,
+} from './GlobalShortcuts';
 import { CommandParser } from './commands/CommandParser';
 import { commandBarSetup } from './commands/CommandBar';
 import { TabManager } from './TabManager';
@@ -37,9 +40,9 @@ export class BrowserWindowUI {
     this.createMenu();
     this.initializeSubsystems();
     this.mainWindow.on('show', () => {
-      TabManager.getInstance().focusTab(
-        TabManager.getInstance().getCurrentTab()!,
-      );
+      const manager = TabManager.getInstance();
+      const tab = manager.getCurrentTab();
+      if (tab) manager.focusTab(tab);
     });
   }
 
@@ -155,6 +158,7 @@ export class BrowserWindowUI {
         'shortcuts.commandBar',
       );
       registerGlobalShortcuts(savedShortcut);
+      this.mainWindow.once('closed', unregisterGlobalShortcuts);
     });
 
     initSubsystem('SystemMetaIpc', () => {
@@ -213,7 +217,8 @@ export class BrowserWindowUI {
     });
 
     initSubsystem('CommandBar', () => {
-      commandBarSetup();
+      const dispose = commandBarSetup();
+      this.mainWindow.once('closed', dispose);
     });
 
     initSubsystem('TabManager', () => {

@@ -8,12 +8,13 @@
  * When running `npm run build` or `npm run build:main`, this file is compiled to
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
-import { app, BrowserWindow } from 'electron';
+import { app } from 'electron';
 import { unregisterGlobalShortcuts } from './GlobalShortcuts';
 import { BrowserWindowUI } from './BrowserWindowUI';
 import { AnalyticsManager } from './AnalyticsManager';
 
-let mainWindow: BrowserWindow | null = null;
+let windowOwner: BrowserWindowUI | null = null;
+let creatingWindow = false;
 
 // ---------------------------------------------------------------------------
 // Global exception handlers — forward to PostHog via AnalyticsManager
@@ -63,11 +64,18 @@ const installExtensions = async () => {
 };
 
 const createWindow = async () => {
-  if (isDebug) {
-    await installExtensions();
+  if (creatingWindow || windowOwner) return;
+  creatingWindow = true;
+  try {
+    if (isDebug) await installExtensions();
+    const owner = new BrowserWindowUI(isDebug);
+    windowOwner = owner;
+    owner.mainWindow.once('closed', () => {
+      if (windowOwner === owner) windowOwner = null;
+    });
+  } finally {
+    creatingWindow = false;
   }
-
-  new BrowserWindowUI(isDebug);
 };
 
 /**
@@ -90,7 +98,13 @@ app
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
-      if (mainWindow === null) createWindow();
+      if (!windowOwner) createWindow();
+      else {
+        const win = windowOwner.mainWindow;
+        if (win.isMinimized()) win.restore();
+        win.show();
+        win.focus();
+      }
     });
   })
   .catch(console.log);

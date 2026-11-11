@@ -6,7 +6,7 @@ import { AnalyticsManager } from './AnalyticsManager';
 import { registerTabManagerIpc } from './TabManagerIpcHandlers';
 
 export class TabManager {
-  private static instance: TabManager;
+  private static instance: TabManager | null = null;
   private mainWindow: BrowserWindow;
   private currentTab: Tab | null = null;
   private tabs: Tab[] = [];
@@ -46,10 +46,17 @@ export class TabManager {
       await this.updateDevtoolsView();
     });
     const disposeIpc = registerTabManagerIpc(this);
-    mainWindow.once('closed', disposeIpc);
-    setInterval(() => {
-      this.updateRenderProcess();
-    }, 500);
+    const timer = setInterval(() => this.updateRenderProcess(), 500);
+    mainWindow.once('closed', () => {
+      clearInterval(timer);
+      disposeIpc();
+      const tabs = this.tabs;
+      this.tabs = [];
+      this.currentTab = null;
+      this.mediaStates.clear();
+      tabs.forEach((tab) => tab.destroyTab());
+      if (TabManager.instance === this) TabManager.instance = null;
+    });
   }
 
   public async updateBrowsingView(
@@ -254,20 +261,28 @@ export class TabManager {
   }
 
   public closeTab(uuid: string) {
-    const selectedIndex = this.getTabIndex(uuid);
-    const selectedTab = this.getTabByUuid(uuid);
-    if (selectedIndex > 0) {
-      this.focusTabIndex(selectedIndex - 1);
-    }
-    if (selectedTab) {
-      AnalyticsManager.getInstance().capture('tab_closed');
-      if (this.currentTab && uuid === this.currentTab.uuid) {
-        this.mainWindow.contentView.removeChildView(this.currentTab.view);
+    const index = this.getTabIndex(uuid);
+    if (index < 0) return;
+    const tab = this.tabs[index];
+    const wasCurrent = this.currentTab === tab;
+    this.tabs.splice(index, 1);
+    if (wasCurrent) {
+      this.mainWindow.contentView.removeChildView(tab.view);
+      this.mainWindow.contentView.removeChildView(tab.devToolsView);
+      this.currentTab = null;
+      const nextTab = this.tabs[Math.max(0, index - 1)];
+      if (nextTab) this.focusTab(nextTab);
+      else {
+        typedWebContents(this.mainWindow.webContents).send(
+          'internal-page-navigate',
+          { newPath: '' },
+        );
       }
-      selectedTab.view.webContents.close();
-      const idx = this.tabs.indexOf(selectedTab);
-      if (idx !== -1) this.tabs.splice(idx, 1);
     }
+    tab.destroyTab();
+    this.syncMediaStates();
+    this.updateRenderProcess();
+    AnalyticsManager.getInstance().capture('tab_closed');
   }
 
   public reorderTab(startIndex: number, finishIndex: number) {
